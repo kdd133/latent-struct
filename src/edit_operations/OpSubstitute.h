@@ -1,0 +1,49 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Copyright (c) 2012 Kenneth Dwyer
+ */
+
+#ifndef _OPSUBSTITUTE_H
+#define _OPSUBSTITUTE_H
+
+#include "EditOperation.h"
+#include <string>
+#include <vector>
+using namespace std;
+
+// A Substitute operation is only applied when the two phrases differ.
+// (Note: See OpReplace for an operation that is applied unconditionally.) 
+class OpSubstitute : public EditOperation {
+
+  public:
+  
+    OpSubstitute(int opId, int defaultDestinationStateId, string name =
+      "Substitute", int phraseLengthSource = 1, int phraseLengthTarget = 1,
+      int cantFollowStateTypeId = -1);
+    
+    virtual ~OpSubstitute() {}
+    
+    int apply(const vector<string>& source,
+              const vector<string>& target,
+              const int prevStateTypeId,
+              const int i,
+              const int j,
+              int& iNew,
+              int& jNew) const;
+              
+  private:
+  
+    int _defaultDestinationStateId;
+    
+    int _phraseLengthSource;
+    
+    int _phraseLengthTarget;
+    
+    int _cantFollowStateTypeId;
+};
+
+#endif

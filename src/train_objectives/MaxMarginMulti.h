@@ -1,0 +1,61 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Copyright (c) 2012 Kenneth Dwyer
+ */
+
+#ifndef _MAXMARGINOBJECTIVE_H
+#define _MAXMARGINOBJECTIVE_H
+
+#include "FeatureVector.h"
+#include "TrainingObjective.h"
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+
+class Dataset;
+class Model;
+class RealWeight;
+
+class MaxMarginMulti : public TrainingObjective {
+
+  public:
+  
+    MaxMarginMulti(const Dataset& dataset, const vector<Model*>& models) :
+      TrainingObjective(dataset, models), _imputedFv(0) {}
+    
+    virtual ~MaxMarginMulti() {}
+
+    virtual bool isBinary() const { return false; }
+
+    static const string& name() {
+      static const string _name = "MaxMarginMulti";
+      return _name;
+    }
+    
+  private:
+  
+    virtual void valueAndGradientPart(const WeightVector& w, Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      
+    virtual void valueAndGradientFinalize(const WeightVector& w, double& f,
+      FeatureVector<RealWeight>& g);
+      
+    virtual void predictPart(const WeightVector& w, Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      const Label k, LabelScoreTable& scores);
+      
+    virtual void setLatentFeatureVectorsPart(const WeightVector& w, Model& model,
+        const Dataset::iterator& begin, const Dataset::iterator& end);
+        
+    virtual void initLatentFeatureVectors(const WeightVector& w);
+  
+    boost::scoped_ptr<FeatureVector<RealWeight> > _imputedFv;
+    
+    boost::mutex _flag;
+};
+
+#endif

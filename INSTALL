@@ -1,0 +1,6 @@
+First, install the required libraries, then modify src/Makefile if necessary
+in order to add the paths to these libraries. See the comments near the top of
+src/Makefile for more information, which includes the list of dependencies.
+
+Finally, type "make" (sans quotes) to build the latent_struct binary.
+

@@ -1,0 +1,15 @@
+Latent Struct is a software package, written in C++, that provides routines for
+training classifiers on data that contain structured latent variables.
+Currently, log-linear and max-margin (i.e., support vector machine) models can
+be trained. A given model can then be employed to make predictions on unseen
+data. In addition to choosing between log-linear and max-margin models, one may
+also train either a binary or a multiclass variant of each. Training of fully
+supervised models (i.e., no latent variables) is also supported.
+
+Although the source code has been commented to some extent, it has not been
+systematically documented. Additional documentation, including usage examples
+involving publicly available datasets, will be added in the near future.
+
+Please contact Kenneth (Ken) Dwyer <dwyer AT cs.ualberta.ca> if you have any
+comments, questions, or suggestions.
+

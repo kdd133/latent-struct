@@ -1,0 +1,8 @@
+*.o
+*.dep
+*.swp
+latent_struct
+latent_struct-gdb
+.project
+.cproject
+
