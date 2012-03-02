@@ -99,9 +99,14 @@ if __name__ == '__main__':
   results = {}
   for folder_name in args:
     folder_name = folder_name.rstrip('/')
-    results[folder_name] = {}
-    
+
     output_fname = '%s/%s' % (folder_name, 'output.gz')
+    try:
+      fin = gzip.open(output_fname)
+    except IOError:
+      print 'Skipping incomplete result in %s' % folder_name
+      continue;
+    results[folder_name] = {}    
     fin = gzip.open(output_fname)
     extract_fields(fin, fields, results[folder_name])
     fin.close()
