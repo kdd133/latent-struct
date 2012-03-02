@@ -135,7 +135,8 @@ int main(int argc, char** argv) {
         EmptyObservedFeatureGen::name()), fgenMsgObs.str().c_str())
     ("load-dir", opt::value<string>(&loadDir),
         "load weights and features from directory and predict on eval data")
-    ("model", opt::value<string>(&modelName), modelMsgObs.str().c_str())
+    ("model", opt::value<string>(&modelName)->default_value(
+        StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
     ("obj", opt::value<string>(&objName)->default_value(
         LogLinearMulti::name()), objMsgObs.str().c_str())
     ("opt", opt::value<string>(&optName)->default_value(optAuto),
