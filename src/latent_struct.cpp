@@ -528,18 +528,21 @@ sample-train to use the unselected training examples as the eval set")
   // Set initial weights (Note: the reAlloc above set them all to zero).
   if (weightsInit != "zero") {
     double* v = new double[d];
+    for (int i = 0; i < d; i++)
+      v[i] = 0;
+
     if (istarts_with(weightsInit, "heuristic")) {
       const Alphabet::DictType& dict = alphabet->getDict();
       Alphabet::DictType::const_iterator it; 
       for (it = dict.begin(); it != dict.end(); it++)
-        v[it->second] = fgenLat->getDefaultFeatureWeight(it->first);
+        v[it->second] += fgenLat->getDefaultFeatureWeight(it->first);
     }
     if (iends_with(weightsInit, "noise")) {
       mt19937 mt(seed);
       normal_distribution<> gaussian(0, 0.01);
       variate_generator<mt19937, normal_distribution<> > rgen(mt, gaussian);
       for (int i = 0; i < d; i++)
-        v[i] = rgen();
+        v[i] += rgen();
     }
     w.setWeights(v, d);
     delete[] v;
