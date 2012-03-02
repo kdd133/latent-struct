@@ -35,7 +35,7 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     virtual int processOptions(int argc, char** argv);
     
     static const string& name() {
-      static const string _name = "KR";
+      static const string _name = "KRWord";
       return _name;
     }
 

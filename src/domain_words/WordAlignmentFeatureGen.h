@@ -43,7 +43,7 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     virtual double getDefaultFeatureWeight(const string& feature) const;
     
     static const string& name() {
-      static const string _name = "StringAlignment";
+      static const string _name = "WordAlignment";
       return _name;
     }
       
