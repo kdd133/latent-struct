@@ -168,13 +168,13 @@ to the final state")
   StateType ins(1, "ins");
   StateType del(2, "del");
   StateType sub(3, "sub");
-  StateType idn(4, "idn");
+  StateType mat(4, "mat");
   
   _states.push_back(start);
   _states.push_back(ins);
   _states.push_back(del);
   if (_useMatch)
-    _states.push_back(idn);
+    _states.push_back(mat);
   _states.push_back(sub);
   
   // note: -1 means there is no restriction on what this op can follow
@@ -199,8 +199,10 @@ to the final state")
       if (_useMatch) {
         _ops.push_back(new OpSubstitute(opId++, sub.getId(), "Substitute" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
-        _ops.push_back(new OpMatch(opId++, idn.getId(), "Match" +
-            lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
+        if (s == t) { // can't possibly match phrases of different lengths
+          _ops.push_back(new OpMatch(opId++, mat.getId(), "Match" +
+              lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
+        }
       }
       else {
         _ops.push_back(new OpReplace(opId++, sub.getId(), "Replace" +
