@@ -99,6 +99,9 @@ class StringEditModel : public Model {
     // Maximum phrase length on the target side.
     int _maxTargetPhraseLength;
     
+    // If true, build a first-order model; otherwise, zero-order.
+    bool _firstOrder;
+    
     // A list of state types that comprise the nodes in an fst.
     list<StateType> _states;
     
@@ -129,7 +132,7 @@ template <typename Arc>
 StringEditModel<Arc>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
     shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
-    _maxSourcePhraseLength(1), _maxTargetPhraseLength(1),
+    _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _firstOrder(false),
     _noFinalArcFeats(false) {
 }
 
@@ -139,12 +142,15 @@ int StringEditModel<Arc>::processOptions(int argc, char** argv) {
   opt::options_description options(name() + " options");
   options.add_options()
     ("allow-redundant", opt::bool_switch(&_allowRedundant),
-        "if true, a delete operation may follow an insert operation")
+        "if true, a delete operation may follow an insert operation \
+(note: this is automatically true for a zero-order model)")
     ("cache-fsts", opt::bool_switch(&_cacheFsts),
         "if true, store the FSTs and rescore them instead of rebuilding")
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
 match state when idential source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
+    ("first-order", opt::bool_switch(&_firstOrder),
+        "if true, build a first-order model; otherwise, zero-order")
     ("no-final-arc-feats", opt::bool_switch(&_noFinalArcFeats),
         "if true, do not fire a feature for each arc in the FST that connects \
 to the final state")
@@ -164,48 +170,59 @@ to the final state")
     return 0;
   }
   
-  StateType start(0, "start");
+  StateType sta(0, "sta");
   StateType ins(1, "ins");
   StateType del(2, "del");
   StateType sub(3, "sub");
   StateType mat(4, "mat");
+  StateType rep(5, "rep");
   
-  _states.push_back(start);
-  _states.push_back(ins);
-  _states.push_back(del);
-  if (_useMatch)
-    _states.push_back(mat);
-  _states.push_back(sub);
-  
-  // note: -1 means there is no restriction on what this op can follow
-  int deleteNoFollow = -1;
-  if (!_allowRedundant)
-    deleteNoFollow = ins.getId();
+  // Note: In a zero-order model, we'll only use one state.
+  _states.push_back(sta);
+  if (_firstOrder) {
+    _states.push_back(ins);
+    _states.push_back(del);
+    if (_useMatch) {
+      _states.push_back(mat);
+      _states.push_back(sub);
+    }
+    else
+      _states.push_back(rep);
+  }
   
   int opId = 0; // we will assign a unique identifier to each edit operation
   
+  // Note: -1 means there is no restriction on what the delete op can follow.
+  int deleteNoFollow = -1;
+  if (_firstOrder && !_allowRedundant)
+    deleteNoFollow = ins.getId();  
+  int destStateId = _firstOrder ? del.getId() : sta.getId();
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-    _ops.push_back(new OpDelete(opId++, del.getId(), "Delete" +
+    _ops.push_back(new OpDelete(opId++, destStateId, "Delete" +
         lexical_cast<string>(s), s, deleteNoFollow));
   }
   
+  destStateId = _firstOrder ? ins.getId() : sta.getId();
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-    _ops.push_back(new OpInsert(opId++, ins.getId(), "Insert" +
+    _ops.push_back(new OpInsert(opId++, destStateId, "Insert" +
         lexical_cast<string>(t), t));
   }
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       if (_useMatch) {
-        _ops.push_back(new OpSubstitute(opId++, sub.getId(), "Substitute" +
+        destStateId = _firstOrder ? sub.getId() : sta.getId();
+        _ops.push_back(new OpSubstitute(opId++, destStateId, "Substitute" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         if (s == t) { // can't possibly match phrases of different lengths
-          _ops.push_back(new OpMatch(opId++, mat.getId(), "Match" +
+          destStateId = _firstOrder ? mat.getId() : sta.getId();
+          _ops.push_back(new OpMatch(opId++, destStateId, "Match" +
               lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         }
       }
       else {
-        _ops.push_back(new OpReplace(opId++, sub.getId(), "Replace" +
+        destStateId = _firstOrder ? rep.getId() : sta.getId();
+        _ops.push_back(new OpReplace(opId++, destStateId, "Replace" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
       }
     }
