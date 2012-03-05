@@ -12,6 +12,25 @@ import optparse
 import re
 import sys
 
+# names of fields to (attempt to) extract from the output files
+field_names = ('Train-Accuracy', 'Train-Precision', 'Train-Recall',
+               'Train-Fscore', 'Eval-Accuracy', 'Eval-Precision',
+               'Eval-Recall', 'Eval-Fscore', '11-pt')
+
+# map cryptic names to "pretty" names; columns will be printed in this order  
+stat_names = {'Train-Accuracy' : 'Train acc',
+              'Train-Precision' : 'Train prec',
+              'Train-Recall' : 'Train rec',
+              'Train-Fscore' : 'Train F1',
+              'Eval-Accuracy' : 'Eval acc',
+              'Eval-Precision' : 'Eval prec',
+              'Eval-Recall' : 'Eval rec',
+              'Eval-Fscore' : 'Eval F1'}
+
+# these options will be omitted from any output
+option_names_to_skip = ('dir',)
+
+
 def extract_fields(f, fields, values, prepend='', index=1):
   for line in f.readlines():
     for (field_name, regex) in fields:
@@ -28,19 +47,25 @@ def read_options(s, results):
     except ValueError:
       results['flags'] += o[2:] + ' '    
   
-def results_html(fout, results):
-  # map cryptic names to "pretty" names; columns will be printed in this order  
-  stat_names = {'Train-Accuracy' : 'Train acc',
-                'Train-Precision' : 'Train prec',
-                'Train-Recall' : 'Train rec',
-                'Train-Fscore' : 'Train F1',
-                'Eval-Accuracy' : 'Eval acc',
-                'Eval-Precision' : 'Eval prec',
-                'Eval-Recall' : 'Eval rec',
-                'Eval-Fscore' : 'Eval F1'}
+def results_txt(fout, results):
+  fout.write('ID\t')
+  fout.write('\t'.join([s for s in sorted(stat_names)]))
+  # Note: this assumes that the same options appear in all jobs
+  for name in sorted(results[min(results)]):
+    if name not in stat_names and name not in option_names_to_skip:
+      fout.write('\t%s' % name)
+  fout.write('\t\n')
   
-  option_names_to_skip = ('dir',)
-  
+  for subfolder in results:
+    fout.write('%s\t' % subfolder.split('/')[-1])
+    for statname in sorted(stat_names):
+      fout.write('%.3f\t' % results[subfolder][statname])
+    for name in sorted(results[subfolder]):
+      if name not in stat_names and name not in option_names_to_skip:
+        fout.write('%s\t' % results[subfolder][name])
+    fout.write('\n')
+
+def results_html(fout, results):  
   fout.write('<table id="table" class="tablesorter">\n')
   fout.write('<thead align="center">\n  <tr>\n')
   fout.write('    <th>ID</th>\n')
@@ -88,9 +113,6 @@ if __name__ == '__main__':
     parser.print_help()
     sys.exit()
 
-  field_names = ('Train-Accuracy', 'Train-Precision', 'Train-Recall',
-                 'Train-Fscore', 'Eval-Accuracy', 'Eval-Precision',
-                 'Eval-Recall', 'Eval-Fscore', '11-pt')
   field_res = []
   for field in field_names:
     field_res.append(re.compile('.*%s' % field))
@@ -117,22 +139,31 @@ if __name__ == '__main__':
     fin.close()
     
     # Get the 11-pt avg precision for train and eval if the files are present
-    train_avgprec_fname = '%s/%s' % (folder_name, 'train_11pt_avg_prec.txt')
-    try:
-      fin = open(train_avgprec_fname)
+    try :
+      fname = '%s/%s' % (folder_name, 'train_11pt_avg_prec.txt')
+      fin = open(fname)
       extract_fields(fin, fields, results[folder_name], 'Train ', 2)
       fin.close()
     except IOError:
-      pass    
-    eval_avgprec_fname = '%s/%s' % (folder_name, 'eval_11pt_avg_prec.txt')
-    try:
-      fin = open(eval_avgprec_fname)
+      pass
+    try :
+      fname = '%s/%s' % (folder_name, 'eval_11pt_avg_prec.txt')
+      fin = open(fname)
       extract_fields(fin, fields, results[folder_name], 'Eval ', 2)
       fin.close()
     except IOError:
       pass
-  
+
   experiment_name = args[0].split('/')[0]
+
+  # output a table of results to a plain text file
+  txt_name = '%s.txt' % experiment_name
+  fout = open(txt_name, 'w')
+  results_txt(fout, results)
+  fout.close()
+  print 'Wrote ' + txt_name
+
+  # output a table of results to a html file
   html_name = '%s.html' % experiment_name
   fout = open(html_name, 'w')
   fout.write('<html>\n')
@@ -159,6 +190,4 @@ if __name__ == '__main__':
   fout.write('</body>\n')
   fout.write('</html>\n')
   fout.close()
-
   print 'Wrote ' + html_name
-
