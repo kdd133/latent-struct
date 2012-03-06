@@ -89,11 +89,12 @@ int main(int argc, char** argv) {
   int seed = 0;
   size_t poolMB = 0;
   size_t threads = 1;
+  double negativeRatio = 0.0;
   double trainFraction = 1.0;
   bool optEM = false;
   bool disablePool = false;
   bool split = false;
-  bool sampleAllPositives = false;
+  bool keepAllPositives = false;
   const string optAuto = "Auto";
   
   // Enumerate the choices for each option that involves a class name.
@@ -133,6 +134,9 @@ int main(int argc, char** argv) {
         EmptyAlignmentFeatureGen::name()), fgenMsgLat.str().c_str())
     ("fgen-obs", opt::value<string>(&fgenNameObs)->default_value(
         EmptyObservedFeatureGen::name()), fgenMsgObs.str().c_str())
+    ("keep-all-positives", opt::bool_switch(&keepAllPositives),
+        "if --sample-train is enabled, this option ensures that all the \
+positive examples present in the data are retained")
     ("load-dir", opt::value<string>(&loadDir),
         "load weights and features from directory and predict on eval data")
     ("model", opt::value<string>(&modelName)->default_value(
@@ -144,9 +148,9 @@ int main(int argc, char** argv) {
     ("pool-size", opt::value<size_t>(&poolMB)->default_value(25),
         "max size of pool, *per thread* (megabytes)")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
-    ("sample-all-positives", opt::bool_switch(&sampleAllPositives),
-        "if --sample-train is enabled, this option ensures that all the \
-positive examples present in the data are retained")  
+    ("sample-negative-ratio", opt::value<double>(&negativeRatio),
+        "for each positive example in the training set, sample this number of \
+negative examples (implies --sample-all-positives)")
     ("sample-train", opt::value<double>(&trainFraction),
         "learn on this fraction of the train data (uniformly sampled, \
 without replacement); if greater than 1, the value is interpreted as the \
@@ -314,41 +318,57 @@ sample-train to use the unselected training examples as the eval set")
   }
   
   if (!help && vm.count("train")) {
-    cout << "Loading " << trainFilename << " ...\n";
-    boost::timer::auto_cpu_timer loadTrainTimer;
-    if (Utility::loadDataset(*reader, trainFilename, trainData)) {
-      cout << "Error: Unable to load train file " << trainFilename << endl;
-      return 1;
+    {
+      cout << "Loading " << trainFilename << " ...\n";
+      boost::timer::auto_cpu_timer loadTrainTimer;
+      if (Utility::loadDataset(*reader, trainFilename, trainData)) {
+        cout << "Error: Unable to load train file " << trainFilename << endl;
+        return 1;
+      }
+      cout << "Read " << trainData.numExamples() << " train examples, " <<
+          trainData.getLabelSet().size() << " classes\n";
     }
-    cout << "Read " << trainData.numExamples() << " train examples, " <<
-        trainData.getLabelSet().size() << " classes\n";
   
-    if (trainFraction < 1.0 || (trainFraction > 1.0 &&
-        (size_t)trainFraction < trainData.numExamples())) {
-      size_t subTrainSize;
-      if (trainFraction < 1)
-        subTrainSize = (size_t)(trainFraction * trainData.numExamples());
-      else
-        subTrainSize = (size_t)trainFraction; // interpret trainFraction as num
-      cout << "Selecting a random sample of " << subTrainSize <<
-          " train examples.\n";
+    if (negativeRatio > 0.0 || trainFraction != 1.0) {
+      if (negativeRatio > 0.0)
+        keepAllPositives = true; // keepAllPositives is implied in this case
       mt19937 mt(seed);
       uniform_int<> uni(0, trainData.numExamples()-1);
       variate_generator<mt19937, uniform_int<> > rgen(mt, uni);
       set<int> selected;
-      if (sampleAllPositives) {
+      if (keepAllPositives) {
         for (size_t i = 0; i < trainData.numExamples(); i++) {
           if (trainData.getExamples()[i].y() == TrainingObjective::kPositive)
             selected.insert((int)i);
         }
+        cout << "Keeping all " << selected.size() << " positive examples.\n";
+      }
+      size_t subTrainSize;      
+      if (negativeRatio > 0.0) {
+        subTrainSize = (size_t)(selected.size() * negativeRatio) +
+          selected.size();
+      }
+      else {
+        assert(trainFraction != 1.0);
+        if (trainFraction < 1)
+          subTrainSize = (size_t)(trainFraction * trainData.numExamples());
+        else // interpret trainFraction as the number of examples requested
+          subTrainSize = (size_t)trainFraction;
+      }
+      if (subTrainSize >= trainData.numExamples()) {
+        cout << "Invalid arguments: There are not enough training examples " <<
+            "for the sampling options that you specified.\n";
+        return 1;
       }
       if (selected.size() >= subTrainSize) {
         cout << "Invalid arguments: There are more positive examples than " <<
             "the total number of training examples you asked to sample. " <<
             "Please lower the value of --sample-train or remove the " <<
-            "--sample-all-positives flag." << endl;
+            "--sample-all-positives flag.\n";
         return 1;
       }
+      cout << "Randomly selecting " << (subTrainSize - selected.size()) <<
+          (keepAllPositives ? " negative" : " train") << " examples.\n";
       while (selected.size() < subTrainSize)
         selected.insert(rgen());
       Dataset subTrainData(threads);
