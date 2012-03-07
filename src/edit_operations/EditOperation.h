@@ -46,11 +46,6 @@ class EditOperation {
     //Returns the name that uniquely identifies this edit operation.
     const string& getName() const { return _name; }
 
-    static int noopId() {
-      static const int NOOP = -1;
-      return NOOP;
-    }
-
   protected:
   
     int _id;

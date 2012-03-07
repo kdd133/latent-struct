@@ -12,6 +12,7 @@
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
 #include "Label.h"
+#include "OpNone.h"
 #include "Pattern.h"
 #include "StateType.h"
 #include "StringPair.h"
@@ -162,7 +163,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   }
 
   // edit operation feature (state, operation interchangable in this function)
-  if (_includeEditFeats && op.getId() != EditOperation::noopId()) {
+  if (_includeEditFeats && op.getId() != OpNone::ID) {
     assert(!_legacy || _includeAnnotatedEdits);
     if (_includeAnnotatedEdits) {
       ss.str(""); // re-initialize the stringstream

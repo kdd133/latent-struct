@@ -99,11 +99,6 @@ class AlignmentTransducer : public Transducer {
                          const StateId finishStateId,
                          const int i,
                          const int j);
-                         
-    static const EditOperation& noOp() {
-      static const OpNone noop = OpNone();
-      return noop;
-    }
     
     void addArc(const int opId, const int destStateTypeId,
         const StateId sourceId, const StateId destId,
@@ -260,8 +255,8 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   if (includeObsArc) {
     FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
     const StateId preStartStateId = _fst->AddState();
-    addArc(noOp().getId(), startFinishStateTypeId, preStartStateId,
-        startStateId, fv, w);
+    addArc(OpNone::ID, startFinishStateTypeId, preStartStateId, startStateId,
+        fv, w);
     _fst->SetStart(preStartStateId);
   }
   else
@@ -295,17 +290,17 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     // FIXME: The 0 value should not be hard-coded (tied to StringEditModel.h)
     assert(startFinishStateType.getId() == 0);
     FeatureVector<RealWeight>* fv = 0;
+    OpNone noOp;
     if (_includeFinalFeats) {
       AlignmentPart part = {startFinishStateType, "", ""};
       history.push_back(part);
-      OpNone noOp;
       fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
       addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           finishStateId, fv, w);
       history.pop_back();
     }
     else {
-      addArc(noOp().getId(), startFinishStateType.getId(), sourceStateId,
+      addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           finishStateId, fv, w); // Note: using zero fv
     }
     return;

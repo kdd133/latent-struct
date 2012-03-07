@@ -11,6 +11,7 @@
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
+#include "OpNone.h"
 #include "Pattern.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "StateType.h"
@@ -124,7 +125,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
   }
 
   // edit operation feature (state, operation interchangable in this function)
-  if (_includeEditFeats && op.getId() != EditOperation::noopId()) {
+  if (_includeEditFeats && op.getId() != OpNone::ID) {
     if (_includeAnnotatedEdits) {
       vector<string>::const_iterator sourcePhraseBegin, sourcePhraseEnd;
       const bool gotSource = false; // FIXME = getPhraseIterators(source, i, iNew,

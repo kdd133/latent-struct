@@ -19,8 +19,7 @@ class OpNone : public EditOperation {
 
   public:
   
-    OpNone(string name = "None") :
-      EditOperation(EditOperation::noopId(), name) {}
+    OpNone(string name = "None") : EditOperation(ID, name) {}
     
     int apply(const vector<string>& source,
               const vector<string>& target,
@@ -33,6 +32,8 @@ class OpNone : public EditOperation {
       jNew = j;
       return prevStateTypeId;
     }
+    
+    static const int ID;
               
 };
 
