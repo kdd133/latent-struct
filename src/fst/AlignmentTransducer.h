@@ -57,7 +57,7 @@ class AlignmentTransducer : public Transducer {
     
     // The first stateType in the list will be used as the start state and as
     // the finish state.
-    AlignmentTransducer(const list<StateType>& stateTypes,
+    AlignmentTransducer(const vector<StateType>& stateTypes,
                         const list<const EditOperation*>& ops,
                         boost::shared_ptr<AlignmentFeatureGen> fgen,
                         boost::shared_ptr<ObservedFeatureGen> fgenObs,
@@ -94,7 +94,7 @@ class AlignmentTransducer : public Transducer {
     void applyOperations(const WeightVector& w,
                          const StringPair& pair,
                          const int label,
-                         vector<int>& stateTypeHistory,
+                         vector<StateType>& stateTypeHistory,
                          const StateId finishStateId,
                          const int i,
                          const int j);
@@ -110,7 +110,7 @@ class AlignmentTransducer : public Transducer {
         
     void clear();
     
-    const list<StateType>& _stateTypes;
+    const vector<StateType>& _stateTypes;
     
     const list<const EditOperation*>& _ops;
     
@@ -147,7 +147,7 @@ class AlignmentTransducer : public Transducer {
 
 template<typename Arc>
 AlignmentTransducer<Arc>::AlignmentTransducer(
-    const list<StateType>& stateTypes,
+    const vector<StateType>& stateTypes,
     const list<const EditOperation*>& ops,
     boost::shared_ptr<AlignmentFeatureGen> fgen,
     boost::shared_ptr<ObservedFeatureGen> fgenObs,
@@ -250,11 +250,11 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   
   _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
   
-  vector<int> stateTypeHistory;
-  stateTypeHistory.push_back(startFinishStateTypeId);
+  vector<StateType> stateTypeHistory;
+  stateTypeHistory.push_back(startFinishStateType);
 
   // If we have both latent and observed features, we put the observed ones
-  // on a "pre-start" arc that every path throug the fst must include.
+  // on a "pre-start" arc that every path through the fst must include.
   if (includeObsArc) {
     FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
     const StateId preStartStateId = _fst->AddState();
@@ -272,14 +272,14 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
-    const StringPair& pair, const int label, vector<int>& stateTypeHistory,
+    const StringPair& pair, const int label, vector<StateType>& stateTypeHistory,
     const StateId finishStateId, const int i, const int j) {
   const int S = pair.getSource().size();
   const int T = pair.getTarget().size();
   assert(i <= S && j <= T); // an op should never take us out of bounds
   
-  const int sourceStateTypeId = stateTypeHistory.back();
-  const StateId& sourceStateId = _stateIdTable[i][j][sourceStateTypeId];
+  const StateType& sourceStateType = stateTypeHistory.back();
+  const StateId& sourceStateId = _stateIdTable[i][j][sourceStateType.getId()];
   
   if (i == S && j == T) { // reached finish
     // There must be exactly one outgoing arc from any state at position (S,T).
@@ -290,18 +290,18 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     }
     // The type of the first state in the list defines the type of the start
     // state and the finish state.
-    const int startFinishStateTypeId = _stateTypes.front().getId();
+    const StateType& startFinishStateType = _stateTypes.front();
     FeatureVector<RealWeight>* fv = 0;
     if (_includeFinalFeats) {
-      stateTypeHistory.push_back(startFinishStateTypeId);
+      stateTypeHistory.push_back(startFinishStateType);
       OpNone noOp;
       fv = _fgen->getFeatures(pair, i, j, i, j, label, noOp, stateTypeHistory);
-      addArc(noOp.getId(), startFinishStateTypeId, sourceStateId, finishStateId,
-          fv, w);
+      addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
+          finishStateId, fv, w);
       stateTypeHistory.pop_back();
     }
     else {
-      addArc(noOp().getId(), startFinishStateTypeId, sourceStateId,
+      addArc(noOp().getId(), startFinishStateType.getId(), sourceStateId,
           finishStateId, fv, w); // Note: using zero fv
     }
     return;
@@ -311,8 +311,8 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
   const vector<string>& t = pair.getTarget();
   BOOST_FOREACH(const EditOperation* op, _ops) {
     int iNew = -1, jNew = -1;
-    const int destStateTypeId = op->apply(s, t, sourceStateTypeId, i, j, iNew,
-        jNew);
+    const int destStateTypeId = op->apply(s, t, sourceStateType.getId(), i, j,
+        iNew, jNew);
     if (destStateTypeId >= 0) { // was the operation successfully applied?
       assert(iNew >= 0 && jNew >= 0);
       StateId& destStateId = _stateIdTable[iNew][jNew][destStateTypeId];
@@ -337,7 +337,9 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
         destStateId = _fst->AddState(); // note: updates the stateIdTable
       }
       
-      stateTypeHistory.push_back(destStateTypeId);
+      // By construction (see, e.g., StringEditModel.h), we may assume that a
+      // given StateType's id corresponds to its index in the vector.
+      stateTypeHistory.push_back(_stateTypes[destStateTypeId]);
       FeatureVector<RealWeight>* fv =  _fgen->getFeatures(pair, i, j, iNew,
           jNew, label, *op, stateTypeHistory);
       addArc(op->getId(), destStateTypeId, sourceStateId, destStateId, fv, w);

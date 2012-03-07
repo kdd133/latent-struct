@@ -12,6 +12,7 @@
 
 #include "FeatureGen.h"
 #include "FeatureVector.h"
+#include "StateType.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
@@ -33,7 +34,7 @@ class AlignmentFeatureGen : public FeatureGen {
     //j: Current position in the target string.
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
       int i, int j, int iNew, int jNew, int label,
-      const EditOperation& op, const vector<int>& editHistory) = 0;
+      const EditOperation& op, const vector<StateType>& editHistory) = 0;
       
     virtual double getDefaultFeatureWeight(const string& feature) const = 0;
       

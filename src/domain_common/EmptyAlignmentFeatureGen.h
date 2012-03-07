@@ -12,6 +12,7 @@
 
 #include "AlignmentFeatureGen.h"
 #include "FeatureVector.h"
+#include "StateType.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
@@ -30,7 +31,7 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
     
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
         int i, int j, int iNew, int jNew, int label,
-      const EditOperation& op, const vector<int>& editHistory) {
+      const EditOperation& op, const vector<StateType>& editHistory) {
       return 0;
     }
       

@@ -13,7 +13,9 @@
 
 #include "AlignmentFeatureGen.h"
 #include "FeatureVector.h"
+#include "StateType.h"
 #include <boost/shared_ptr.hpp>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -35,8 +37,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     //i: Current position in the source string.
     //j: Current position in the target string.
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      int i, int j, int iNew, int jNew,
-      int label, const EditOperation& op, const vector<int>& editHistory);
+      int i, int j, int iNew, int jNew, 
+      int label, const EditOperation& op, const vector<StateType>& editHistory);
       
     virtual int processOptions(int argc, char** argv);
     
@@ -60,7 +62,9 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _includeEditFeats;
     
-    bool _includeStateFeats;
+    bool _includeStateNgrams;
+    
+    bool _includeAlignNgrams;
     
     bool _normalize;
     
@@ -68,6 +72,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     // Handle matching and mismatching phrases differently, as in old code.
     bool _legacy;
+    
+    set<string> _vowels;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)

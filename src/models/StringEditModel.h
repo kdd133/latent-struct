@@ -103,7 +103,7 @@ class StringEditModel : public Model {
     bool _firstOrder;
     
     // A list of state types that comprise the nodes in an fst.
-    list<StateType> _states;
+    vector<StateType> _states;
     
     // A list of edit operations that comprise the arcs in an fst.
     list<const EditOperation*> _ops;
@@ -170,12 +170,12 @@ to the final state")
     return 0;
   }
   
-  StateType sta(0, "sta");
-  StateType ins(1, "ins");
-  StateType del(2, "del");
-  StateType sub(3, "sub");
-  StateType mat(4, "mat");
-  StateType rep(5, "rep");
+  StateType sta("sta");
+  StateType ins("ins");
+  StateType del("del");
+  StateType sub("sub");
+  StateType mat("mat");
+  StateType rep("rep");
   
   // Note: In a zero-order model, we'll only use one state.
   _states.push_back(sta);
@@ -189,6 +189,10 @@ to the final state")
     else
       _states.push_back(rep);
   }
+  
+  // Set the id of each StateType to its position in the vector.
+  for (size_t i = 0; i < _states.size(); i++)
+    _states[i].setId((int)i);
   
   int opId = 0; // we will assign a unique identifier to each edit operation
   

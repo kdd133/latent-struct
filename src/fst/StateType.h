@@ -16,17 +16,21 @@ using namespace std;
 
 class StateType {
   public:
-    StateType(int id, string name) : id(id), name(name) { }
+    StateType(string name) : _id(-1), _name(name) {}
+  
+    StateType(int id, string name) : _id(id), _name(name) {}
     
-    int getId() const { return id; }
+    int getId() const { return _id; }
     
-    const string& getName() const { return name; }
+    void setId(int id) { _id = id; }
+    
+    const string& getName() const { return _name; }
 
 
   private:
-    int id;
+    int _id;
     
-    string name;
+    string _name;
 
 };
 

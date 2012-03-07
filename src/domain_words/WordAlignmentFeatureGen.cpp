@@ -11,14 +11,17 @@
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
 #include "Pattern.h"
-#include "WordAlignmentFeatureGen.h"
+#include "StateType.h"
 #include "StringPair.h"
+#include "WordAlignmentFeatureGen.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
+#include <fstream>
 #include <list>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -27,34 +30,40 @@ using namespace std;
 
 WordAlignmentFeatureGen::WordAlignmentFeatureGen(
     shared_ptr<Alphabet> alphabet, int order, bool includeAnnotatedEdits,
-    bool includeEditFeats, bool includeStateFeats, bool normalize) :
+    bool includeEditFeats, bool includeStateNgrams, bool normalize) :
     AlignmentFeatureGen(alphabet), _order(order), _includeAnnotatedEdits(
         includeAnnotatedEdits), _includeEditFeats(includeEditFeats),
-        _includeStateFeats(includeStateFeats), _normalize(normalize),
+        _includeStateNgrams(includeStateNgrams), _normalize(normalize),
         _addContextFeats(false), _legacy(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
+  bool noAlign = false;
   bool noAnnotated = false;
   bool noEdit = false;
   bool noState = false;
   bool noNormalize = false;
+  string vowelsFname;
   opt::options_description options(name() + " options");
   options.add_options()
     ("add-context-feats", opt::bool_switch(&_addContextFeats), "add features \
 for combinations of the previous and next characters in the two strings")
     ("legacy", opt::bool_switch(&_legacy),
         "handle matching and mismatching phrases differently, as in old code")
+    ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
+features of the aligned strings")
     ("no-annotate", opt::bool_switch(&noAnnotated), "do not include annotated \
 edit operation features (e.g., edits along with affected characters)")
     ("no-edit", opt::bool_switch(&noEdit), "do not include edit operation \
 features (overrides --no-annotate)")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
 length of the longer word")
-    ("no-state", opt::bool_switch(&noState), "do not include state \
-(transition) features")
+    ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
+features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
+    ("vowels-file", opt::value<string>(&vowelsFname), "the name of a file that \
+contains a list of vowels, one per line")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -67,6 +76,8 @@ length of the longer word")
     return 0;
   }
   
+  if (noAlign)
+    _includeAlignNgrams = false;
   if (noAnnotated)
     _includeAnnotatedEdits = false;
   if (noEdit)
@@ -74,7 +85,20 @@ length of the longer word")
   if (noNormalize)
     _normalize = false;
   if (noState)
-    _includeStateFeats = false;
+    _includeStateNgrams = false;
+    
+  if (vowelsFname != "") {
+    ifstream fin(vowelsFname.c_str());
+    if (!fin.good()) {
+      cout << "Error: Unable to open " << vowelsFname << endl;
+      return 1;
+    }
+    string line;
+    while (getline(fin, line)) {
+      if (line.size() > 0)
+        _vowels.insert(line);
+    }
+  }
   
   return 0;
 }
@@ -82,7 +106,7 @@ length of the longer word")
 FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     const Pattern& x, int i, int j,
     int iNew, int jNew, int label, const EditOperation& op,
-    const vector<int>& stateHistory) {
+    const vector<StateType>& stateHistory) {
   const vector<string>& source = ((const StringPair&)x).getSource();
   const vector<string>& target = ((const StringPair&)x).getTarget();
     
@@ -99,19 +123,38 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   // TODO: See if FastFormat (or some other int2str method) improves efficiency
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
   
-  // state history (transition) feature
-  if (_includeStateFeats) {
+  // n-grams of the state sequence (only valid up to the Markov order)
+  if (_includeStateNgrams) {
     ss.str(""); // re-initialize the stringstream
     ss << label << sep << "S:";
     int start;
-    if (_order+1 > histLen)
+    if (_order + 1 > histLen)
       start = 0;
     else
-      start = histLen - (_order+1);    
-    for (int k = start; k < histLen-1; k++)
-      ss << stateHistory[k] << FeatureGenConstants::OP_SEP;
-    ss << stateHistory[histLen-1];
+      start = histLen - (_order + 1);
+    for (int k = start; k < histLen-1; k++) {
+      ss << stateHistory[k].getName();
+      addFeatureId(ss.str(), featureIds);
+      ss << FeatureGenConstants::OP_SEP;
+    }
+    ss << stateHistory[histLen-1].getName();
     addFeatureId(ss.str(), featureIds);
+  }
+
+  if (_includeAlignNgrams) {
+    ss.str(""); // re-initialize the stringstream
+    assert(0);
+    // TODO: It looks like I'll have to "reconstruct" the alignment based on
+    // the state history, which means this function will have to know the inner
+    // workings of each possible edit operation (?).
+    // Maybe a better approach would be to maintain the current alignment string
+    // (i.e., with epsilons) in the AlignmentTransducer function that calls this
+    // one. It shouldn't be much harder than maintaining the state history,
+    // which we already do, right?
+    // Idea: Could pass in aligned strings as the StringPair/Patter (1st arg) to
+    // this function. I don't think we would ever need the unaligned/original
+    // strings. Could just remove the alignment info anyways, if the need were
+    // to arise.
   }
 
   // edit operation feature (state, operation interchangable in this function)
@@ -234,6 +277,7 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
   // separate operations for identity and substitution (phrases differ in the
   // latter).
   
+  // TODO: ANY CHANGES NEEDED HERE AFTER UPDATING FEATURE FUNCTION ABOVE?
   const string opType = *it++;
   if (opType == "E") {                 // Generic or string-specific op feature
     const string opName = *it++;

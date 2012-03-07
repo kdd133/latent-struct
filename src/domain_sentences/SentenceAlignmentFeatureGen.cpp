@@ -12,6 +12,7 @@
 #include "FeatureVector.h"
 #include "Pattern.h"
 #include "SentenceAlignmentFeatureGen.h"
+#include "StateType.h"
 #include "StringPair.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
@@ -28,10 +29,10 @@ using namespace std;
 
 SentenceAlignmentFeatureGen::SentenceAlignmentFeatureGen(
     shared_ptr<Alphabet> alphabet, int order, bool includeAnnotatedEdits,
-    bool includeEditFeats, bool includeStateFeats, bool normalize) :
+    bool includeEditFeats, bool includeStateNgrams, bool normalize) :
     AlignmentFeatureGen(alphabet), _order(order), _includeAnnotatedEdits(
         includeAnnotatedEdits), _includeEditFeats(includeEditFeats),
-        _includeStateFeats(includeStateFeats), _normalize(normalize) {
+        _includeStateNgrams(includeStateNgrams), _normalize(normalize) {
 }
 
 int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -70,7 +71,7 @@ length of the longer sentence")
   if (noNormalize)
     _normalize = false;
   if (noState)
-    _includeStateFeats = false;
+    _includeStateNgrams = false;
   
   return 0;
 }
@@ -78,7 +79,7 @@ length of the longer sentence")
 FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     const Pattern& x, int i, int j,
     int iNew, int jNew, int label, const EditOperation& op,
-    const vector<int>& stateHistory) {
+    const vector<StateType>& stateHistory) {
   const vector<string>& source = ((const StringPair&)x).getSource();
   const vector<string>& target = ((const StringPair&)x).getTarget();
     
@@ -104,18 +105,21 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
   // TODO: See if FastFormat (or some other int2str method) improves efficiency
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
   
-  // state history (transition) feature
-  if (_includeStateFeats) {
+  // n-grams of the state sequence (only valid up to the Markov order)
+  if (_includeStateNgrams) {
     ss.str(""); // re-initialize the stringstream
     ss << label << sep << "S:";
     int start;
-    if (_order+1 > histLen)
+    if (_order + 1 > histLen)
       start = 0;
     else
-      start = histLen - (_order+1);    
-    for (int k = start; k < histLen-1; k++)
-      ss << stateHistory[k] << ">";
-    ss << stateHistory[histLen-1];
+      start = histLen - (_order + 1);
+    for (int k = start; k < histLen-1; k++) {
+      ss << stateHistory[k].getName();
+      addFeatureId(ss.str(), featureIds);
+      ss << FeatureGenConstants::OP_SEP;
+    }
+    ss << stateHistory[histLen-1].getName();
     addFeatureId(ss.str(), featureIds);
   }
 
