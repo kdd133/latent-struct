@@ -12,7 +12,9 @@
 
 
 #include "AlignmentFeatureGen.h"
+#include "AlignmentPart.h"
 #include "FeatureVector.h"
+#include "Label.h"
 #include "StateType.h"
 #include <boost/shared_ptr.hpp>
 #include <set>
@@ -22,7 +24,7 @@ using namespace std;
 
 class Alphabet;
 class Pattern;
-class StringPair;
+class StateType;
 
 class WordAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
@@ -37,8 +39,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     //i: Current position in the source string.
     //j: Current position in the target string.
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      int i, int j, int iNew, int jNew, 
-      int label, const EditOperation& op, const vector<StateType>& editHistory);
+      Label label, int i, int j, const EditOperation& op,
+      const vector<AlignmentPart>& editHistory);
       
     virtual int processOptions(int argc, char** argv);
     

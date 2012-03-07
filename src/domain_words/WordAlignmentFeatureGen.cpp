@@ -7,9 +7,11 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "AlignmentPart.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
+#include "Label.h"
 #include "Pattern.h"
 #include "StateType.h"
 #include "StringPair.h"
@@ -104,9 +106,8 @@ contains a list of vowels, one per line")
 }
 
 FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
-    const Pattern& x, int i, int j,
-    int iNew, int jNew, int label, const EditOperation& op,
-    const vector<StateType>& stateHistory) {
+    const Pattern& x, Label label, int iNew, int jNew,
+    const EditOperation& op, const vector<AlignmentPart>& stateHistory) {
   const vector<string>& source = ((const StringPair&)x).getSource();
   const vector<string>& target = ((const StringPair&)x).getTarget();
     
@@ -124,6 +125,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
   
   // n-grams of the state sequence (only valid up to the Markov order)
+  cout << "in WordAlignment\n";
   if (_includeStateNgrams) {
     ss.str(""); // re-initialize the stringstream
     ss << label << sep << "S:";
@@ -132,12 +134,14 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
       start = 0;
     else
       start = histLen - (_order + 1);
+    // FIXME: This is buggy! We're building the n-gram from the left instead of
+    // from the right (same thing in SentenceAlignmentFeatureGen.cpp)
     for (int k = start; k < histLen-1; k++) {
-      ss << stateHistory[k].getName();
+      ss << stateHistory[k].state.getName();
       addFeatureId(ss.str(), featureIds);
       ss << FeatureGenConstants::OP_SEP;
     }
-    ss << stateHistory[histLen-1].getName();
+    ss << stateHistory[histLen-1].state.getName();
     addFeatureId(ss.str(), featureIds);
   }
 
@@ -159,12 +163,11 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
 
   // edit operation feature (state, operation interchangable in this function)
   if (_includeEditFeats && op.getId() != EditOperation::noopId()) {
-    assert(i != iNew || j != jNew); // if not NOOP, we should have moved
     assert(!_legacy || _includeAnnotatedEdits);
     if (_includeAnnotatedEdits) {
       ss.str(""); // re-initialize the stringstream
-      string sourcePhrase = extractPhrase(source, i, iNew);
-      string targetPhrase = extractPhrase(target, j, jNew);
+      string sourcePhrase; // FIXME = extractPhrase(source, i, iNew);
+      string targetPhrase; // FIXME = extractPhrase(target, j, jNew);
       ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
           << FeatureGenConstants::OP_SEP << targetPhrase;
       addFeatureId(ss.str(), featureIds);
@@ -180,7 +183,8 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
           ss << label << sep << "E:" << op.getName();
         addFeatureId(ss.str(), featureIds);
       }
-      if (_addContextFeats) {
+      if (_addContextFeats) { // FIXME
+/*
         string sourceLeft;
         if (i <= 0)
           sourceLeft = FeatureGenConstants::BEGIN_CHAR;
@@ -225,6 +229,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
           << FeatureGenConstants::OP_SEP << targetPhrase << sep << "tr="
           << targetRight;
         addFeatureId(ss.str(), featureIds);
+*/
       }
     }
     if (!_legacy) {

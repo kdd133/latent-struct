@@ -177,22 +177,28 @@ to the final state")
   StateType mat("mat");
   StateType rep("rep");
   
+  // We will set the id of each StateType to its position in the _states vector.
+  int stateId = 0;
+  
   // Note: In a zero-order model, we'll only use one state.
+  sta.setId(stateId++);
   _states.push_back(sta);
+  
   if (_firstOrder) {
+    ins.setId(stateId++);
     _states.push_back(ins);
+    del.setId(stateId++);
     _states.push_back(del);
     if (_useMatch) {
+      mat.setId(stateId++);
       _states.push_back(mat);
+      sub.setId(stateId++);
       _states.push_back(sub);
     }
     else
+      rep.setId(stateId++);
       _states.push_back(rep);
   }
-  
-  // Set the id of each StateType to its position in the vector.
-  for (size_t i = 0; i < _states.size(); i++)
-    _states[i].setId((int)i);
   
   int opId = 0; // we will assign a unique identifier to each edit operation
   
@@ -201,12 +207,14 @@ to the final state")
   if (_firstOrder && !_allowRedundant)
     deleteNoFollow = ins.getId();  
   int destStateId = _firstOrder ? del.getId() : sta.getId();
+  assert(destStateId >= 0);
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     _ops.push_back(new OpDelete(opId++, destStateId, "Delete" +
         lexical_cast<string>(s), s, deleteNoFollow));
   }
   
   destStateId = _firstOrder ? ins.getId() : sta.getId();
+  assert(destStateId >= 0);
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
     _ops.push_back(new OpInsert(opId++, destStateId, "Insert" +
         lexical_cast<string>(t), t));
@@ -216,16 +224,19 @@ to the final state")
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       if (_useMatch) {
         destStateId = _firstOrder ? sub.getId() : sta.getId();
+        assert(destStateId >= 0);
         _ops.push_back(new OpSubstitute(opId++, destStateId, "Substitute" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         if (s == t) { // can't possibly match phrases of different lengths
           destStateId = _firstOrder ? mat.getId() : sta.getId();
+          assert(destStateId >= 0);
           _ops.push_back(new OpMatch(opId++, destStateId, "Match" +
               lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         }
       }
       else {
         destStateId = _firstOrder ? rep.getId() : sta.getId();
+        assert(destStateId >= 0);
         _ops.push_back(new OpReplace(opId++, destStateId, "Replace" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
       }

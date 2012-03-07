@@ -7,6 +7,7 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "AlignmentPart.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
@@ -77,9 +78,8 @@ length of the longer sentence")
 }
 
 FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
-    const Pattern& x, int i, int j,
-    int iNew, int jNew, int label, const EditOperation& op,
-    const vector<StateType>& stateHistory) {
+    const Pattern& x, Label label, int iNew, int jNew,
+    const EditOperation& op, const vector<AlignmentPart>& stateHistory) {
   const vector<string>& source = ((const StringPair&)x).getSource();
   const vector<string>& target = ((const StringPair&)x).getTarget();
     
@@ -115,24 +115,23 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     else
       start = histLen - (_order + 1);
     for (int k = start; k < histLen-1; k++) {
-      ss << stateHistory[k].getName();
+      ss << stateHistory[k].state.getName();
       addFeatureId(ss.str(), featureIds);
       ss << FeatureGenConstants::OP_SEP;
     }
-    ss << stateHistory[histLen-1].getName();
+    ss << stateHistory[histLen-1].state.getName();
     addFeatureId(ss.str(), featureIds);
   }
 
   // edit operation feature (state, operation interchangable in this function)
   if (_includeEditFeats && op.getId() != EditOperation::noopId()) {
-    assert(i != iNew || j != jNew); // if not NOOP, we should have moved
     if (_includeAnnotatedEdits) {
       vector<string>::const_iterator sourcePhraseBegin, sourcePhraseEnd;
-      const bool gotSource = getPhraseIterators(source, i, iNew,
-          sourcePhraseBegin, sourcePhraseEnd);
+      const bool gotSource = false; // FIXME = getPhraseIterators(source, i, iNew,
+          //sourcePhraseBegin, sourcePhraseEnd);
       vector<string>::const_iterator targetPhraseBegin, targetPhraseEnd;
-      const bool gotTarget = getPhraseIterators(target, j, jNew,
-          targetPhraseBegin, targetPhraseEnd);
+      const bool gotTarget = false; // FIXME = getPhraseIterators(target, j, jNew,
+          //targetPhraseBegin, targetPhraseEnd);
           
       typedef tokenizer<char_separator<char> > Tokenizer;
       char_separator<char> featSep(FeatureGenConstants::WORDFEAT_SEP);

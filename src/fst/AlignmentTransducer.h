@@ -11,6 +11,7 @@
 #define _ALIGNMENTTRANSDUCER_H
 
 #include "AlignmentFeatureGen.h"
+#include "AlignmentPart.h"
 #include "EditOperation.h"
 #include "FeatureVector.h"
 #include "Label.h"
@@ -93,8 +94,8 @@ class AlignmentTransducer : public Transducer {
   private:
     void applyOperations(const WeightVector& w,
                          const StringPair& pair,
-                         const int label,
-                         vector<StateType>& stateTypeHistory,
+                         const Label label,
+                         vector<AlignmentPart>& history,
                          const StateId finishStateId,
                          const int i,
                          const int j);
@@ -250,8 +251,9 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   
   _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
   
-  vector<StateType> stateTypeHistory;
-  stateTypeHistory.push_back(startFinishStateType);
+  vector<AlignmentPart> history;
+  AlignmentPart part = {startFinishStateType, "", ""};
+  history.push_back(part);
 
   // If we have both latent and observed features, we put the observed ones
   // on a "pre-start" arc that every path through the fst must include.
@@ -265,20 +267,19 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   else
     _fst->SetStart(startStateId);
 
-  applyOperations(w, pair, label, stateTypeHistory, finishStateId, 0, 0);
+  applyOperations(w, pair, label, history, finishStateId, 0, 0);
   
   assert(_fvecs.size() > 0);
 }
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
-    const StringPair& pair, const int label, vector<StateType>& stateTypeHistory,
+    const StringPair& pair, const Label label, vector<AlignmentPart>& history,
     const StateId finishStateId, const int i, const int j) {
   const int S = pair.getSource().size();
   const int T = pair.getTarget().size();
   assert(i <= S && j <= T); // an op should never take us out of bounds
-  
-  const StateType& sourceStateType = stateTypeHistory.back();
+  const StateType& sourceStateType = history.back().state;
   const StateId& sourceStateId = _stateIdTable[i][j][sourceStateType.getId()];
   
   if (i == S && j == T) { // reached finish
@@ -291,14 +292,17 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     // The type of the first state in the list defines the type of the start
     // state and the finish state.
     const StateType& startFinishStateType = _stateTypes.front();
+    // FIXME: The 0 value should not be hard-coded (tied to StringEditModel.h)
+    assert(startFinishStateType.getId() == 0);
     FeatureVector<RealWeight>* fv = 0;
     if (_includeFinalFeats) {
-      stateTypeHistory.push_back(startFinishStateType);
+      AlignmentPart part = {startFinishStateType, "", ""};
+      history.push_back(part);
       OpNone noOp;
-      fv = _fgen->getFeatures(pair, i, j, i, j, label, noOp, stateTypeHistory);
+      fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
       addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           finishStateId, fv, w);
-      stateTypeHistory.pop_back();
+      history.pop_back();
     }
     else {
       addArc(noOp().getId(), startFinishStateType.getId(), sourceStateId,
@@ -339,13 +343,25 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       
       // By construction (see, e.g., StringEditModel.h), we may assume that a
       // given StateType's id corresponds to its index in the vector.
-      stateTypeHistory.push_back(_stateTypes[destStateTypeId]);
-      FeatureVector<RealWeight>* fv =  _fgen->getFeatures(pair, i, j, iNew,
-          jNew, label, *op, stateTypeHistory);
+      const StateType& destState = _stateTypes[destStateTypeId];
+      
+      // Determine the portions of the strings that were consumed by the op. 
+      string sourceConsumed = "";
+      for (int k = i; k < iNew; k++)
+        sourceConsumed += s[k];
+      string targetConsumed = "";
+      for (int k = j; k < jNew; k++)
+        targetConsumed += t[k];
+      assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
+        
+      // Append the state and the consumed strings to the alignment history.
+      AlignmentPart part = {destState, sourceConsumed, targetConsumed};
+      history.push_back(part);      
+      FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
+          jNew, *op, history);
       addArc(op->getId(), destStateTypeId, sourceStateId, destStateId, fv, w);
-      applyOperations(w, pair, label, stateTypeHistory, finishStateId,
-          iNew, jNew);
-      stateTypeHistory.pop_back();
+      applyOperations(w, pair, label, history, finishStateId, iNew, jNew);
+      history.pop_back();
     }
   }
 }

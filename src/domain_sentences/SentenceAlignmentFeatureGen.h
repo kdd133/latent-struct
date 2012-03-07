@@ -11,6 +11,7 @@
 #define _SENTENCEALIGNMENTFEATUREGEN_H
 
 #include "AlignmentFeatureGen.h"
+#include "AlignmentPart.h"
 #include "FeatureVector.h"
 #include "StateType.h"
 #include <boost/shared_ptr.hpp>
@@ -35,8 +36,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
     //i: Current position in the source string.
     //j: Current position in the target string.
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      int i, int j, int iNew, int jNew,
-      int label, const EditOperation& op, const vector<StateType>& editHistory);
+      Label label, int i, int j, const EditOperation& op,
+      const vector<AlignmentPart>& editHistory);
       
     virtual int processOptions(int argc, char** argv);
     
