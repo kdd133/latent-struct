@@ -21,6 +21,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/container/flat_set.hpp>
 #include <boost/program_options.hpp>
+#include <boost/regex.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
 #include <fstream>
@@ -34,12 +35,13 @@ using namespace std;
 WordAlignmentFeatureGen::WordAlignmentFeatureGen(
     shared_ptr<Alphabet> alphabet, int order, bool includeStateNgrams,
       bool includeAlignNgrams, bool includeCollapsedAlignNgrams,
-      bool normalize) :
+      bool includeOpFeature, bool normalize) :
     AlignmentFeatureGen(alphabet), _order(order),
         _includeStateNgrams(includeStateNgrams),
         _includeAlignNgrams(includeAlignNgrams),
         _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
-        _normalize(normalize), _addContextFeats(false), _legacy(false) {
+        _includeOpFeature(includeOpFeature),
+        _normalize(normalize), _addContextFeats(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -47,25 +49,27 @@ int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   bool noAlign = false;
   bool noCollapse = false;
   bool noNormalize = false;
+  bool noOpFeature = false;
   bool noState = false;
   string vowelsFname;
   opt::options_description options(name() + " options");
   options.add_options()
     ("add-context-feats", opt::bool_switch(&_addContextFeats), "add features \
 for combinations of the previous and next characters in the two strings")
-    ("legacy", opt::bool_switch(&_legacy),
-        "handle matching and mismatching phrases differently, as in old code")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
 include backoff features of the aligned strings that discard the gaps/epsilons")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
 length of the longer word")
+    ("no-op-feature", opt::bool_switch(&noOpFeature), "do not include a \
+feature that indicates the edit operation that was used")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
-    ("vowels-file", opt::value<string>(&vowelsFname), "the name of a file that \
-contains a list of vowels, one per line (activates consonant/vowel n-grams)")
+    ("vowels-file", opt::value<string>(&vowelsFname), "the name of a file whose \
+first line contains string of vowels (case-insensitive), e.g., \"aeiou\" \
+(sans quotes) (note: this option activates consonant/vowel n-gram features)")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -84,23 +88,23 @@ contains a list of vowels, one per line (activates consonant/vowel n-grams)")
     _includeCollapsedAlignNgrams = false;
   if (noNormalize)
     _normalize = false;
+  if (noOpFeature)
+    _includeOpFeature = false;
   if (noState)
     _includeStateNgrams = false;
     
+  _vowelsRegex = "";
   if (vowelsFname != "") {
     ifstream fin(vowelsFname.c_str());
     if (!fin.good()) {
       cout << "Error: Unable to open " << vowelsFname << endl;
       return 1;
     }
-    string line;
-    while (getline(fin, line)) {
-      if (line.size() > 0)
-        _vowels.insert(line);
-    }
+    getline(fin, _vowelsRegex);
     fin.close();
-    if (_vowels.size() == 0) {
-      cout << "Error: No strings were read from " << vowelsFname << endl;
+    if (_vowelsRegex.size() == 0) {
+      cout << "Error: The first line of the vowels file does not contain a "
+          << "string\n";
       return 1;
     }
   }
@@ -120,10 +124,22 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   assert(_order >= 0);
   
   list<int> featureIds;
-  const bool includeVowels = _vowels.size() > 0;
-  const string V = "V";
-  const string C = "C";
   const char* sep = FeatureGenConstants::PART_SEP;
+  const bool includeVowels = _vowelsRegex.size() > 0;
+  const string V = "[V]";
+  const string C = "[C]";
+  
+  // The vowel regex matches any of the characters read from the vowels file.
+  regex regVowel("["+_vowelsRegex+"]", regex::icase|regex::perl);
+  
+  // The consonant regex matches anything that's not a vowel, punctuation, or
+  // a space.
+  const string patt = "[^[:punct:]" + _vowelsRegex + "\\s]";
+  regex regConsonant(patt, regex::icase|regex::perl);
+  
+  // For some features, we will want to remove any separators from phrases.
+  const string escape = "\\";
+  regex regPhraseSep(escape + FeatureGenConstants::PHRASE_SEP);
   
   // Determine the point in the history where the longest n-gram begins.
   typedef vector<AlignmentPart>::const_iterator align_iterator;
@@ -139,7 +155,6 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   
   // Extract n-grams of the state sequence (up to the Markov order).
   if (_includeStateNgrams) {
-    cout << "entering _includeStateNgrams" << endl;
     stringstream prefix;
     prefix << label << sep << "S:";
     string s;
@@ -153,157 +168,50 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   // These features only fire if we didn't perform a no-op on this arc.
   if (op.getId() != OpNone::ID) {
     stringstream prefix;
-    prefix << label << sep << "E:";
+    prefix << label << sep << "A:";
     
     if (_includeAlignNgrams) {
-      cout << "entering _includeAlignNgrams" << endl;      
-      string s, vs;
+      string s;
       for (int k = histLen - 1; k >= left; k--) {
         s = history[k].source + FeatureGenConstants::OP_SEP +
             history[k].target + s;
         addFeatureId(prefix.str() + s, featureIds);
-        s = FeatureGenConstants::PART_SEP + s;        
         if (includeVowels) {
-          string prepend;
-          if (history[k].source == FeatureGenConstants::EPSILON)
-            prepend += FeatureGenConstants::EPSILON;
-          else if (_vowels.find(history[k].source) != _vowels.end())
-            prepend += V;
-          else
-            prepend += C;
-          prepend += FeatureGenConstants::OP_SEP;
-          if (history[k].target == FeatureGenConstants::EPSILON)
-            prepend += FeatureGenConstants::EPSILON;
-          else if (_vowels.find(history[k].target) != _vowels.end())
-            prepend += V;
-          else
-            prepend += C;
-          vs = prepend + vs;
-          addFeatureId(prefix.str() + vs, featureIds);
-          vs = FeatureGenConstants::PART_SEP + vs;
+          const string temp = regex_replace(s, regConsonant, C);
+          const string fVC = regex_replace(temp, regVowel, V);
+          addFeatureId(prefix.str() + fVC, featureIds);
         }
+        s = FeatureGenConstants::PART_SEP + s;
       }
     }
     
     if (_includeCollapsedAlignNgrams) {
-      cout << "entering _includeCollapsedAlignNgrams" << endl;
-      stringstream s, t, vs, vt;
+      string s, t;
       for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
-        if (history[k].source != FeatureGenConstants::EPSILON) {
-          s << history[k].source;
-          if (includeVowels) {
-            if (_vowels.find(history[k].source) != _vowels.end())
-              vs << V;
-            else
-              vs << C;
-          }
-        }
-        if (history[k].target != FeatureGenConstants::EPSILON) {
-          t << history[k].target;
-          if (includeVowels) {
-            if (_vowels.find(history[k].target) != _vowels.end())
-              vt << V;
-            else
-              vt << C;
-          }
-        }
+        if (history[k].source != FeatureGenConstants::EPSILON)
+          s = history[k].source + s;
+        if (history[k].target != FeatureGenConstants::EPSILON)
+          t = history[k].target + t;
         // Since collapsed n-grams of different sizes may not be unique, we
         // prepend the size/length of the n-gram to each feature.
         stringstream size;
-        size << l << FeatureGenConstants::PART_SEP;        
-        addFeatureId(prefix.str() + size.str() + s.str() +
-            FeatureGenConstants::OP_SEP + t.str(), featureIds);
+        size << l << FeatureGenConstants::PART_SEP;
+        string collapsed = s + FeatureGenConstants::OP_SEP + t;
+        collapsed = regex_replace(collapsed, regPhraseSep, "");
+        addFeatureId(prefix.str() + size.str() + collapsed, featureIds);
         if (includeVowels) {
-          addFeatureId(prefix.str() + size.str() + vs.str() +
-              FeatureGenConstants::OP_SEP + vt.str(), featureIds);
+          const string temp = regex_replace(collapsed, regConsonant, C);
+          const string collapsedVC = regex_replace(temp, regVowel, V);
+          addFeatureId(prefix.str() + size.str() + collapsedVC, featureIds);
         }
       }
     }
-    
-//    boost::container::flat_set<string>::const_iterator it = _vowels.find("b");
-//    if (it != _vowels.end()) {
-//      cout << "found " << *it << endl; 
-//    }
   }
   
-  assert(0); // only checked things up to this point
-
-  // edit operation feature (state, operation interchangable in this function)
-  if (true && op.getId() != OpNone::ID) {
-    assert(!_legacy || true);
-    if (true /*_includeAnnotatedEdits*/) {
-      stringstream ss;
-      string sourcePhrase; // FIXME = extractPhrase(source, i, iNew);
-      string targetPhrase; // FIXME = extractPhrase(target, j, jNew);
-      ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
-          << FeatureGenConstants::OP_SEP << targetPhrase;
-      addFeatureId(ss.str(), featureIds);
-      if (_legacy) {
-        // For substitution-like edits (which consume characters from both the
-        // source and target strings), fire the special feature SubDiff if the
-        // phrases differ; otherwise, fire the usual op.getName() feature.
-        ss.str(""); // re-initialize the stringstream
-        if (sourcePhrase.size() > 0 && targetPhrase.size() > 0 &&
-            sourcePhrase != targetPhrase)
-          ss << label << sep << "E:SubDiff";
-        else
-          ss << label << sep << "E:" << op.getName();
-        addFeatureId(ss.str(), featureIds);
-      }
-      if (_addContextFeats) { // FIXME
-/*
-        string sourceLeft;
-        if (i <= 0)
-          sourceLeft = FeatureGenConstants::BEGIN_CHAR;
-        else
-          sourceLeft = source[i - 1];
-        string sourceRight;
-        if (iNew >= (int)source.size())
-          sourceRight = FeatureGenConstants::END_CHAR;
-        else
-          sourceRight = source[iNew];
-        string targetLeft;
-        if (j <= 0)
-          targetLeft = FeatureGenConstants::BEGIN_CHAR;
-        else
-          targetLeft = target[j - 1];
-        string targetRight;
-        if (jNew >= (int)target.size())
-          targetRight = FeatureGenConstants::END_CHAR;
-        else
-          targetRight = target[jNew];
-          
-        ss.str("");
-        ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
-          << FeatureGenConstants::OP_SEP << targetPhrase << sep << "sl="
-          << sourceLeft;
-        addFeatureId(ss.str(), featureIds);
-        
-        ss.str("");
-        ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
-          << FeatureGenConstants::OP_SEP << targetPhrase << sep << "sr="
-          << sourceRight;
-        addFeatureId(ss.str(), featureIds);
-        
-        ss.str("");
-        ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
-          << FeatureGenConstants::OP_SEP << targetPhrase << sep << "tl="
-          << targetLeft;
-        addFeatureId(ss.str(), featureIds);
-        
-        ss.str("");
-        ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
-          << FeatureGenConstants::OP_SEP << targetPhrase << sep << "tr="
-          << targetRight;
-        addFeatureId(ss.str(), featureIds);
-*/
-      }
-    }
-    if (!_legacy) {
-      stringstream ss;
-      ss << label << sep << "E:" << op.getName();
-      addFeatureId(ss.str(), featureIds);
-    }
+  if (_includeOpFeature) {
+    stringstream ss;
+    ss << label << sep << "E:" << op.getName();
+    addFeatureId(ss.str(), featureIds);
   }
 
   if (!_alphabet->isLocked()) {
@@ -349,10 +257,11 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
   // separate operations for identity and substitution (phrases differ in the
   // latter).
   
-  // TODO: ANY CHANGES NEEDED HERE AFTER UPDATING FEATURE FUNCTION ABOVE?
   const string opType = *it++;
-  if (opType == "E") {                 // Generic or string-specific op feature
+  if (opType == "E") {                 // Edit (generic or string-specific)
     const string opName = *it++;
+    if (istarts_with(opName, "No"))    // No-op
+      return 0.0;
     if (istarts_with(opName, "Mat"))   // Match
       return sign;
     if (istarts_with(opName, "Sub"))   // Substitute
@@ -371,15 +280,31 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
       const string source = *it++;
       const string target = *it++;
       if (source == target)
-        return _legacy ? -sign : sign; // match (legacy had this backward)
-      return _legacy ? sign : -sign; // substitution (legacy had this backward)
+        return sign;
+      else
+        return -sign;
     }
     assert(0);
+  }
+  else if (opType == "S") {          // State transition feature
+    double value = 0;
+    const double a = 1.0/3.0;
+    const double b = 1.0 - a;
+    while (!it.at_end()) {
+      // The most recent (rightmost) state should dominate (carry more weight),
+      // so we interpolate the sign with a fraction of the previous value.
+      const string stName = *it++;
+      if (istarts_with(stName, "Mat"))
+        value = a*value + b*sign; // A match is good
+      else
+        value = a*value - b*sign; // Everything else is (assumed to be) bad
+    }
+    return value;
   }
   else if (opType == "Bias") {       // bias (offset) feature
     // FIXME: This is actually an observed feature, but we're handling it here
     // for the sake of convenience.
-    return (label == MATCH) ? 1 : -1;
+    return sign;
   }
   //cout << "Warning: No default weight for: " << f << " (setting to zero)\n";
   return 0.0;
@@ -390,7 +315,6 @@ inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
-  cout << f << " " << fId << endl;
   featureIds.push_back(fId);
 }
 

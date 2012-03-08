@@ -16,7 +16,6 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "StateType.h"
-#include <boost/container/flat_set.hpp>
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
@@ -31,7 +30,7 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
 
     WordAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet, int order = 1,
       bool includeStateNgrams = true, bool includeAlignNgrams = true,
-      bool includeCollapsedAlignNgrams = true,
+      bool includeCollapsedAlignNgrams = true, bool includeOpFeature = true,
       bool normalize = true);
       
     virtual ~WordAlignmentFeatureGen() {}
@@ -66,14 +65,13 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _includeCollapsedAlignNgrams;
     
+    bool _includeOpFeature;
+    
     bool _normalize;
     
     bool _addContextFeats;
     
-    // Handle matching and mismatching phrases differently, as in old code.
-    bool _legacy;
-    
-    boost::container::flat_set<string> _vowels;
+    string _vowelsRegex;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)

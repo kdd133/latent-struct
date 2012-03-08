@@ -347,10 +347,10 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       // Determine the portions of the strings that were consumed by the op. 
       string sourceConsumed = (i == iNew) ? FeatureGenConstants::EPSILON : s[i];
       for (int k = i + 1; k < iNew; k++)
-        sourceConsumed += s[k] + FeatureGenConstants::PHRASE_SEP;
+        sourceConsumed += FeatureGenConstants::PHRASE_SEP + s[k];
       string targetConsumed = (j == jNew) ? FeatureGenConstants::EPSILON : t[j];
       for (int k = j + 1; k < jNew; k++)
-        targetConsumed += t[k] + FeatureGenConstants::PHRASE_SEP;
+        targetConsumed += FeatureGenConstants::PHRASE_SEP + t[k];
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
 
       // Append the state and the consumed strings to the alignment history.
