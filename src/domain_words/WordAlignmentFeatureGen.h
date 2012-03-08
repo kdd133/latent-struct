@@ -16,8 +16,8 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "StateType.h"
+#include <boost/container/flat_set.hpp>
 #include <boost/shared_ptr.hpp>
-#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -29,9 +29,9 @@ class StateType;
 class WordAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
 
-    WordAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet,
-      int order = 1, bool includeAnnotatedEdits = true,
-      bool includeEditFeats = true, bool includeStateFeats = true,
+    WordAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet, int order = 1,
+      bool includeStateNgrams = true, bool includeAlignNgrams = true,
+      bool includeCollapsedAlignNgrams = true,
       bool normalize = true);
       
     virtual ~WordAlignmentFeatureGen() {}
@@ -58,15 +58,13 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     // last-1, from the given string vector.
     static string extractPhrase(const vector<string>& str, int first, int last);
       
-    int _order; // TODO: Change to size_t (make sure it doesn't break anything)
-    
-    bool _includeAnnotatedEdits;
-    
-    bool _includeEditFeats;
+    int _order;
     
     bool _includeStateNgrams;
     
     bool _includeAlignNgrams;
+    
+    bool _includeCollapsedAlignNgrams;
     
     bool _normalize;
     
@@ -75,7 +73,7 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     // Handle matching and mismatching phrases differently, as in old code.
     bool _legacy;
     
-    set<string> _vowels;
+    boost::container::flat_set<string> _vowels;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)

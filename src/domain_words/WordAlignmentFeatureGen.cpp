@@ -19,12 +19,12 @@
 #include "WordAlignmentFeatureGen.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/container/flat_set.hpp>
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
 #include <fstream>
 #include <list>
-#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -32,21 +32,22 @@ using namespace boost;
 using namespace std;
 
 WordAlignmentFeatureGen::WordAlignmentFeatureGen(
-    shared_ptr<Alphabet> alphabet, int order, bool includeAnnotatedEdits,
-    bool includeEditFeats, bool includeStateNgrams, bool normalize) :
-    AlignmentFeatureGen(alphabet), _order(order), _includeAnnotatedEdits(
-        includeAnnotatedEdits), _includeEditFeats(includeEditFeats),
-        _includeStateNgrams(includeStateNgrams), _normalize(normalize),
-        _addContextFeats(false), _legacy(false) {
+    shared_ptr<Alphabet> alphabet, int order, bool includeStateNgrams,
+      bool includeAlignNgrams, bool includeCollapsedAlignNgrams,
+      bool normalize) :
+    AlignmentFeatureGen(alphabet), _order(order),
+        _includeStateNgrams(includeStateNgrams),
+        _includeAlignNgrams(includeAlignNgrams),
+        _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
+        _normalize(normalize), _addContextFeats(false), _legacy(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   bool noAlign = false;
-  bool noAnnotated = false;
-  bool noEdit = false;
-  bool noState = false;
+  bool noCollapse = false;
   bool noNormalize = false;
+  bool noState = false;
   string vowelsFname;
   opt::options_description options(name() + " options");
   options.add_options()
@@ -56,17 +57,15 @@ for combinations of the previous and next characters in the two strings")
         "handle matching and mismatching phrases differently, as in old code")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
-    ("no-annotate", opt::bool_switch(&noAnnotated), "do not include annotated \
-edit operation features (e.g., edits along with affected characters)")
-    ("no-edit", opt::bool_switch(&noEdit), "do not include edit operation \
-features (overrides --no-annotate)")
+    ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
+include backoff features of the aligned strings that discard the gaps/epsilons")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
 length of the longer word")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
     ("vowels-file", opt::value<string>(&vowelsFname), "the name of a file that \
-contains a list of vowels, one per line")
+contains a list of vowels, one per line (activates consonant/vowel n-grams)")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -81,10 +80,8 @@ contains a list of vowels, one per line")
   
   if (noAlign)
     _includeAlignNgrams = false;
-  if (noAnnotated)
-    _includeAnnotatedEdits = false;
-  if (noEdit)
-    _includeEditFeats = false;
+  if (noCollapse)
+    _includeCollapsedAlignNgrams = false;
   if (noNormalize)
     _normalize = false;
   if (noState)
@@ -101,6 +98,11 @@ contains a list of vowels, one per line")
       if (line.size() > 0)
         _vowels.insert(line);
     }
+    fin.close();
+    if (_vowels.size() == 0) {
+      cout << "Error: No strings were read from " << vowelsFname << endl;
+      return 1;
+    }
   }
   
   return 0;
@@ -108,65 +110,129 @@ contains a list of vowels, one per line")
 
 FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     const Pattern& x, Label label, int iNew, int jNew,
-    const EditOperation& op, const vector<AlignmentPart>& stateHistory) {
-  const vector<string>& source = ((const StringPair&)x).getSource();
-  const vector<string>& target = ((const StringPair&)x).getTarget();
+    const EditOperation& op, const vector<AlignmentPart>& history) {
+  //const vector<string>& source = ((const StringPair&)x).getSource();
+  //const vector<string>& target = ((const StringPair&)x).getTarget();
     
-  const int histLen = stateHistory.size();
+  const int histLen = history.size();
   assert(iNew >= 0 && jNew >= 0);
   assert(histLen >= 1);
   assert(_order >= 0);
   
   list<int> featureIds;
-  stringstream ss;
-  
+  const bool includeVowels = _vowels.size() > 0;
+  const string V = "V";
+  const string C = "C";
   const char* sep = FeatureGenConstants::PART_SEP;
+  
+  // Determine the point in the history where the longest n-gram begins.
+  typedef vector<AlignmentPart>::const_iterator align_iterator;
+  int left;
+  if (_order + 1 > histLen)
+    left = 0;
+  else
+    left = histLen - (_order + 1);
+  assert(left >= 0);
 
   // TODO: See if FastFormat (or some other int2str method) improves efficiency
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
   
-  // n-grams of the state sequence (only valid up to the Markov order)
-  cout << "in WordAlignment\n";
+  // Extract n-grams of the state sequence (up to the Markov order).
   if (_includeStateNgrams) {
-    ss.str(""); // re-initialize the stringstream
-    ss << label << sep << "S:";
-    int start;
-    if (_order + 1 > histLen)
-      start = 0;
-    else
-      start = histLen - (_order + 1);
-    // FIXME: This is buggy! We're building the n-gram from the left instead of
-    // from the right (same thing in SentenceAlignmentFeatureGen.cpp)
-    for (int k = start; k < histLen-1; k++) {
-      ss << stateHistory[k].state.getName();
-      addFeatureId(ss.str(), featureIds);
-      ss << FeatureGenConstants::OP_SEP;
+    cout << "entering _includeStateNgrams" << endl;
+    stringstream prefix;
+    prefix << label << sep << "S:";
+    string s;
+    for (int k = histLen - 1; k >= left; k--) {
+      s = history[k].state.getName() + s;
+      addFeatureId(prefix.str() + s, featureIds);
+      s = FeatureGenConstants::OP_SEP + s;
     }
-    ss << stateHistory[histLen-1].state.getName();
-    addFeatureId(ss.str(), featureIds);
   }
 
-  if (_includeAlignNgrams) {
-    ss.str(""); // re-initialize the stringstream
-    assert(0);
-    // TODO: It looks like I'll have to "reconstruct" the alignment based on
-    // the state history, which means this function will have to know the inner
-    // workings of each possible edit operation (?).
-    // Maybe a better approach would be to maintain the current alignment string
-    // (i.e., with epsilons) in the AlignmentTransducer function that calls this
-    // one. It shouldn't be much harder than maintaining the state history,
-    // which we already do, right?
-    // Idea: Could pass in aligned strings as the StringPair/Patter (1st arg) to
-    // this function. I don't think we would ever need the unaligned/original
-    // strings. Could just remove the alignment info anyways, if the need were
-    // to arise.
+  // These features only fire if we didn't perform a no-op on this arc.
+  if (op.getId() != OpNone::ID) {
+    stringstream prefix;
+    prefix << label << sep << "E:";
+    
+    if (_includeAlignNgrams) {
+      cout << "entering _includeAlignNgrams" << endl;      
+      string s, vs;
+      for (int k = histLen - 1; k >= left; k--) {
+        s = history[k].source + FeatureGenConstants::OP_SEP +
+            history[k].target + s;
+        addFeatureId(prefix.str() + s, featureIds);
+        s = FeatureGenConstants::PART_SEP + s;        
+        if (includeVowels) {
+          string prepend;
+          if (history[k].source == FeatureGenConstants::EPSILON)
+            prepend += FeatureGenConstants::EPSILON;
+          else if (_vowels.find(history[k].source) != _vowels.end())
+            prepend += V;
+          else
+            prepend += C;
+          prepend += FeatureGenConstants::OP_SEP;
+          if (history[k].target == FeatureGenConstants::EPSILON)
+            prepend += FeatureGenConstants::EPSILON;
+          else if (_vowels.find(history[k].target) != _vowels.end())
+            prepend += V;
+          else
+            prepend += C;
+          vs = prepend + vs;
+          addFeatureId(prefix.str() + vs, featureIds);
+          vs = FeatureGenConstants::PART_SEP + vs;
+        }
+      }
+    }
+    
+    if (_includeCollapsedAlignNgrams) {
+      cout << "entering _includeCollapsedAlignNgrams" << endl;
+      stringstream s, t, vs, vt;
+      for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
+        if (history[k].source != FeatureGenConstants::EPSILON) {
+          s << history[k].source;
+          if (includeVowels) {
+            if (_vowels.find(history[k].source) != _vowels.end())
+              vs << V;
+            else
+              vs << C;
+          }
+        }
+        if (history[k].target != FeatureGenConstants::EPSILON) {
+          t << history[k].target;
+          if (includeVowels) {
+            if (_vowels.find(history[k].target) != _vowels.end())
+              vt << V;
+            else
+              vt << C;
+          }
+        }
+        // Since collapsed n-grams of different sizes may not be unique, we
+        // prepend the size/length of the n-gram to each feature.
+        stringstream size;
+        size << l << FeatureGenConstants::PART_SEP;        
+        addFeatureId(prefix.str() + size.str() + s.str() +
+            FeatureGenConstants::OP_SEP + t.str(), featureIds);
+        if (includeVowels) {
+          addFeatureId(prefix.str() + size.str() + vs.str() +
+              FeatureGenConstants::OP_SEP + vt.str(), featureIds);
+        }
+      }
+    }
+    
+//    boost::container::flat_set<string>::const_iterator it = _vowels.find("b");
+//    if (it != _vowels.end()) {
+//      cout << "found " << *it << endl; 
+//    }
   }
+  
+  assert(0); // only checked things up to this point
 
   // edit operation feature (state, operation interchangable in this function)
-  if (_includeEditFeats && op.getId() != OpNone::ID) {
-    assert(!_legacy || _includeAnnotatedEdits);
-    if (_includeAnnotatedEdits) {
-      ss.str(""); // re-initialize the stringstream
+  if (true && op.getId() != OpNone::ID) {
+    assert(!_legacy || true);
+    if (true /*_includeAnnotatedEdits*/) {
+      stringstream ss;
       string sourcePhrase; // FIXME = extractPhrase(source, i, iNew);
       string targetPhrase; // FIXME = extractPhrase(target, j, jNew);
       ss << label << sep << "E:" << op.getName() << ":" << sourcePhrase
@@ -234,7 +300,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
       }
     }
     if (!_legacy) {
-      ss.str(""); // re-initialize the stringstream
+      stringstream ss;
       ss << label << sep << "E:" << op.getName();
       addFeatureId(ss.str(), featureIds);
     }
@@ -324,6 +390,7 @@ inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
+  cout << f << " " << fId << endl;
   featureIds.push_back(fId);
 }
 

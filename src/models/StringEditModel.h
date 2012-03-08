@@ -99,8 +99,9 @@ class StringEditModel : public Model {
     // Maximum phrase length on the target side.
     int _maxTargetPhraseLength;
     
-    // If true, build a first-order model; otherwise, zero-order.
-    bool _firstOrder;
+    // The Markov order -- how many previous states the current state may
+    // depend on.
+    int _order;
     
     // A list of state types that comprise the nodes in an fst.
     vector<StateType> _states;
@@ -132,7 +133,7 @@ template <typename Arc>
 StringEditModel<Arc>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
     shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
-    _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _firstOrder(false),
+    _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
     _noFinalArcFeats(false) {
 }
 
@@ -149,11 +150,10 @@ int StringEditModel<Arc>::processOptions(int argc, char** argv) {
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
 match state when idential source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
-    ("first-order", opt::bool_switch(&_firstOrder),
-        "if true, build a first-order model; otherwise, zero-order")
     ("no-final-arc-feats", opt::bool_switch(&_noFinalArcFeats),
         "if true, do not fire a feature for each arc in the FST that connects \
 to the final state")
+    ("order", opt::value<int>(&_order), "the Markov order")
     ("phrase-source", opt::value<int>(&_maxSourcePhraseLength),
         "maximum length of phrases on the source side")
     ("phrase-target", opt::value<int>(&_maxTargetPhraseLength),
@@ -170,6 +170,11 @@ to the final state")
     return 0;
   }
   
+  if (_order < 0 || _order > 1) {
+    cout << "Invalid arguments: --order can only be 0 or 1 in this version\n";
+    return 1;
+  }
+  
   StateType sta("sta");
   StateType ins("ins");
   StateType del("del");
@@ -184,7 +189,8 @@ to the final state")
   sta.setId(stateId++);
   _states.push_back(sta);
   
-  if (_firstOrder) {
+  bool firstOrder = _order == 1;
+  if (firstOrder) {
     ins.setId(stateId++);
     _states.push_back(ins);
     del.setId(stateId++);
@@ -204,16 +210,16 @@ to the final state")
   
   // Note: -1 means there is no restriction on what the delete op can follow.
   int deleteNoFollow = -1;
-  if (_firstOrder && !_allowRedundant)
+  if (firstOrder && !_allowRedundant)
     deleteNoFollow = ins.getId();  
-  int destStateId = _firstOrder ? del.getId() : sta.getId();
+  int destStateId = firstOrder ? del.getId() : sta.getId();
   assert(destStateId >= 0);
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     _ops.push_back(new OpDelete(opId++, destStateId, "Delete" +
         lexical_cast<string>(s), s, deleteNoFollow));
   }
   
-  destStateId = _firstOrder ? ins.getId() : sta.getId();
+  destStateId = firstOrder ? ins.getId() : sta.getId();
   assert(destStateId >= 0);
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
     _ops.push_back(new OpInsert(opId++, destStateId, "Insert" +
@@ -223,19 +229,19 @@ to the final state")
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       if (_useMatch) {
-        destStateId = _firstOrder ? sub.getId() : sta.getId();
+        destStateId = firstOrder ? sub.getId() : sta.getId();
         assert(destStateId >= 0);
         _ops.push_back(new OpSubstitute(opId++, destStateId, "Substitute" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         if (s == t) { // can't possibly match phrases of different lengths
-          destStateId = _firstOrder ? mat.getId() : sta.getId();
+          destStateId = firstOrder ? mat.getId() : sta.getId();
           assert(destStateId >= 0);
           _ops.push_back(new OpMatch(opId++, destStateId, "Match" +
               lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
         }
       }
       else {
-        destStateId = _firstOrder ? rep.getId() : sta.getId();
+        destStateId = firstOrder ? rep.getId() : sta.getId();
         assert(destStateId >= 0);
         _ops.push_back(new OpReplace(opId++, destStateId, "Replace" +
             lexical_cast<string>(s) + lexical_cast<string>(t), s, t));

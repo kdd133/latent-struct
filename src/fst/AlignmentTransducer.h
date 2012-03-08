@@ -13,6 +13,7 @@
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
 #include "EditOperation.h"
+#include "FeatureGenConstants.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include "LogFeatArc.h"
@@ -247,7 +248,8 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
   
   vector<AlignmentPart> history;
-  AlignmentPart part = {startFinishStateType, "", ""};
+  AlignmentPart part = {startFinishStateType, FeatureGenConstants::EPSILON,
+      FeatureGenConstants::EPSILON};
   history.push_back(part);
 
   // If we have both latent and observed features, we put the observed ones
@@ -292,7 +294,9 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     FeatureVector<RealWeight>* fv = 0;
     OpNone noOp;
     if (_includeFinalFeats) {
-      AlignmentPart part = {startFinishStateType, "", ""};
+      // The OpNone doesn't consume any of the strings, hence the epsilons below.
+      AlignmentPart part = {startFinishStateType, FeatureGenConstants::EPSILON,
+          FeatureGenConstants::EPSILON};
       history.push_back(part);
       fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
       addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
@@ -341,14 +345,14 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       const StateType& destState = _stateTypes[destStateTypeId];
       
       // Determine the portions of the strings that were consumed by the op. 
-      string sourceConsumed = "";
-      for (int k = i; k < iNew; k++)
-        sourceConsumed += s[k];
-      string targetConsumed = "";
-      for (int k = j; k < jNew; k++)
-        targetConsumed += t[k];
+      string sourceConsumed = (i == iNew) ? FeatureGenConstants::EPSILON : s[i];
+      for (int k = i + 1; k < iNew; k++)
+        sourceConsumed += s[k] + FeatureGenConstants::PHRASE_SEP;
+      string targetConsumed = (j == jNew) ? FeatureGenConstants::EPSILON : t[j];
+      for (int k = j + 1; k < jNew; k++)
+        targetConsumed += t[k] + FeatureGenConstants::PHRASE_SEP;
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
-        
+
       // Append the state and the consumed strings to the alignment history.
       AlignmentPart part = {destState, sourceConsumed, targetConsumed};
       history.push_back(part);      

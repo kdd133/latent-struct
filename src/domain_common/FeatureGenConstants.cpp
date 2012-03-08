@@ -15,6 +15,8 @@ const char* FeatureGenConstants::PART_SEP = "_";
 
 const char* FeatureGenConstants::PHRASE_SEP = "+";
 
+const char* FeatureGenConstants::EPSILON = "-";
+
 const char* FeatureGenConstants::OP_SEP = ">";
 
 const char* FeatureGenConstants::WORDFEAT_SEP = "~";

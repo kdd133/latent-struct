@@ -20,6 +20,9 @@ class FeatureGenConstants {
     // Separator for elements of a phrase.
     static const char* PHRASE_SEP;
     
+    // Represents an epsilon/gap in an alignment string.
+    static const char* EPSILON;
+    
     // Separator for edit operations, e.g., source > target.
     static const char* OP_SEP;
     
