@@ -74,15 +74,8 @@ FeatureVector<RealWeight>* KlementievRothWordFeatureGen::getFeatures(
   
   // copy the source and target strings into s and t
   // append beginning/end of word markers
-  vector<string> s, t;
-  s.reserve(pair.getSource().size() + 2);
-  s.push_back(FeatureGenConstants::BEGIN_CHAR);
-  s.insert(s.begin()+1, pair.getSource().begin(), pair.getSource().end());
-  s.push_back(FeatureGenConstants::END_CHAR);
-  t.reserve(pair.getTarget().size() + 2);
-  t.push_back(FeatureGenConstants::BEGIN_CHAR);
-  t.insert(t.begin()+1, pair.getTarget().begin(), pair.getTarget().end());
-  t.push_back(FeatureGenConstants::END_CHAR);
+  const vector<string>& s = pair.getSource();
+  const vector<string>& t = pair.getTarget();
   assert(s.size() > 0 && t.size() > 0);
   
   const vector<string>* longest; // pointer to the longest string

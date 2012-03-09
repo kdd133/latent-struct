@@ -7,6 +7,7 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "FeatureGenConstants.h"
 #include "Label.h"
 #include "Pattern.h"
 #include "StringPair.h"
@@ -21,7 +22,8 @@
 using namespace boost;
 using namespace std;
 
-/* Read sequences of ISO-8859 encoded character and store them as strings.
+/* Read sequences of ISO-8859 encoded character and store them as strings,
+ * adding begin- and end-of-word markers to each string.
  * Lines are of the form: {+,-} drehende freshened
  */
 void CognatePairReader::readExample(const string& line, Pattern*& pattern,
@@ -41,18 +43,22 @@ void CognatePairReader::readExample(const string& line, Pattern*& pattern,
   assert(it == fields.end());
   
   vector<string> source;
+  source.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (size_t i = 0; i < sourceStr.size(); ++i) {
     string s;
     s.append(1, sourceStr[i]);
     source.push_back(s);
   }
+  source.push_back(FeatureGenConstants::END_CHAR);
 
   vector<string> target;
+  target.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (size_t i = 0; i < targetStr.size(); ++i) {
     string t;
     t.append(1, targetStr[i]);
     target.push_back(t);
   }
+  target.push_back(FeatureGenConstants::END_CHAR);
     
   pattern = new StringPair(source, target);
 }

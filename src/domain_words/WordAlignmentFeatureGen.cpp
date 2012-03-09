@@ -315,6 +315,7 @@ inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
+  cout << f << endl;
   featureIds.push_back(fId);
 }
 
