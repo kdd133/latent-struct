@@ -92,9 +92,9 @@ first line contains string of vowels (case-insensitive), e.g., \"aeiou\" \
     _includeOpFeature = false;
   if (noState)
     _includeStateNgrams = false;
-    
-  _vowelsRegex = "";
+
   if (vowelsFname != "") {
+    _vowelsRegex = "";
     ifstream fin(vowelsFname.c_str());
     if (!fin.good()) {
       cout << "Error: Unable to open " << vowelsFname << endl;
@@ -108,6 +108,8 @@ first line contains string of vowels (case-insensitive), e.g., \"aeiou\" \
       return 1;
     }
   }
+  else
+    _vowelsRegex = "aeiou"; // provide a default so regex doesn't choke below
   
   return 0;
 }
@@ -315,7 +317,6 @@ inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
-  cout << f << endl;
   featureIds.insert(fId);
 }
 
