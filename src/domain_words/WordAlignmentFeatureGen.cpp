@@ -25,7 +25,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
 #include <fstream>
-#include <list>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -123,7 +123,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   assert(histLen >= 1);
   assert(_order >= 0);
   
-  list<int> featureIds;
+  set<int> featureIds;
   const char* sep = FeatureGenConstants::PART_SEP;
   const bool includeVowels = _vowelsRegex.size() > 0;
   const string V = "[V]";
@@ -311,12 +311,12 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
 }
 
 inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
-    list<int>& featureIds) const {
+    set<int>& featureIds) const {
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
   cout << f << endl;
-  featureIds.push_back(fId);
+  featureIds.insert(fId);
 }
 
 inline string WordAlignmentFeatureGen::extractPhrase(const vector<string>& str,

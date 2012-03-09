@@ -17,6 +17,7 @@
 #include "Label.h"
 #include "StateType.h"
 #include <boost/shared_ptr.hpp>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -51,7 +52,7 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     }
       
   private:
-    void addFeatureId(const string& f, list<int>& featureIds) const;
+    void addFeatureId(const string& f, set<int>& featureIds) const;
     
     // Extracts a sequence of strings, starting with first and ending with
     // last-1, from the given string vector.

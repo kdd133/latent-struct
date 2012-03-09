@@ -22,7 +22,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
-#include <list>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -98,7 +98,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
   assert(histLen >= 1);
   assert(_order >= 0);
   
-  list<int> featureIds;
+  set<int> featureIds;
   stringstream ss;
   
   const char* sep = FeatureGenConstants::PART_SEP;
@@ -225,11 +225,11 @@ inline double SentenceAlignmentFeatureGen::getDefaultFeatureWeight(
 }
 
 inline void SentenceAlignmentFeatureGen::addFeatureId(const string& f,
-    list<int>& featureIds) const {
+    set<int>& featureIds) const {
   const int fId = _alphabet->lookup(f, true);
   if (fId == -1)
     return;
-  featureIds.push_back(fId);
+  featureIds.insert(fId);
 }
 
 inline bool SentenceAlignmentFeatureGen::getPhraseIterators(

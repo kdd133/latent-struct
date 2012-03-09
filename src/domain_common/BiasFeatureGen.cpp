@@ -17,6 +17,7 @@
 #include <boost/program_options.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <set>
 #include <sstream>
 #include <string>
 using namespace boost;
@@ -70,8 +71,8 @@ FeatureVector<RealWeight>* BiasFeatureGen::getFeatures(const Pattern& x,
       return new FeatureVector<RealWeight>(); // return the zero vector
   }
 
-  list<int> featureIds;
-  featureIds.push_back(fId);
+  set<int> featureIds;
+  featureIds.insert(fId);
   
   FeatureVector<RealWeight>* fv = 0;
   if (_pool)

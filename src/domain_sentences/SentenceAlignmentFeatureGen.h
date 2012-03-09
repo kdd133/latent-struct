@@ -15,6 +15,7 @@
 #include "FeatureVector.h"
 #include "StateType.h"
 #include <boost/shared_ptr.hpp>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -55,7 +56,7 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
       
   private:
   
-    void addFeatureId(const string& f, list<int>& featureIds) const;
+    void addFeatureId(const string& f, set<int>& featureIds) const;
       
     int _order;
     

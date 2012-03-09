@@ -17,7 +17,7 @@ using boost::shared_array;
 #include "LogWeight.h"
 #include "RealWeight.h"
 #include <assert.h>
-#include <list>
+#include <set>
 #include <ostream>
 #include <stdexcept>
 using namespace std;
@@ -46,8 +46,8 @@ class FeatureVector {
     bool reinit();
     
     // Creates a sparse, binary-valued vector with given indices set to one.
-    FeatureVector(const list<int>& indices);
-    bool reinit(const list<int>& indices);
+    FeatureVector(const set<int>& indices);
+    bool reinit(const set<int>& indices);
     
     // Creates a sparse, real-valued vector based on the given feature counts.
     FeatureVector(const unordered_map<int,Weight>& featureCounts);
@@ -192,7 +192,7 @@ FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
 }
 
 template <typename Weight>
-FeatureVector<Weight>::FeatureVector(const list<int>& indicesList) :
+FeatureVector<Weight>::FeatureVector(const set<int>& indicesList) :
     _indices(0), _values(0), _entries(indicesList.size()),
     _allocatedEntries(_entries), _next(0), _pool(0) {
   if (_entries == 0)
@@ -202,7 +202,7 @@ FeatureVector<Weight>::FeatureVector(const list<int>& indicesList) :
 }
 
 template <typename Weight>
-bool FeatureVector<Weight>::reinit(const list<int>& indicesList) {
+bool FeatureVector<Weight>::reinit(const set<int>& indicesList) {
   if ((int)indicesList.size() > _allocatedEntries)
     return false;
   reinit(); // set this to a default zero vector
@@ -211,7 +211,7 @@ bool FeatureVector<Weight>::reinit(const list<int>& indicesList) {
   if (_entries == 0)
     return true;
   int i = 0;
-  list<int>::const_iterator it = indicesList.begin();
+  set<int>::const_iterator it = indicesList.begin();
   for (; it != indicesList.end(); ++it)
     _indices[i++] = *it;
   updateLength();

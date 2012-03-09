@@ -15,7 +15,7 @@ template <typename T> class FeatureVector;
 #include "FeatureVector.h"
 #include <assert.h>
 #include <iostream>
-#include <list>
+#include <set>
 #include <vector>
 using namespace std;
 #include <tr1/unordered_map>
@@ -31,7 +31,7 @@ class FeatureVectorPool {
     ~FeatureVectorPool();
     
     FeatureVector<T>* get();
-    FeatureVector<T>* get(const list<int>& indices);
+    FeatureVector<T>* get(const set<int>& indices);
     FeatureVector<T>* get(const unordered_map<int,T>& featureCounts);
     
     void release(FeatureVector<T>* fv);
@@ -100,7 +100,7 @@ FeatureVector<T>* FeatureVectorPool<T>::get() {
 }
 
 template <typename T>
-FeatureVector<T>* FeatureVectorPool<T>::get(const list<int>& indices) {
+FeatureVector<T>* FeatureVectorPool<T>::get(const set<int>& indices) {
   FeatureVector<T>* fv = fetchNext();
   if (fv && fv->reinit(indices)) {
     assert(fv->isOwnedByPool());
