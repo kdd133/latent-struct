@@ -52,8 +52,6 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     
     bool _addBias;
     
-    bool _legacy;
-    
     static void appendSubstrings(const vector<string>* s, size_t i, size_t k,
       size_t end, vector<string>& subs);
 };

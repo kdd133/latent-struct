@@ -11,6 +11,7 @@
 #define _TRANSDUCER_H
 
 #include "FeatureVector.h"
+#include <boost/shared_array.hpp>
 
 class LogWeight;
 class RealWeight;
@@ -23,7 +24,8 @@ class Transducer {
     
     virtual LogWeight logPartition() = 0;
 
-    virtual LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv) = 0;
+    virtual LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
+        boost::shared_array<LogWeight> buffer) = 0;
 
     virtual RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
         bool getCostOnly = false) = 0;

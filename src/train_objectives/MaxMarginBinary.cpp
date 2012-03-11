@@ -53,12 +53,13 @@ void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
       // we need to factor them in here.
       bool own = false;
       FeatureVector<RealWeight>* phiObs = model.observedFeatures(xi, ypos, own);
+      assert(phiObs);
       z = yi * (w.innerProd(phiObs) + w.innerProd(_imputedFvs[i]));
       if (z < 1) {
         _imputedFvs[i]->addTo(gradFv, -yi);
         phiObs->addTo(gradFv, -yi);
       }
-      if (own && !phiObs->release()) delete phiObs;
+      if (own) delete phiObs;
     }
     funcVal += Utility::hinge(1 - z);
   }

@@ -197,19 +197,9 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     ss << label << sep << "E:" << op.getName();
     addFeatureId(ss.str(), featureIds);
   }
-
-  if (!_alphabet->isLocked()) {
-    const size_t entries = featureIds.size();
-    if (entries > _maxEntries)
-      _maxEntries = entries;
-  }
   
-  FeatureVector<RealWeight>* fv = 0;
-  if (_pool)
-    fv = _pool->get(featureIds);
-  else
-    fv = new FeatureVector<RealWeight>(featureIds);
-    
+  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
+
   if (_normalize) {
     const double normalization = x.getSize();
     assert(normalization > 0);

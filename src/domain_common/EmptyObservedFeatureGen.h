@@ -34,10 +34,7 @@ class EmptyObservedFeatureGen : public ObservedFeatureGen {
     
     virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
         const Label y) {
-      if (_pool)
-        return _pool->get();
-      else
-        return new FeatureVector<RealWeight>(); // return the zero vector
+      return new FeatureVector<RealWeight>(); // return the zero vector
     }
     
     virtual int processOptions(int argc, char** argv) {

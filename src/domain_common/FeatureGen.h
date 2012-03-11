@@ -11,7 +11,6 @@
 #define _FEATUREGEN_H
 
 #include "FeatureVector.h"
-#include "FeatureVectorPool.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
@@ -26,27 +25,11 @@ class FeatureGen {
   public:
   
     FeatureGen(boost::shared_ptr<Alphabet> alphabet) :
-      _alphabet(alphabet), _pool(0), _maxEntries(0) {}
+      _alphabet(alphabet) {}
       
     virtual ~FeatureGen() {}
     
     virtual int processOptions(int argc, char** argv) = 0;
-    
-    void enablePool(FeatureVectorPool<RealWeight>* pool) {
-      _pool = pool;
-    }
-    
-    void disablePool() {
-      _pool = 0;
-    }
-    
-    const FeatureVectorPool<RealWeight>* getPool() const {
-      return _pool;
-    }
-    
-    size_t getMaxEntries() const {
-      return _maxEntries;
-    }
     
     void setAlphabet(boost::shared_ptr<Alphabet> alphabet) {
       _alphabet = alphabet;
@@ -59,10 +42,6 @@ class FeatureGen {
   protected:
   
     boost::shared_ptr<Alphabet> _alphabet;
-  
-    FeatureVectorPool<RealWeight>* _pool;
-    
-    size_t _maxEntries;
 };
 
 #endif

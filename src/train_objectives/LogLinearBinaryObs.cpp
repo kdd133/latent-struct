@@ -38,11 +38,12 @@ void LogLinearBinaryObs::valueAndGradientPart(const WeightVector& w,
     
     bool own = false;
     FeatureVector<RealWeight>* phi = model.observedFeatures(xi, ypos, own);
+    assert(phi);
     const double mass = -yi * w.innerProd(phi);
     funcVal += Utility::log1Plus(exp(mass));    
     phi->addTo(gradFv, -yi * (1 - Utility::sigmoid(-mass)));
     
-    if (own && !phi->release()) delete phi;
+    if (own) delete phi;
   }
 }
 
@@ -55,8 +56,9 @@ void LogLinearBinaryObs::predictPart(const WeightVector& w, Model& model,
     const size_t id = x.getId();
     FeatureVector<RealWeight>* phi = model.getFgenObserved()->getFeatures(x,
         ypos);
+    assert(phi);
     const double z = w.innerProd(phi);
-    if (!phi->release()) delete phi;
+    delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

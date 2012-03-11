@@ -13,7 +13,6 @@
 #include <boost/shared_array.hpp>
 using boost::shared_array;
 #include "Alphabet.h"
-#include "FeatureVectorPool.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
 #include <assert.h>
@@ -128,22 +127,6 @@ class FeatureVector {
     int _allocatedEntries; 
     
     FeatureVector& operator=(const FeatureVector& fv);
-    
-  // Used by FeatureVectorPool
-  public:
-    FeatureVector* getNext() const { return _next; }
-    void setNext(FeatureVector* next) { _next = next; }
-    void setPoolOwner(FeatureVectorPool<Weight>* pool) { _pool = pool; }
-    bool isOwnedByPool() const { return _pool != 0; }
-    bool release() {
-      if (!_pool)
-        return false;
-      _pool->release(this);
-      return true;
-    }
-  private:
-    FeatureVector* _next;
-    FeatureVectorPool<Weight>* _pool;
 };
 
 template <typename Weight>
@@ -151,7 +134,7 @@ FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
     shared_array<Weight> values, int entries, bool copy) :
   _indices(indices), _values(values), _entries(entries), _length(0),
     _scaleFactor(Weight::kOne), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(entries), _next(0), _pool(0) {
+    _allocatedEntries(entries) {
   if (isDense()) { // dense vector
     _length = _entries;
     if (copy) {
@@ -184,7 +167,7 @@ template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
   _indices(0), _values(0), _entries(length), _length(length),
     _scaleFactor(Weight::kOne), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(length), _next(0), _pool(0) {
+    _allocatedEntries(length) {
   _values.reset(new Weight[length]);
   if (allocateIndices)
     _indices.reset(new int[length]);
@@ -194,7 +177,7 @@ FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const set<int>& indicesList) :
     _indices(0), _values(0), _entries(indicesList.size()),
-    _allocatedEntries(_entries), _next(0), _pool(0) {
+    _allocatedEntries(_entries) {
   if (_entries == 0)
     return; // return zero vector
   _indices.reset(new int[_entries]);
@@ -220,7 +203,7 @@ bool FeatureVector<Weight>::reinit(const set<int>& indicesList) {
 
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector() :
-    _indices(0), _values(0), _allocatedEntries(0), _next(0), _pool(0) {
+    _indices(0), _values(0), _allocatedEntries(0) {
   reinit();
 }
 
@@ -238,7 +221,7 @@ template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const unordered_map<int,Weight>&
     featureCounts) :
     _indices(0), _values(0), _entries(featureCounts.size()),
-    _allocatedEntries(_entries), _next(0), _pool(0) {
+    _allocatedEntries(_entries) {
   if (_entries == 0)
     return; // return zero vector
   _indices.reset(new int[_entries]);
@@ -272,7 +255,6 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 template <typename Weight>
 void FeatureVector<Weight>::pack() {
   assert(!isDense());
-  assert(!_pool); // FeatureVector's from a pool should not be resized this way
   if (_entries == _allocatedEntries)
     return;
   assert(_indices);
@@ -293,7 +275,7 @@ template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const FeatureVector<Weight>& fv) :
   _indices(0), _values(0), _entries(fv._entries), _length(fv._length),
     _scaleFactor(fv._scaleFactor), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(_entries), _next(0), _pool(0) {
+    _allocatedEntries(_entries) {
   if (fv._indices != 0) {
     int* indsTemp = new int[_entries];
     for (int i = 0; i < _entries; i++)

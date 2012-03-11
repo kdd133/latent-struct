@@ -75,7 +75,8 @@ class AlignmentTransducer : public Transducer {
     LogWeight logPartition();
 
     // Note: Assumes fv has been zeroed out.
-    LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv); 
+    LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
+        boost::shared_array<LogWeight> buffer); 
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -127,10 +128,6 @@ class AlignmentTransducer : public Transducer {
     
     int _numArcs;
     
-    boost::shared_array<LogWeight> _tempLogWeights;
-    
-    int _tempLogWeightsLength;
-    
     // If true, fire a feature for arcs connecting to the Final state.
     bool _includeFinalFeats;
     
@@ -161,10 +158,8 @@ AlignmentTransducer<Arc>::~AlignmentTransducer() {
 template<typename Arc>
 void AlignmentTransducer<Arc>::clear() {    
   BOOST_FOREACH(const FeatureVector<RealWeight>* fv, _fvecs) {
-    if (fv != 0) {
-      if (!((FeatureVector<RealWeight>*)fv)->release()) // non-const cast
-        delete fv; // Only delete fv's that aren't in a memory pool.
-    }
+    if (fv != 0)
+      delete fv;
   }
   
   if (_fst)
@@ -400,7 +395,7 @@ LogWeight AlignmentTransducer<Arc>::logPartition() {
 
 template<typename Arc>
 LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv) {
+    FeatureVector<LogWeight>& fv, boost::shared_array<LogWeight> logArray) {
   assert(_fst);
   assert(!fv.isDense());
   
@@ -413,12 +408,16 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
   const LogWeight logZ = logPartition(); // fills in _betas if necessary
   assert(_alphas.size() > 0 && _betas.size() == _alphas.size());
   
-  const int de = _fgen->getMaxEntries() + _fgenObs->getMaxEntries();
-  if (!_tempLogWeights) {
-    _tempLogWeights.reset(new LogWeight[de]); // passed to convert()
-    _tempLogWeightsLength = de;
+  // FIXME: We're assuming d doesn't change between calls, but we don't actually
+  // verify this. In fact, this whole buffer business is ugly and should be done
+  // away with if possible.
+  const int d = _fgen->getAlphabet()->size();
+  if (!logArray) {
+    // The alphabet is shared between the two f-gens (see latent_struct.cpp)
+    assert(d == _fgenObs->getAlphabet()->size());
+    logArray.reset(new LogWeight[d]);
   }
-  assert(de == _tempLogWeightsLength);
+  assert(logArray);
   
   tr1::unordered_map<int,LogWeight> sparse;
   
@@ -433,7 +432,7 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
       LogWeight weight(arc.weight);
       weight.timesEquals(_alphas[prevstate]);
       weight.timesEquals(_betas[arc.nextstate]);  
-      convert(*arc.fv, _tempLogWeights, de).addTo(sparse, weight);
+      convert(*arc.fv, logArray, d).addTo(sparse, weight);
     }
   }
   fv.reinit(sparse);
@@ -503,7 +502,7 @@ AlignmentTransducer<StdFeatArc>::logPartition() {
 
 template<> inline LogWeight
 AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv) {
+    FeatureVector<LogWeight>& fv, boost::shared_array<LogWeight> buffer) {
   throw logic_error("Can't compute expectations in the Tropical semiring.");
 }
 

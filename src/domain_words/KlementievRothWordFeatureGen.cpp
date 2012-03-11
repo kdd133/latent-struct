@@ -28,7 +28,7 @@ const string KlementievRothWordFeatureGen::SUB_JOINER = ",";
 KlementievRothWordFeatureGen::KlementievRothWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _offsetSize(1),
-    _normalize(normalize), _addBias(true), _legacy(false) {
+    _normalize(normalize), _addBias(true) {
 }
 
 int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
@@ -37,8 +37,6 @@ int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
   bool noBias = false;
   bool noNormalize = false;
   options.add_options()
-    ("legacy", opt::bool_switch(&_legacy),
-        "perform normalization as in old code")
     ("kr-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
     ("kr-no-normalize", opt::bool_switch(&noNormalize),
         "do not normalize by the length of the longer word")
@@ -146,32 +144,13 @@ FeatureVector<RealWeight>* KlementievRothWordFeatureGen::getFeatures(
   // TODO: Add the optional "distance" feature described in Feb. 17, 2011
   // email from M.W. Chang
   
-  // If we're gathering features, keep track of the maximum number of non-zero
-  // entries in a feature vector.
-  if (!_alphabet->isLocked()) {
-    const size_t entries = sub_pair_counts.size();
-    if (entries > _maxEntries)
-      _maxEntries = entries;
-  }
-  
   assert(sub_pair_counts.size() > 0);  
-  FeatureVector<RealWeight>* fv = 0;  
-  if (_pool)
-    fv = _pool->get(sub_pair_counts);
-  else
-    fv = new FeatureVector<RealWeight>(sub_pair_counts);
+  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(sub_pair_counts);
   assert(fv);
 
   if (_normalize) {
     double normalization = x.getSize();
     assert(normalization > 0);
-    if (_legacy) {
-      // In the old code, we divided by the length of the longest string, where
-      // the length was determined after padding the string with begin/end of
-      // word markers. In the new code, that procedure would yield different
-      // normalizers in the KR and bias feature gens, which is undesirable.
-      normalization += 2;
-    }
     fv->timesEquals(1.0 / normalization);
   }
 

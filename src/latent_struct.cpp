@@ -17,7 +17,6 @@
 #include "EmptyAlignmentFeatureGen.h"
 #include "EmptyObservedFeatureGen.h"
 #include "Example.h"
-#include "FeatureVectorPool.h"
 #include "InputReader.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "KlementievRothSentenceFeatureGen.h"
@@ -87,12 +86,10 @@ int main(int argc, char** argv) {
   string trainFilename(blank);
   string weightsInit(blank);
   int seed = 0;
-  size_t poolMB = 0;
   size_t threads = 1;
   double negativeRatio = 0.0;
   double trainFraction = 1.0;
   bool optEM = false;
-  bool disablePool = false;
   bool split = false;
   bool keepAllPositives = false;
   const string optAuto = "Auto";
@@ -127,7 +124,6 @@ int main(int argc, char** argv) {
   options.add_options()
     ("dir", opt::value<string>(&dirPath),
         "directory in which to store results (must already exist)")
-    ("disable-pool", opt::bool_switch(&disablePool), "disable the memory pool")
 //  ("em", opt::bool_switch(&optEM), "employ the optimizer inside an EM loop")
     ("eval", opt::value<string>(&evalFilename), "evaluation data file")
     ("fgen-lat", opt::value<string>(&fgenNameLat)->default_value(
@@ -145,8 +141,6 @@ positive examples present in the data are retained")
         LogLinearMulti::name()), objMsgObs.str().c_str())
     ("opt", opt::value<string>(&optName)->default_value(optAuto),
         optMsgObs.str().c_str())
-    ("pool-size", opt::value<size_t>(&poolMB)->default_value(25),
-        "max size of pool, *per thread* (megabytes)")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
@@ -568,57 +562,6 @@ sample-train to use the unselected training examples as the eval set")
     delete[] v;
   }
 
-  // Optionally enable memory pools for managing FeatureVector objects.
-  ptr_vector<nullable<FeatureVectorPool<RealWeight> > > poolsLat;
-  ptr_vector<nullable<FeatureVectorPool<RealWeight> > > poolsObs;
-  if (!disablePool) {
-    assert(objective->getNumModels() == threads);
-    for (size_t i = 0; i < objective->getNumModels(); i++) {
-      Model& model = objective->getModel(i);
-      const size_t maxLatEntries = model.getFgenLatent()->getMaxEntries();
-      const size_t maxObsEntries = model.getFgenObserved()->getMaxEntries();    
-      cout << "thread " << i << " maxLatEntries: " << maxLatEntries <<
-          "  maxObsEntries: " << maxObsEntries << endl;
-      const int bytesPerEntry = sizeof(int) + sizeof(double); // indices + values
-      assert(poolMB > 0);
-      const unsigned long long maxBytes = poolMB * 1048576ULL;
-      assert(maxLatEntries + maxObsEntries > 0);
-      
-      if (maxLatEntries > 0) {
-        const size_t maxAllowedLatFvs =
-            maxBytes / (maxLatEntries * bytesPerEntry);
-        cout << "Allocating pool of size " << min(maxAllowedLatFvs, maxNumFvs)
-            << " for latent feature vectors.\n";
-        // It doesn't make sense to combine the memory pool with caching of
-        // transducers, since the feature vectors pointed to by the cached
-        // transducers would be in constant flux. We can still use the pool when
-        // we classify examples, though.
-        poolsLat.push_back(new FeatureVectorPool<RealWeight>(maxLatEntries,
-          min(maxAllowedLatFvs, maxNumFvs), false)); // not expandable
-        if (!model.getCacheEnabled())
-          model.getFgenLatent()->enablePool(&poolsLat[i]);
-      }
-      else
-        poolsLat.push_back(0);
-        
-      if (maxObsEntries > 0) {
-        // Generally (always?), only one observed feature vector appears in the
-        // fst for each class, so we'll initialize this pool to size 1 and allow
-        // it to expand. (1 per thread, that is)
-        cout << "Allocating pool of size 1 for observed feature vectors.\n";
-        // See comment in previous block.
-        poolsObs.push_back(new FeatureVectorPool<RealWeight>(maxObsEntries, 1,
-            true)); // expandable
-        if (!model.getCacheEnabled())
-          model.getFgenObserved()->enablePool(&poolsObs[i]);
-      }
-      else
-        poolsObs.push_back(0);
-    }
-  }
-  assert(disablePool || poolsLat.size() == threads);
-  assert(disablePool || poolsObs.size() == threads);
-
   // Train the model.
   cout << "Calling Optimizer.train()\n";
   outerOpt->train(w);
@@ -650,25 +593,14 @@ sample-train to use the unselected training examples as the eval set")
   }
   
   trainData.clear(); // We no longer need the training data.
-  
-  // If the model was caching transducers, we did not use the feature vector
-  // pool during training. We'll enable it now (or simply reset to null if it
-  // was never initialized) for the sake of classifying the eval examples.
-  // TODO: This is actually inefficient in terms of memory use, since the pool
-  // was allocated before training, but not used during training. It should
-  // instead be allocated here if caching was also enabled.
+
   if (cachingEnabled) {
+    // There's no point in caching during evaluation, since each eval example
+    // will be used exactly once.
     for (size_t i = 0; i < objective->getNumModels(); i++) {
-      Model& model = objective->getModel(i);
-      // No point in caching during evaluation.
+      Model& model = objective->getModel(i);      
       model.setCacheEnabled(false);
       model.emptyCache();
-      if (!disablePool) {
-        if (!poolsLat.is_null(i))
-          model.getFgenLatent()->enablePool(&poolsLat[i]);
-        if (!poolsObs.is_null(i))
-          model.getFgenObserved()->enablePool(&poolsObs[i]);
-      }
     }
   }
   

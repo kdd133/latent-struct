@@ -39,6 +39,7 @@ void MaxMarginBinaryObs::valueAndGradientPart(const WeightVector& w,
     
     bool own = false;
     FeatureVector<RealWeight>* phi = model.observedFeatures(xi, ypos, own);
+    assert(phi);
     const double z = yi * w.innerProd(phi);
     funcVal += Utility::hinge(1-z);
     
@@ -46,7 +47,7 @@ void MaxMarginBinaryObs::valueAndGradientPart(const WeightVector& w,
     if (z < 1)
       phi->addTo(gradFv, -yi);
 
-    if (own && !phi->release()) delete phi;
+    if (own) delete phi;
   }
 }
 
@@ -59,8 +60,9 @@ void MaxMarginBinaryObs::predictPart(const WeightVector& w, Model& model,
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     FeatureVector<RealWeight>* phi = fgen->getFeatures(x, ypos);
+    assert(phi);
     const double z = w.innerProd(phi);
-    if (!phi->release()) delete phi;
+    delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

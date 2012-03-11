@@ -158,19 +158,9 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
   
   // TODO: Add the optional "distance" feature described in Feb. 17, 2011
   // email from M.W. Chang
-  
-  if (!_alphabet->isLocked()) {
-    const size_t entries = sub_pair_counts.size();
-    if (entries > _maxEntries)
-      _maxEntries = entries;
-  }
 
   assert(sub_pair_counts.size() > 0);  
-  FeatureVector<RealWeight>* fv = 0;  
-  if (_pool)
-    fv = _pool->get(sub_pair_counts);
-  else
-    fv = new FeatureVector<RealWeight>(sub_pair_counts);
+  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(sub_pair_counts);
   assert(fv);
 
   if (_normalize) {

@@ -34,6 +34,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <list>
 #include <set>
@@ -120,6 +121,13 @@ class StringEditModel : public Model {
     
     // A cache for observed feature vectors.
     ptr_map<ExampleId, FeatureVector<RealWeight> > _fvCacheObs;
+    
+    // For the sake of efficiency, we pass a buffer to AlignmentTransducer that
+    // is used for temporary storage when computing logExpectedFeaturesUnnorm().
+    // The callee allocates and otherwise manages the buffer; the reason it is
+    // a member variable here is that we only require one buffer per thread --
+    // not one per Transducer -- and we currently use one thread per Model.
+    shared_array<LogWeight> _buffer;
     
     Fst* getFst(ptr_map<ExampleId, Fst>& cache, const WeightVector& w,
         const Pattern& x, const Label y,
@@ -309,7 +317,7 @@ LogWeight StringEditModel<Arc>::expectedFeatures(const WeightVector& w,
     FeatureVector<LogWeight>& fv, const Pattern& x, const Label y,
     bool normalize) {
   Fst* fst = getFst(_fstCache, w, (StringPair&)x, y);
-  const LogWeight logZ = fst->logExpectedFeaturesUnnorm(fv);
+  const LogWeight logZ = fst->logExpectedFeaturesUnnorm(fv, _buffer);
   fst->clearDynProgVariables();
   if (normalize)
     fv.timesEquals(-logZ);
@@ -373,7 +381,6 @@ FeatureVector<RealWeight>* StringEditModel<Arc>::observedFeatures(
     typename ptr_map<ExampleId, FeatureVector<RealWeight> >::iterator it =
         _fvCacheObs.find(id);
     if (it == _fvCacheObs.end()) {
-      assert(_fgenObserved->getPool() == 0);
       fv = _fgenObserved->getFeatures(x, y);
       assert(fv);
       _fvCacheObs.insert(id, fv);

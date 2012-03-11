@@ -61,9 +61,10 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     // Subtract the observed features and score for the correct label yi.
     bool own = false;
     FeatureVector<RealWeight>* phi_yi = model.observedFeatures(xi, yi, own);
+    assert(phi_yi);
     phi_yi->addTo(gradFv, -1);
     funcVal -= w.innerProd(phi_yi);
-    if (own && !phi_yi->release()) delete phi_yi;
+    if (own) delete phi_yi;
   }
 }
 

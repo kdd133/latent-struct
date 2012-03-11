@@ -27,9 +27,7 @@ using namespace std;
 const string BiasFeatureGen::kPrefix = "Bias";
 
 BiasFeatureGen::BiasFeatureGen(shared_ptr<Alphabet> alphabet, bool normalize) :
-    ObservedFeatureGen(alphabet), _normalize(normalize) {
-  _maxEntries = 1; // Exactly one bias feature always fires.
-}
+    ObservedFeatureGen(alphabet), _normalize(normalize) {}
 
 int BiasFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
@@ -65,20 +63,13 @@ FeatureVector<RealWeight>* BiasFeatureGen::getFeatures(const Pattern& x,
   if (fId == -1) {
     // This should only ever happen if there's a class in the test set that
     // didn't appear in the training set.
-    if (_pool)
-      return _pool->get();
-    else
-      return new FeatureVector<RealWeight>(); // return the zero vector
+    return new FeatureVector<RealWeight>(); // return the zero vector
   }
 
   set<int> featureIds;
   featureIds.insert(fId);
   
-  FeatureVector<RealWeight>* fv = 0;
-  if (_pool)
-    fv = _pool->get(featureIds);
-  else
-    fv = new FeatureVector<RealWeight>(featureIds);
+  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
   assert(fv);
     
   if (_normalize) {
