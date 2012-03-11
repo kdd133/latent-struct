@@ -24,7 +24,7 @@ using namespace std;
 
 
 LbfgsOptimizer::LbfgsOptimizer(TrainingObjective& objective) :
-    Optimizer(objective), _restarts(3), _quiet(false) {
+    Optimizer(objective, 1e-4), _restarts(3), _quiet(false) {
   lbfgs_parameter_init(&_params);
 }
 
@@ -32,10 +32,6 @@ int LbfgsOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("beta", opt::value<double>(&_beta)->default_value(0.5),
-        "the L2 regularization constant, i.e., (beta/2)*||w||^2")
-    ("epsilon", opt::value<lbfgsfloatval_t >(&_params.epsilon)
-        ->default_value(1e-4), "value used when testing for convergence")
     ("m", opt::value<int>(&_params.m)->default_value(20),
         "number of vectors used to compute the approximate the inverse Hessian")
     ("max-iters", opt::value<int>(&_params.max_iterations)->default_value(250),
@@ -104,7 +100,7 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
   return 0;
 }
 
-double LbfgsOptimizer::train(WeightVector& w) const {
+double LbfgsOptimizer::train(WeightVector& w, double tol) const {
   boost::timer::auto_cpu_timer timer;
   const int d = w.getDim();
   assert(d > 0);
@@ -118,6 +114,7 @@ double LbfgsOptimizer::train(WeightVector& w) const {
   
   for (int t = 0; t < _restarts; t++) {
     lbfgs_parameter_t params = _params; // make a copy, since train() is const
+    params.epsilon = tol; // use the tolerance passed to train()
     ret = lbfgs(d, x, &objVal, evaluate, _quiet ? 0 : progress, &inst, &params);
     bool terminate = false;
     switch (ret) {

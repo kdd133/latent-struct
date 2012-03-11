@@ -30,17 +30,13 @@
 using namespace std;
 
 BmrmOptimizer::BmrmOptimizer(TrainingObjective& objective) :
-    Optimizer(objective), _epsilon(1e-3), _maxIters(250) {
+    Optimizer(objective, 1e-4), _maxIters(250) {
 }
 
 int BmrmOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("beta", opt::value<double>(&_beta)->default_value(0.5),
-        "the L2 regularization constant, i.e., (beta/2)*||w||^2")
-    ("epsilon", opt::value<double>(&_epsilon)->default_value(1e-3),
-        "value used when testing for convergence")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
         "maximum number of iterations")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
@@ -56,7 +52,7 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
   return 0;
 }
 
-double BmrmOptimizer::train(WeightVector& w) const {
+double BmrmOptimizer::train(WeightVector& w, double tol) const {
   namespace ublas = boost::numeric::ublas;
   const size_t d = w.getDim();
   assert(d > 0);
@@ -169,7 +165,7 @@ double BmrmOptimizer::train(WeightVector& w) const {
           (int)t, Jw, epsilon_t);
     }
     
-    if (epsilon_t <= _epsilon) {
+    if (epsilon_t <= tol) {
       if (!_quiet)
         cout << name() << ": Convergence detected; objective value " << min_Jw
           << endl;

@@ -54,11 +54,11 @@ void LogLinearBinaryObs::predictPart(const WeightVector& w, Model& model,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    FeatureVector<RealWeight>* phi = model.getFgenObserved()->getFeatures(x,
-        ypos);
+    bool own = false;
+    FeatureVector<RealWeight>* phi = model.observedFeatures(x, ypos, own);
     assert(phi);
     const double z = w.innerProd(phi);
-    delete phi;
+    if (own) delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

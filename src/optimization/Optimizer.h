@@ -17,19 +17,21 @@ class WeightVector;
 class Optimizer {
 
   public:
-    Optimizer(TrainingObjective& objective, double beta = 1.0)
+    Optimizer(TrainingObjective& objective, double beta)
       : _objective(objective), _beta(beta) {}
     
     virtual ~Optimizer() {}
 
     // Returns the objective value at the optimal point, or infinity if an
     // error was encountered.
-    virtual double train(WeightVector& w) const = 0;
+    virtual double train(WeightVector& w, double tolerance) const = 0;
 
     virtual int processOptions(int argc, char** argv) = 0;
     
-    double getBeta() const { return _beta; }
-
+    double getBeta() const;
+    
+    virtual void setBeta(double beta);
+    
   protected:
   
     TrainingObjective& _objective;
@@ -37,5 +39,13 @@ class Optimizer {
     double _beta; // regularization constant
 
 };
+
+inline double Optimizer::getBeta() const {
+  return _beta;
+}
+
+inline void Optimizer::setBeta(double beta) {
+  _beta = beta;
+}
 
 #endif

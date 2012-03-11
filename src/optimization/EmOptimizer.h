@@ -21,13 +21,15 @@ class TrainingObjective;
 class EmOptimizer : public Optimizer {
 
   public:
-    EmOptimizer(TrainingObjective& objective, shared_ptr<const Optimizer> opt);
+    EmOptimizer(TrainingObjective& objective, shared_ptr<Optimizer> opt);
     
     virtual ~EmOptimizer() {}
 
-    virtual double train(WeightVector& w) const;
+    virtual double train(WeightVector& w, double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);
+    
+    virtual void setBeta(double beta);
     
     static const string& name() {
       static const string _name = "EM";
@@ -36,10 +38,8 @@ class EmOptimizer : public Optimizer {
     
   private:
   
-    shared_ptr<const Optimizer> _convexOpt; // the convex optimization procedure
+    shared_ptr<Optimizer> _convexOpt; // the convex optimization procedure
   
-    double _epsilon; // value used when testing for convergence
-    
     int _maxIters; // maximum number of iterations
     
     bool _quiet; // suppress optimization output

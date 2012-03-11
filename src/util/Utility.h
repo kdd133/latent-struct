@@ -10,10 +10,11 @@
 #ifndef _UTILITY_H
 #define _UTILITY_H
 
-#include <string>
-using std::string;
 #include "FeatureVector.h"
 #include "Label.h"
+#include "LabelScoreTable.h"
+#include <string>
+using std::string;
 
 class Dataset;
 class InputReader;
@@ -32,7 +33,12 @@ class Utility {
       double& fval, FeatureVector<RealWeight>& grad);
         
     static void evaluate(const WeightVector& w, TrainingObjective& obj,
-      const Dataset& eval, const char* identifier, const string outFname = "");
+      const Dataset& eval, const string& identifier,
+      const string& outFname = "");
+      
+    static void evaluate(const vector<WeightVector>& weightVectors,
+      TrainingObjective& obj, const Dataset& evalData,
+      const vector<string>& ids, const vector<string>& fnames);
         
     static double sigmoid(double a);
     
@@ -48,6 +54,9 @@ class Utility {
     // Call the library function log1p if argument to log1Plus is less than
     // this value.
     static const double log1PlusTiny;
+    
+    static void printResults(const Dataset& evalData, LabelScoreTable& scores,
+        const string& id, const string& fname);
 };
 
 inline double Utility::sigmoid(double a) {

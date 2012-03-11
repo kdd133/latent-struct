@@ -46,8 +46,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
-#include <boost/ptr_container/nullable.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/uniform_int.hpp>
@@ -93,6 +91,8 @@ int main(int argc, char** argv) {
   bool split = false;
   bool keepAllPositives = false;
   const string optAuto = "Auto";
+  vector<double> betas;
+  vector<double> tolerances;
   
   // Enumerate the choices for each option that involves a class name.
   const string CMA = ", ";
@@ -122,13 +122,16 @@ int main(int argc, char** argv) {
   
   opt::options_description options("Main options");
   options.add_options()
-    ("dir", opt::value<string>(&dirPath),
+    ("beta,b", opt::value<vector<double> >(&betas)->default_value(
+        vector<double>(1, 1.0), "1.0"), "the L2 regularization constant used \
+in the training objective, i.e., (beta/2)*||w||^2")
+    ("directory", opt::value<string>(&dirPath),
         "directory in which to store results (must already exist)")
 //  ("em", opt::bool_switch(&optEM), "employ the optimizer inside an EM loop")
     ("eval", opt::value<string>(&evalFilename), "evaluation data file")
-    ("fgen-lat", opt::value<string>(&fgenNameLat)->default_value(
+    ("fgen-latent", opt::value<string>(&fgenNameLat)->default_value(
         EmptyAlignmentFeatureGen::name()), fgenMsgLat.str().c_str())
-    ("fgen-obs", opt::value<string>(&fgenNameObs)->default_value(
+    ("fgen-observed", opt::value<string>(&fgenNameObs)->default_value(
         EmptyObservedFeatureGen::name()), fgenMsgObs.str().c_str())
     ("keep-all-positives", opt::bool_switch(&keepAllPositives),
         "if --sample-train is enabled, this option ensures that all the \
@@ -137,9 +140,9 @@ positive examples present in the data are retained")
         "load weights and features from directory and predict on eval data")
     ("model", opt::value<string>(&modelName)->default_value(
         StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
-    ("obj", opt::value<string>(&objName)->default_value(
+    ("objective", opt::value<string>(&objName)->default_value(
         LogLinearMulti::name()), objMsgObs.str().c_str())
-    ("opt", opt::value<string>(&optName)->default_value(optAuto),
+    ("optimizer", opt::value<string>(&optName)->default_value(optAuto),
         optMsgObs.str().c_str())
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
@@ -155,6 +158,9 @@ without replacement); if greater than 1, the value is interpreted as the \
 sample-train to use the unselected training examples as the eval set")
     ("threads", opt::value<size_t>(&threads)->default_value(1),
         "number of threads employed to parallelize computations")
+    ("tolerance,t", opt::value<vector<double> >(&tolerances)->default_value(
+        vector<double>(1, 1e-4), "1e-4"), "the tolerance of the stopping \
+criterion used by the optimizer")
     ("train", opt::value<string>(&trainFilename), "training data file")
     ("weights-init", opt::value<string>(&weightsInit)->default_value("noise"),
         "initialize weights {heuristic, heuristic+noise, noise, zero}")
@@ -166,7 +172,7 @@ sample-train to use the unselected training examples as the eval set")
   opt::notify(vm);
   const bool help = vm.count("help");
   const bool load = vm.count("load-dir");
-  const bool writeFiles = vm.count("dir");
+  const bool writeFiles = vm.count("directory");
   
   if (split && trainFraction == 1.0) {
     cout << "Invalid arguments: Can't have --split with --sample-train=1.0\n"
@@ -178,7 +184,7 @@ sample-train to use the unselected training examples as the eval set")
         << options << endl;
     return 1;
   }
-  if (load && !vm.count("dir")) {
+  if (load && !vm.count("directory")) {
     cout << "Invalid arguments: Can't have --load-dir without --dir\n"
         << options << endl;
     return 1;
@@ -462,22 +468,22 @@ sample-train to use the unselected training examples as the eval set")
   }
 
   // Initialize the optimizer.
-  shared_ptr<Optimizer> optimizer;
+  shared_ptr<Optimizer> optimizer_;
   if (optName == optAuto) {
     // Automatically select an appropriate optimizer for the chosen objective.
     if (istarts_with(objName, "LogLinear"))
-      optimizer.reset(new LbfgsOptimizer(*objective));
+      optimizer_.reset(new LbfgsOptimizer(*objective));
     else if (istarts_with(objName, "MaxMargin"))
-      optimizer.reset(new BmrmOptimizer(*objective));
+      optimizer_.reset(new BmrmOptimizer(*objective));
     else {
       cout << "Automatic optimizer selection failed for " << objName << endl;
       return 1;
     }
   }
   else if (optName == LbfgsOptimizer::name())    
-    optimizer.reset(new LbfgsOptimizer(*objective));
+    optimizer_.reset(new LbfgsOptimizer(*objective));
   else if (optName == BmrmOptimizer::name())
-    optimizer.reset(new BmrmOptimizer(*objective));
+    optimizer_.reset(new BmrmOptimizer(*objective));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized optimizer name was given: "
@@ -485,22 +491,22 @@ sample-train to use the unselected training examples as the eval set")
       return 1;
     }
   }
-  if (optimizer->processOptions(argc, argv)) {
+  if (optimizer_->processOptions(argc, argv)) {
     cout << "Optimizer::processOptions() failed." << endl;
     return 1;
   }
 
   // Wrap the optimizer in an EM procedure if requested.
-  shared_ptr<Optimizer> outerOpt;
+  shared_ptr<Optimizer> optimizer;
   if (optEM) {
-    outerOpt.reset(new EmOptimizer(*objective, optimizer));
-    if (outerOpt->processOptions(argc, argv)) {
-      cout << "outerOpt->processOptions() failed." << endl;
+    optimizer.reset(new EmOptimizer(*objective, optimizer_));
+    if (optimizer->processOptions(argc, argv)) {
+      cout << "Optimizer::processOptions() failed." << endl;
       return 1;
     }
   }
   else
-    outerOpt = optimizer; // processOptions already called for inner optimizer
+    optimizer = optimizer_; // Note: processOptions has already been called
 
   if (help) {
     cout << options << endl;
@@ -529,22 +535,42 @@ sample-train to use the unselected training examples as the eval set")
     return 1;
   }
   cout << "Extracted " << d << " features\n";  
-  WeightVector w(d);
+
+  // If an output directory was specfied, save the alphabet and options.
+  if (writeFiles) {
+    if (!alphabet->write(dirPath + "alphabet.txt"))
+      cout << "Warning: Unable to write " << dirPath << "alphabet.txt" << endl;  
+    const string optsFname = dirPath + "options.txt";
+    ofstream optsOut(optsFname.c_str());
+    if (optsOut.good()) {
+      optsOut << optsStream.str();
+      optsOut.close();
+    }
+    else
+      cout << "Warning: Unable to write " << optsFname << endl;
+  }
 
   // Enable caching at this point, if requested.
-  if (cachingEnabled)
+  if (cachingEnabled) {
     for (size_t i = 0; i < objective->getNumModels(); i++) {
       objective->getModel(i).setCacheEnabled(true);
       // The cache may contain a "reusable" fst: see StringEditModel::getFst().
       objective->getModel(i).emptyCache();      
     }
+  }
   
+  assert(betas.size() > 0);
+  assert(tolerances.size() > 0);
+  const size_t numWeightVectors = betas.size() * tolerances.size();
+  vector<WeightVector> weightVectors;
+  for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++)
+    weightVectors.push_back(WeightVector(d));
+
   // Set initial weights (Note: the reAlloc above set them all to zero).
   if (weightsInit != "zero") {
     double* v = new double[d];
     for (int i = 0; i < d; i++)
-      v[i] = 0;
-
+      v[i] = 0;    
     if (istarts_with(weightsInit, "heuristic")) {
       const Alphabet::DictType& dict = alphabet->getDict();
       Alphabet::DictType::const_iterator it; 
@@ -558,53 +584,69 @@ sample-train to use the unselected training examples as the eval set")
       for (int i = 0; i < d; i++)
         v[i] += rgen();
     }
-    w.setWeights(v, d);
+    BOOST_FOREACH(WeightVector& w, weightVectors) {
+      w.setWeights(v, d);
+    }
     delete[] v;
   }
 
-  // Train the model.
-  cout << "Calling Optimizer.train()\n";
-  outerOpt->train(w);
-  
-  // If an output directory was specfied, write some files.
-  if (writeFiles) {
-    if (!alphabet->write(dirPath + "alphabet.txt"))
-      cout << "Warning: Unable to write " << dirPath << "alphabet.txt" << endl;  
-    if (!w.write(dirPath + "weights.txt"))
-      cout << "Warning: Unable to write " << dirPath << "weights.txt" << endl;
-    const string optsFname = dirPath + "options.txt";
-    ofstream optsOut(optsFname.c_str());
-    if (optsOut.good()) {
-      optsOut << optsStream.str();
-      optsOut.close();
+  // Train weights for each combination of the beta and tolerance parameters.
+  // Note that the fsts (if caching is enabled) will be reused after being
+  // built during the first parameter combination.
+  int wvIndex = 0;
+  BOOST_FOREACH(const double beta, betas) {
+    BOOST_FOREACH(const double tol, tolerances) {
+      assert(beta > 0); // by definition, these should be positive values
+      assert(tol > 0);
+      
+      WeightVector& w = weightVectors[wvIndex];      
+      cout << wvIndex << "-beta: " << beta << endl;
+      cout << wvIndex << "-tolerance: " << tol << endl;
+      
+      // Train the model.
+      cout << "Calling Optimizer.train()\n";
+      {        
+        boost::timer::auto_cpu_timer trainTimer;
+        optimizer->setBeta(beta);
+        optimizer->train(w, tol);
+      }
+
+      // If an output directory was specfied, save the weight vector.
+      if (writeFiles) {
+        stringstream fname;
+        fname << dirPath << wvIndex << "-weights.txt";
+        if (!w.write(fname.str()))
+          cout << "Warning: Unable to write " << fname.str() << endl;
+      }
+      
+      // Classify train examples and optionally write the predictions to a file.
+      // Note: The model's transducer cache can still be used at this point, so
+      // we defer purging it until after classifying the train examples.
+      cout << "Classifying train examples ...\n";
+      {
+        stringstream fname;
+        if (writeFiles)
+          fname << dirPath << wvIndex << "-train_predictions.txt";
+        stringstream identifier;
+        identifier << wvIndex << "-Train";
+        boost::timer::auto_cpu_timer classifyTrainTimer;
+        Utility::evaluate(w, *objective, trainData, identifier.str(),
+            fname.str());
+      }
+      
+      wvIndex++;
     }
-    else
-      cout << "Warning: Unable to write " << optsFname << endl;
-  }
-  
-  // Classify train examples and optionally write the predictions to a file.
-  // Note: The model's transducer cache can still be used at this point, so we
-  // defer purging it until after classifying the train examples.
-  cout << "Classifying train examples ...\n";
-  {
-    boost::timer::auto_cpu_timer classifyTrainTimer;
-    string fname = writeFiles ? dirPath + "train_predictions.txt" : "";
-    Utility::evaluate(w, *objective, trainData, "Train", fname);
   }
   
   trainData.clear(); // We no longer need the training data.
 
+  // Clear the fsts that were cached for the training data.
   if (cachingEnabled) {
-    // There's no point in caching during evaluation, since each eval example
-    // will be used exactly once.
-    for (size_t i = 0; i < objective->getNumModels(); i++) {
-      Model& model = objective->getModel(i);      
-      model.setCacheEnabled(false);
-      model.emptyCache();
-    }
+    for (size_t i = 0; i < objective->getNumModels(); i++)
+      objective->getModel(i).emptyCache();
   }
   
-  // Classify eval examples and optionally write the predictions to a file.
+  // Load the eval examples from the specified file.
   if (!split && vm.count("eval")) {
     cout << "Loading " << evalFilename << " ...\n";
     boost::timer::auto_cpu_timer loadEvalTimer;
@@ -616,13 +658,21 @@ sample-train to use the unselected training examples as the eval set")
         evalData.getLabelSet().size() << " classes\n";
   }
   assert(evalData.numExamples() > 0);
-  cout << "Classifying eval examples ...\n";
-  {
-    boost::timer::auto_cpu_timer classifyEvalTimer;
-    string fname = writeFiles ? dirPath + "eval_predictions.txt" : "";
-    Utility::evaluate(w, *objective, evalData, "Eval", fname);
+  
+  // Classify eval examples and optionally write the predictions to files.
+  vector<string> identifiers;
+  vector<string> fnames;
+  for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
+    stringstream fname;
+    if (writeFiles) {
+      fname << dirPath << wvIndex << "-eval_predictions.txt";
+      fnames.push_back(fname.str());
+    }
+    stringstream identifier;
+    identifier << wvIndex << "-Eval";
+    identifiers.push_back(identifier.str());
   }
+  Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
 
-  objective.reset(); // must be deleted before the memory pools
   return 0;
 }

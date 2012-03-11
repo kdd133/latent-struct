@@ -24,7 +24,7 @@ class BmrmOptimizer : public Optimizer {
     
     virtual ~BmrmOptimizer() {}
 
-    virtual double train(WeightVector& w) const;
+    virtual double train(WeightVector& w, double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);
     
@@ -34,8 +34,6 @@ class BmrmOptimizer : public Optimizer {
     }
     
   private:
-    
-    double _epsilon; // value used when testing for convergence
     
     size_t _maxIters; // maximum number of iterations
     

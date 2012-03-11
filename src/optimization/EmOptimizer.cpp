@@ -23,16 +23,14 @@ using namespace std;
 #include "WeightVector.h"
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,
-    shared_ptr<const Optimizer> opt) :
-    Optimizer(objective), _convexOpt(opt), _epsilon(1e-5), _maxIters(10) {
+    shared_ptr<Optimizer> opt) :
+    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(10) {
 }
 
 int EmOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("epsilon", opt::value<double>(&_epsilon)->default_value(1e-5),
-        "value used when testing for convergence")
     ("em-max-iters", opt::value<int>(&_maxIters)->default_value(10),
         "maximum number of iterations")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
@@ -49,7 +47,7 @@ int EmOptimizer::processOptions(int argc, char** argv) {
   return 0;
 }
 
-double EmOptimizer::train(WeightVector& w) const {
+double EmOptimizer::train(WeightVector& w, double tol) const {
   _objective.initLatentFeatureVectors(w);
   double valPrev = numeric_limits<double>::infinity();
   double valCur = valPrev;
@@ -57,7 +55,7 @@ double EmOptimizer::train(WeightVector& w) const {
   for (int iter = 0; iter < _maxIters; iter++) {
     boost::timer::auto_cpu_timer timer;
     _objective.setLatentFeatureVectors(w); // E-step (uses new W)
-    valCur = _convexOpt->train(w); // M-step (modifies W)
+    valCur = _convexOpt->train(w, tol); // M-step (modifies W)
     
     if (valCur == numeric_limits<double>::infinity()) {
       cout << name() << ": Inner solver returned an infinite objective value. "
@@ -70,7 +68,7 @@ double EmOptimizer::train(WeightVector& w) const {
       cout << name() << ": Objective value increased?! Terminating.\n";
       return valCur;
     }
-    if (valPrev - valCur < _epsilon) {
+    if (valPrev - valCur < tol) {
       if (!_quiet)
         cout << name() << ": Convergence detected; objective value " << valCur
           << endl;
@@ -84,4 +82,9 @@ double EmOptimizer::train(WeightVector& w) const {
     cout << name() << ": Max iterations reached; objective value " << valCur
         << endl;
   return valCur;
+}
+
+void EmOptimizer::setBeta(double beta) {
+  _beta = beta;
+  _convexOpt->setBeta(beta);
 }

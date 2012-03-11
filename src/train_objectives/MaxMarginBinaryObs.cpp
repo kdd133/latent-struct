@@ -55,14 +55,14 @@ void MaxMarginBinaryObs::predictPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   const Label ypos = TrainingObjective::kPositive;
-  boost::shared_ptr<ObservedFeatureGen> fgen = model.getFgenObserved();
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    FeatureVector<RealWeight>* phi = fgen->getFeatures(x, ypos);
+    bool own = false;
+    FeatureVector<RealWeight>* phi = model.observedFeatures(x, ypos, own);
     assert(phi);
     const double z = w.innerProd(phi);
-    delete phi;
+    if (own) delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }
