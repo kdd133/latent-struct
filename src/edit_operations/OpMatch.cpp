@@ -9,43 +9,48 @@
 
 #include "EditOperation.h"
 #include "OpMatch.h"
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 using namespace std;
 
 OpMatch::OpMatch(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthSource, int phraseLengthTarget, int cantFollowStateTypeId) :
-    EditOperation(opId, name),
+    int phraseLength) : EditOperation(opId, name),
     _defaultDestinationStateId(defaultDestinationStateId),
-    _phraseLengthSource(phraseLengthSource),
-    _phraseLengthTarget(phraseLengthTarget),
-    _cantFollowStateTypeId(cantFollowStateTypeId) {
+    _phraseLength(phraseLength),
+    _conditionEnabled(false) {
+}
+
+void OpMatch::setCondition(string tokenRegexStr, bool acceptMatching) {
+  if (tokenRegexStr.size() > 0) {
+    _conditionEnabled = true;
+    _tokenRegex = boost::regex(tokenRegexStr);
+    _acceptMatching = acceptMatching;
+  }
 }
 
 int OpMatch::apply(const vector<string>& source, const vector<string>& target,
     const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
-  if (_cantFollowStateTypeId != -1 && _cantFollowStateTypeId == prevStateTypeId)
+  if (i + _phraseLength > source.size() || j + _phraseLength > target.size())
     return -1;
-  const int S = source.size();
-  const int T = target.size();  
-  if (i + _phraseLengthSource > S || j + _phraseLengthTarget > T)
-    return -1;
-  // if the phrase lengths differ, this can't be an identical match
-  if (_phraseLengthSource != _phraseLengthTarget)
-    return -1;    
-  int posSource = i;
-  int posTarget = j;
-  int l = 0;
-  bool same = true;
-  for (; l < _phraseLengthSource; l++) {
-    if (source[posSource+l] != target[posTarget+l]) {
-      same = false;
-      break;
+  // If the two phrases are not identical, return -1.
+  for (int l = 0; l < _phraseLength; l++) {
+    if (source[i + l] != target[j + l])
+      return -1;
+  }
+  if (_conditionEnabled) {
+    // Since we now know that the source and target phrases are equal, we can
+    // just check the matching condition on the source side.
+    for (int l = 0; l < _phraseLength; l++) {
+      if (boost::regex_match(source[i + l], _tokenRegex)) {
+        if (!_acceptMatching)
+          return -1;
+      }
+      else if (_acceptMatching)
+        return -1;
     }
   }
-  if (!same)
-    return -1;
-  iNew = i + _phraseLengthSource;
-  jNew = j + _phraseLengthTarget;
+  iNew = i + _phraseLength;
+  jNew = j + _phraseLength;
   return _defaultDestinationStateId;
 }

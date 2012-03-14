@@ -11,6 +11,7 @@
 #define _OPIDENTITY_H
 
 #include "EditOperation.h"
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 using namespace std;
@@ -21,8 +22,7 @@ class OpMatch : public EditOperation {
   public:
   
     OpMatch(int opId, int defaultDestinationStateId, string name =
-      "Match", int phraseLengthSource = 1, int phraseLengthTarget = 1,
-      int cantFollowStateTypeId = -1);
+      "Match", int phraseLength = 1);
     
     virtual ~OpMatch() {}
     
@@ -34,15 +34,24 @@ class OpMatch : public EditOperation {
               int& iNew,
               int& jNew) const;
               
+    void setCondition(string tokenRegexStr, bool acceptMatching = true);
+              
   private:
   
     int _defaultDestinationStateId;
     
-    int _phraseLengthSource;
+    int _phraseLength;
     
-    int _phraseLengthTarget;
+    // If _acceptMatching is true, then all tokens (i.e., in a phrase) must
+    // match this regex in order for the the apply method to return true;
+    // otherwise, all tokens must not match the regex.
+    boost::regex _tokenRegex;
     
-    int _cantFollowStateTypeId;
+    // True if a non-empty string was passed to the constructor via the
+    // tokensMatchRegex argument.
+    bool _conditionEnabled;
+    
+    bool _acceptMatching;
 };
 
 #endif

@@ -45,6 +45,12 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
+  const string NONE = "None";
+  stringstream vowelsHelp;
+  vowelsHelp << "the name of a file whose first line contains a string of "
+      << "vowels (case-insensitive), e.g., \"aeiou\" (sans quotes), (note: "
+      << "this option activates consonant/vowel n-gram features); pass \""
+      << NONE << "\" instead of a filename to disable";
   namespace opt = boost::program_options;
   bool noAlign = false;
   bool noCollapse = false;
@@ -67,9 +73,7 @@ feature that indicates the edit operation that was used")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
-    ("vowels-file", opt::value<string>(&vowelsFname), "the name of a file whose \
-first line contains string of vowels (case-insensitive), e.g., \"aeiou\" \
-(sans quotes) (note: this option activates consonant/vowel n-gram features)")
+    ("vowels-file", opt::value<string>(&vowelsFname), vowelsHelp.str().c_str())
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -93,7 +97,8 @@ first line contains string of vowels (case-insensitive), e.g., \"aeiou\" \
   if (noState)
     _includeStateNgrams = false;
 
-  if (vowelsFname != "") {
+  if (vowelsFname != "" && !iequals(vowelsFname, NONE))
+  {
     _vowelsRegex = "";
     ifstream fin(vowelsFname.c_str());
     if (!fin.good()) {

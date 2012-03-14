@@ -7,10 +7,11 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#ifndef _OPMATCH_H
-#define _OPMATCH_H
+#ifndef _OPREPLACE_H
+#define _OPREPLACE_H
 
 #include "EditOperation.h"
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 using namespace std;
@@ -23,8 +24,7 @@ class OpReplace : public EditOperation {
   public:
   
     OpReplace(int opId, int defaultDestinationStateId, string name = "Replace",
-      int phraseLengthSource = 1, int phraseLengthTarget = 1,
-      int cantFollowStateTypeId = -1);
+      int phraseLengthSource = 1, int phraseLengthTarget = 1);
     
     virtual ~OpReplace() {}
     
@@ -36,6 +36,9 @@ class OpReplace : public EditOperation {
               int& iNew,
               int& jNew) const;
               
+    void setCondition(string tokenRegexStrSource, string tokenRegexStrTarget,
+      bool acceptMatchingSource = true, bool acceptMatchingTarget = true);
+      
   private:
   
     int _defaultDestinationStateId;
@@ -44,7 +47,17 @@ class OpReplace : public EditOperation {
     
     int _phraseLengthTarget;
     
-    int _cantFollowStateTypeId;
+    boost::regex _tokenRegexSource;
+    
+    boost::regex _tokenRegexTarget;
+    
+    bool _conditionEnabledSource;
+    
+    bool _conditionEnabledTarget;
+    
+    bool _acceptMatchingSource;
+    
+    bool _acceptMatchingTarget;
 };
 
 #endif

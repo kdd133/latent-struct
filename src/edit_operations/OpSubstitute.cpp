@@ -9,28 +9,42 @@
 
 #include "EditOperation.h"
 #include "OpSubstitute.h"
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 using namespace std;
 
 OpSubstitute::OpSubstitute(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthSource, int phraseLengthTarget, int cantFollowStateTypeId) :
+    int phraseLengthSource, int phraseLengthTarget) :
     EditOperation(opId, name),
     _defaultDestinationStateId(defaultDestinationStateId),
     _phraseLengthSource(phraseLengthSource),
     _phraseLengthTarget(phraseLengthTarget),
-    _cantFollowStateTypeId(cantFollowStateTypeId) {
+    _conditionEnabledSource(false),
+    _conditionEnabledTarget(false) {
+}
+
+void OpSubstitute::setCondition(string tokenRegexStrSource,
+    string tokenRegexStrTarget, bool acceptMatchingSource,
+    bool acceptMatchingTarget) {
+  if (tokenRegexStrSource.size() > 0) {
+    _conditionEnabledSource = true;
+    _tokenRegexSource = boost::regex(tokenRegexStrSource);
+    _acceptMatchingSource = acceptMatchingSource;
+  }
+  if (tokenRegexStrTarget.size() > 0) {
+    _conditionEnabledTarget = true;
+    _tokenRegexTarget = boost::regex(tokenRegexStrTarget);
+    _acceptMatchingTarget = acceptMatchingTarget;
+  }
 }
 
 int OpSubstitute::apply(const vector<string>& source, const vector<string>& target,
     const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
-  if (_cantFollowStateTypeId != -1 && _cantFollowStateTypeId == prevStateTypeId)
+  if (i + _phraseLengthSource > source.size() ||
+      j + _phraseLengthTarget > target.size())
     return -1;
-  const int S = source.size();
-  const int T = target.size();  
-  if (i + _phraseLengthSource > S || j + _phraseLengthTarget > T)
-    return -1;
-  // if the phrase lengths are the same, we need to see if they are identical
+  // This operation only applies for distinct phrase pairs.
   if (_phraseLengthSource == _phraseLengthTarget) {
     int posSource = i;
     int posTarget = j;
@@ -44,6 +58,26 @@ int OpSubstitute::apply(const vector<string>& source, const vector<string>& targ
     }
     if (same)
       return -1;
+  }
+  if (_conditionEnabledSource) {
+    for (int l = 0; l < _phraseLengthSource; l++) {
+      if (boost::regex_match(source[i + l], _tokenRegexSource)) {
+        if (!_acceptMatchingSource)
+          return -1;
+      }
+      else if (_acceptMatchingSource)
+        return -1;
+    }
+  }
+  if (_conditionEnabledTarget) {
+    for (int l = 0; l < _phraseLengthTarget; l++) {
+      if (boost::regex_match(target[j + l], _tokenRegexTarget)) {
+        if (!_acceptMatchingTarget)
+          return -1;
+      }
+      else if (_acceptMatchingTarget)
+        return -1;
+    }
   }
   iNew = i + _phraseLengthSource;
   jNew = j + _phraseLengthTarget;

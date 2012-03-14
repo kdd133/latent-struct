@@ -9,25 +9,41 @@
 
 #include "EditOperation.h"
 #include "OpInsert.h"
+#include <boost/regex.hpp>
 #include <string>
 #include <vector>
 using namespace std;
 
 OpInsert::OpInsert(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthTarget, int cantFollowStateTypeId) :
+    int phraseLengthTarget) :
     EditOperation(opId, name),
     _defaultDestinationStateId(defaultDestinationStateId),
     _phraseLengthTarget(phraseLengthTarget),
-    _cantFollowStateTypeId(cantFollowStateTypeId) {
+    _conditionEnabled(false) {
+}
+
+void OpInsert::setCondition(string tokenRegexStr, bool acceptMatching) {
+  if (tokenRegexStr.size() > 0) {
+    _conditionEnabled = true;
+    _tokenRegex = boost::regex(tokenRegexStr);
+    _acceptMatching = acceptMatching;
+  }
 }
 
 int OpInsert::apply(const vector<string>& source, const vector<string>& target,
     const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
-  if (_cantFollowStateTypeId != -1 && _cantFollowStateTypeId == prevStateTypeId)
+  if (j + _phraseLengthTarget > target.size())
     return -1;
-  const int T = target.size();
-  if (j + _phraseLengthTarget > T)
-    return -1;
+  if (_conditionEnabled) {
+    for (int l = 0; l < _phraseLengthTarget; l++) {
+      if (boost::regex_match(target[j + l], _tokenRegex)) {
+        if (!_acceptMatching)
+          return -1;
+      }
+      else if (_acceptMatching)
+        return -1;
+    }
+  }
   iNew = i;
   jNew = j + _phraseLengthTarget;
   return _defaultDestinationStateId;
