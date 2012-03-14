@@ -28,8 +28,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
 
     SentenceAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet,
-      int order = 1, bool includeAnnotatedEdits = true,
-      bool includeEditFeats = true, bool includeStateFeats = true,
+      int order = 1, bool includeStateNgrams = true,
+      bool includeAlignNgrams = true, bool includeOpFeature = true,
       bool normalize = true);
       
     virtual ~SentenceAlignmentFeatureGen() {}
@@ -48,11 +48,6 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
       static const string _name = "SentenceAlignment";
       return _name;
     }
-    
-    static bool getPhraseIterators(const vector<string>& str,
-        int first, int last,
-        vector<string>::const_iterator& itBegin,
-        vector<string>::const_iterator& itEnd);
       
   private:
   
@@ -60,11 +55,11 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
       
     int _order;
     
-    bool _includeAnnotatedEdits;
-    
-    bool _includeEditFeats;
-    
     bool _includeStateNgrams;
+    
+    bool _includeAlignNgrams;
+    
+    bool _includeOpFeature;
     
     bool _normalize;
     

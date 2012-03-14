@@ -70,8 +70,6 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _normalize;
     
-    bool _addContextFeats;
-    
     string _vowelsRegex;
     
     // private copy constructor and assignment operator (passing by value is

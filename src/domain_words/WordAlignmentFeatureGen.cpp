@@ -41,7 +41,7 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(
         _includeAlignNgrams(includeAlignNgrams),
         _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
         _includeOpFeature(includeOpFeature),
-        _normalize(normalize), _addContextFeats(false) {
+        _normalize(normalize) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -60,8 +60,6 @@ int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   string vowelsFname;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("add-context-feats", opt::bool_switch(&_addContextFeats), "add features \
-for combinations of the previous and next characters in the two strings")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
@@ -149,7 +147,6 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   regex regPhraseSep(escape + FeatureGenConstants::PHRASE_SEP);
   
   // Determine the point in the history where the longest n-gram begins.
-  typedef vector<AlignmentPart>::const_iterator align_iterator;
   int left;
   if (_order + 1 > histLen)
     left = 0;

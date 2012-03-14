@@ -18,6 +18,7 @@
 #include "StringPair.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
@@ -30,29 +31,31 @@ using namespace boost;
 using namespace std;
 
 SentenceAlignmentFeatureGen::SentenceAlignmentFeatureGen(
-    shared_ptr<Alphabet> alphabet, int order, bool includeAnnotatedEdits,
-    bool includeEditFeats, bool includeStateNgrams, bool normalize) :
-    AlignmentFeatureGen(alphabet), _order(order), _includeAnnotatedEdits(
-        includeAnnotatedEdits), _includeEditFeats(includeEditFeats),
-        _includeStateNgrams(includeStateNgrams), _normalize(normalize) {
+    shared_ptr<Alphabet> alphabet, int order, bool includeStateNgrams,
+      bool includeAlignNgrams, bool includeOpFeature, bool normalize) :
+    AlignmentFeatureGen(alphabet), _order(order),
+        _includeStateNgrams(includeStateNgrams),
+        _includeAlignNgrams(includeAlignNgrams),
+        _includeOpFeature(includeOpFeature),
+        _normalize(normalize) {
 }
 
 int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
-  bool noAnnotated = false;
-  bool noEdit = false;
-  bool noState = false;
+  bool noAlign = false;
   bool noNormalize = false;
+  bool noOpFeature = false;
+  bool noState = false;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("no-annotate", opt::bool_switch(&noAnnotated), "do not include annotated \
-edit operation features (e.g., edits along with affected characters)")
-    ("no-edit", opt::bool_switch(&noEdit), "do not include edit operation \
-features (overrides --no-annotate)")
+    ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
+features of the aligned strings")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
-length of the longer sentence")
-    ("no-state", opt::bool_switch(&noState), "do not include state \
-(transition) features")
+length of the longer word")
+    ("no-op-feature", opt::bool_switch(&noOpFeature), "do not include a \
+feature that indicates the edit operation that was used")
+    ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
+features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
     ("help", "display a help message")
   ;
@@ -66,12 +69,12 @@ length of the longer sentence")
     return 0;
   }
   
-  if (noAnnotated)
-    _includeAnnotatedEdits = false;
-  if (noEdit)
-    _includeEditFeats = false;
+  if (noAlign)
+    _includeAlignNgrams = false;
   if (noNormalize)
     _normalize = false;
+  if (noOpFeature)
+    _includeOpFeature = false;
   if (noState)
     _includeStateNgrams = false;
   
@@ -80,81 +83,87 @@ length of the longer sentence")
 
 FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     const Pattern& x, Label label, int iNew, int jNew,
-    const EditOperation& op, const vector<AlignmentPart>& stateHistory) {
-  const vector<string>& source = ((const StringPair&)x).getSource();
-  const vector<string>& target = ((const StringPair&)x).getTarget();
+    const EditOperation& op, const vector<AlignmentPart>& history) {
+  //const vector<string>& source = ((const StringPair&)x).getSource();
+  //const vector<string>& target = ((const StringPair&)x).getTarget();
     
   // TODO: May want to do the tokenizing in the reader, store in a
   // different data structure (not StringPair) possibly with
   // feature ids for the "basic" features, which can then be
   // combined into "complex" features here in the FeatureGen.
-  // Note that this would require making AlignmentTransduceconst vector<string>& sourcer more
+  // Note that this would require making AlignmentTransducer more
   // generic, since it currently assumes two vectors of strings;
   // however, I think it only actually needs to know the "size" of
   // the source and target sequences.
     
-  const int histLen = stateHistory.size();
+  const int histLen = history.size();
   assert(iNew >= 0 && jNew >= 0);
   assert(histLen >= 1);
   assert(_order >= 0);
   
   set<int> featureIds;
-  stringstream ss;
-  
   const char* sep = FeatureGenConstants::PART_SEP;
 
   // TODO: See if FastFormat (or some other int2str method) improves efficiency
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
   
-  // n-grams of the state sequence (only valid up to the Markov order)
+  // Determine the point in the history where the longest n-gram begins.
+  int left;
+  if (_order + 1 > histLen)
+    left = 0;
+  else
+    left = histLen - (_order + 1);
+  assert(left >= 0);
+  
+  // Extract n-grams of the state sequence (up to the Markov order).
   if (_includeStateNgrams) {
-    ss.str(""); // re-initialize the stringstream
-    ss << label << sep << "S:";
-    int start;
-    if (_order + 1 > histLen)
-      start = 0;
-    else
-      start = histLen - (_order + 1);
-    for (int k = start; k < histLen-1; k++) {
-      ss << stateHistory[k].state.getName();
-      addFeatureId(ss.str(), featureIds);
-      ss << FeatureGenConstants::OP_SEP;
+    stringstream prefix;
+    prefix << label << sep << "S:";
+    string s;
+    for (int k = histLen - 1; k >= left; k--) {
+      s = history[k].state.getName() + s;
+      addFeatureId(prefix.str() + s, featureIds);
+      s = FeatureGenConstants::OP_SEP + s;
     }
-    ss << stateHistory[histLen-1].state.getName();
-    addFeatureId(ss.str(), featureIds);
   }
 
-  // edit operation feature (state, operation interchangable in this function)
-  if (_includeEditFeats && op.getId() != OpNone::ID) {
-    if (_includeAnnotatedEdits) {
-      vector<string>::const_iterator sourcePhraseBegin, sourcePhraseEnd;
-      const bool gotSource = false; // FIXME = getPhraseIterators(source, i, iNew,
-          //sourcePhraseBegin, sourcePhraseEnd);
-      vector<string>::const_iterator targetPhraseBegin, targetPhraseEnd;
-      const bool gotTarget = false; // FIXME = getPhraseIterators(target, j, jNew,
-          //targetPhraseBegin, targetPhraseEnd);
-          
+  // These features only fire if we didn't perform a no-op on this arc.
+  if (op.getId() != OpNone::ID) {
+    stringstream prefix;
+    prefix << label << sep << "A:";
+    
+    if (_includeAlignNgrams) {
       typedef tokenizer<char_separator<char> > Tokenizer;
       char_separator<char> featSep(FeatureGenConstants::WORDFEAT_SEP);
-            
+      char_separator<char> phraseSep(FeatureGenConstants::PHRASE_SEP);
+      
       // Figure out how many indicator features there are. We assume that the
       // first feature name is "WRD" -- the id of the word itself. Since this
       // is a very sparse feature, we choose to ignore it below. However, it
       // could be used in the future to, e.g., lookup the word in some sort of
       // table to get a quantity that's of interest.
       int numFeats = 0;
+      int k = histLen - 1;
+      bool gotSource = history[k].source != FeatureGenConstants::EPSILON;
+      bool gotTarget = history[k].target != FeatureGenConstants::EPSILON;
+      // We assume the source and target have the same number of features, so
+      // we only need to count the features in one or the other.
       if (gotSource) {
-        Tokenizer tokens(*sourcePhraseBegin, featSep);
+        Tokenizer phrases(history[k].source, phraseSep);
+        const string phrase0 = *phrases.begin();
+        Tokenizer tokens(phrase0, featSep);
         Tokenizer::const_iterator it = tokens.begin();
-        assert(istarts_with(*it, "WRD")); // FIXME: Should not be hard-coded.
+        assert(istarts_with(*it, "WRD")); // FIXME: Should not be hard-coded
         for (; it != tokens.end(); ++it)
           ++numFeats;
       }
       else {
         assert(gotTarget);
-        Tokenizer tokens(*targetPhraseBegin, featSep);
+        Tokenizer phrases(history[k].target, phraseSep);
+        const string phrase0 = *phrases.begin();
+        Tokenizer tokens(phrase0, featSep);
         Tokenizer::const_iterator it = tokens.begin();
-        assert(istarts_with(*it, "WRD")); // FIXME: Should not be hard-coded.
+        assert(istarts_with(*it, "WRD")); // FIXME: Should not be hard-coded
         for (; it != tokens.end(); ++it)
           ++numFeats;
       }      
@@ -163,37 +172,56 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
       
       vector<string> sourceFeats(numFeats);
       vector<string> targetFeats(numFeats);
-      if (gotSource) {
-        vector<string>::const_iterator phraseIt = sourcePhraseBegin;
-        for (; phraseIt != sourcePhraseEnd; phraseIt++) {
-          Tokenizer tokens(*phraseIt, featSep);
-          Tokenizer::const_iterator it = tokens.begin();
-          ++it; // skip WRD
-          for (int fi = 0; fi < numFeats; fi++)
-            sourceFeats[fi] += (*it++) + FeatureGenConstants::PHRASE_SEP;
-          assert(it == tokens.end());
+      vector<string> ngramFeats(numFeats);
+      
+      for (k = histLen - 1; k >= left; k--) {
+        gotSource = history[k].source != FeatureGenConstants::EPSILON;
+        gotTarget = history[k].target != FeatureGenConstants::EPSILON;
+          
+        if (gotSource) {
+          Tokenizer phrases(history[k].source, phraseSep);
+          BOOST_FOREACH(string phrase, phrases) {
+            Tokenizer tokens(phrase, featSep);
+            Tokenizer::const_iterator it = tokens.begin();
+            ++it; // skip WRD
+            for (int fi = 0; fi < numFeats; fi++)
+              sourceFeats[fi] += (*it++) + FeatureGenConstants::PHRASE_SEP;
+            assert(it == tokens.end());
+          }
         }
-      }
-      if (gotTarget) {
-        vector<string>::const_iterator phraseIt = targetPhraseBegin;
-        for (; phraseIt != targetPhraseEnd; phraseIt++) {
-          Tokenizer tokens(*phraseIt, featSep);
-          Tokenizer::const_iterator it = tokens.begin();
-          ++it; // skip WRD
+        else {
           for (int fi = 0; fi < numFeats; fi++)
-            targetFeats[fi] += (*it++) + FeatureGenConstants::PHRASE_SEP;
-          assert(it == tokens.end());
+            sourceFeats[fi] = FeatureGenConstants::EPSILON;
         }
-      }
         
-      for (int fi = 0; fi < numFeats; fi++) {
-        ss.str(""); // re-initialize the stringstream
-        ss << label << sep << "E:" << op.getName() << ":" << sourceFeats[fi] <<
-            FeatureGenConstants::OP_SEP << targetFeats[fi];
-        addFeatureId(ss.str(), featureIds);
+        if (gotTarget) {
+          Tokenizer phrases(history[k].target, phraseSep);
+          BOOST_FOREACH(string phrase, phrases) {
+            Tokenizer tokens(phrase, featSep);
+            Tokenizer::const_iterator it = tokens.begin();
+            ++it; // skip WRD
+            for (int fi = 0; fi < numFeats; fi++)
+              targetFeats[fi] += (*it++) + FeatureGenConstants::PHRASE_SEP;
+            assert(it == tokens.end());
+          }
+        }
+        else {
+          for (int fi = 0; fi < numFeats; fi++)
+            targetFeats[fi] = FeatureGenConstants::EPSILON;
+        }
+        
+        for (int fi = 0; fi < numFeats; fi++) {
+          ngramFeats[fi] = sourceFeats[fi] + FeatureGenConstants::OP_SEP +
+              targetFeats[fi] +ngramFeats[fi]; 
+          addFeatureId(prefix.str() + ngramFeats[fi], featureIds);
+          ngramFeats[fi] = FeatureGenConstants::PART_SEP + ngramFeats[fi];
+        }
       }
     }
-    ss.str(""); // re-initialize the stringstream
+  }
+  
+  if (_includeOpFeature) {
+    stringstream ss;
     ss << label << sep << "E:" << op.getName();
     addFeatureId(ss.str(), featureIds);
   }
@@ -220,23 +248,4 @@ inline void SentenceAlignmentFeatureGen::addFeatureId(const string& f,
   if (fId == -1)
     return;
   featureIds.insert(fId);
-}
-
-inline bool SentenceAlignmentFeatureGen::getPhraseIterators(
-    const vector<string>& str, int first, int last,
-    vector<string>::const_iterator& itBegin,
-    vector<string>::const_iterator& itEnd) {
-  assert(last >= first);
-  if (last > (int)str.size())
-    last = str.size();
-  if (last == first)
-    return false;
-  if (first+1 == last) {
-    itBegin = str.begin() + first;
-    itEnd = itBegin + 1;
-    return true;
-  }
-  itBegin = str.begin() + first;
-  itEnd = str.begin() + last;
-  return true;
 }
