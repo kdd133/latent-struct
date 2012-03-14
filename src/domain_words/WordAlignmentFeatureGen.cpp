@@ -137,7 +137,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   const string C = "[C]";
   
   // The vowel regex matches any of the characters read from the vowels file.
-  regex regVowel("["+_vowelsRegex+"]", regex::icase|regex::perl);
+  regex regVowel("[" + _vowelsRegex + "]", regex::icase|regex::perl);
   
   // The consonant regex matches anything that's not a vowel, punctuation, or
   // a space.
@@ -199,17 +199,13 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
           s = history[k].source + s;
         if (history[k].target != FeatureGenConstants::EPSILON)
           t = history[k].target + t;
-        // Since collapsed n-grams of different sizes may not be unique, we
-        // prepend the size/length of the n-gram to each feature.
-        stringstream size;
-        size << l << FeatureGenConstants::PART_SEP;
         string collapsed = s + FeatureGenConstants::OP_SEP + t;
         collapsed = regex_replace(collapsed, regPhraseSep, "");
-        addFeatureId(prefix.str() + size.str() + collapsed, featureIds);
+        addFeatureId(prefix.str() + collapsed, featureIds);
         if (includeVowels) {
           const string temp = regex_replace(collapsed, regConsonant, C);
           const string collapsedVC = regex_replace(temp, regVowel, V);
-          addFeatureId(prefix.str() + size.str() + collapsedVC, featureIds);
+          addFeatureId(prefix.str() + collapsedVC, featureIds);
         }
       }
     }
