@@ -15,16 +15,16 @@
 #include "AlignmentPart.h"
 #include "FeatureVector.h"
 #include "Label.h"
-#include "StateType.h"
+#include <boost/regex.hpp>
 #include <boost/shared_ptr.hpp>
 #include <set>
 #include <string>
 #include <vector>
+using boost::regex;
 using namespace std;
 
 class Alphabet;
 class Pattern;
-class StateType;
 
 class WordAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
@@ -50,7 +50,7 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
       static const string _name = "WordAlignment";
       return _name;
     }
-      
+
   private:
     void addFeatureId(const string& f, set<int>& featureIds) const;
     
@@ -70,7 +70,13 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _normalize;
     
-    string _vowelsRegex;
+    bool _regexEnabled;
+    
+    regex _regVowel;
+  
+    regex _regConsonant;
+    
+    regex _regPhraseSep;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)

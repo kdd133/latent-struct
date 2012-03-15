@@ -41,7 +41,7 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(
         _includeAlignNgrams(includeAlignNgrams),
         _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
         _includeOpFeature(includeOpFeature),
-        _normalize(normalize) {
+        _normalize(normalize), _regexEnabled(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -97,22 +97,33 @@ features of the state sequence")
 
   if (vowelsFname != "" && !iequals(vowelsFname, NONE))
   {
-    _vowelsRegex = "";
+    string vowelsRegexStr;
     ifstream fin(vowelsFname.c_str());
     if (!fin.good()) {
       cout << "Error: Unable to open " << vowelsFname << endl;
       return 1;
     }
-    getline(fin, _vowelsRegex);
+    getline(fin, vowelsRegexStr);
     fin.close();
-    if (_vowelsRegex.size() == 0) {
+    if (vowelsRegexStr.size() == 0) {
       cout << "Error: The first line of the vowels file does not contain a "
           << "string\n";
       return 1;
     }
+    _regexEnabled = true;
+    
+    // The vowel regex matches any of the characters read from the vowels file.
+    _regVowel = regex("[" + vowelsRegexStr + "]", regex::icase|regex::perl);
+    
+    // The consonant regex matches anything that's not a vowel, punctuation, or
+    // a space.
+    string patt = "[^[:punct:]" + vowelsRegexStr + "\\s]";
+    _regConsonant = regex(patt, regex::icase|regex::perl);
   }
-  else
-    _vowelsRegex = "aeiou"; // provide a default so regex doesn't choke below
+  
+  // For some features, we will want to remove any separators from phrases.
+  string escape = "\\";
+  _regPhraseSep = regex(escape + FeatureGenConstants::PHRASE_SEP);
   
   return 0;
 }
@@ -130,21 +141,8 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   
   set<int> featureIds;
   const char* sep = FeatureGenConstants::PART_SEP;
-  const bool includeVowels = _vowelsRegex.size() > 0;
   const string V = "[V]";
   const string C = "[C]";
-  
-  // The vowel regex matches any of the characters read from the vowels file.
-  regex regVowel("[" + _vowelsRegex + "]", regex::icase|regex::perl);
-  
-  // The consonant regex matches anything that's not a vowel, punctuation, or
-  // a space.
-  const string patt = "[^[:punct:]" + _vowelsRegex + "\\s]";
-  regex regConsonant(patt, regex::icase|regex::perl);
-  
-  // For some features, we will want to remove any separators from phrases.
-  const string escape = "\\";
-  regex regPhraseSep(escape + FeatureGenConstants::PHRASE_SEP);
   
   // Determine the point in the history where the longest n-gram begins.
   int left;
@@ -180,9 +178,9 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
         s = history[k].source + FeatureGenConstants::OP_SEP +
             history[k].target + s;
         addFeatureId(prefix.str() + s, featureIds);
-        if (includeVowels) {
-          const string temp = regex_replace(s, regConsonant, C);
-          const string fVC = regex_replace(temp, regVowel, V);
+        if (_regexEnabled) {
+          const string temp = regex_replace(s, _regConsonant, C);
+          const string fVC = regex_replace(temp, _regVowel, V);
           addFeatureId(prefix.str() + fVC, featureIds);
         }
         s = FeatureGenConstants::PART_SEP + s;
@@ -197,11 +195,11 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
         if (history[k].target != FeatureGenConstants::EPSILON)
           t = history[k].target + t;
         string collapsed = s + FeatureGenConstants::OP_SEP + t;
-        collapsed = regex_replace(collapsed, regPhraseSep, "");
+        collapsed = regex_replace(collapsed, _regPhraseSep, "");
         addFeatureId(prefix.str() + collapsed, featureIds);
-        if (includeVowels) {
-          const string temp = regex_replace(collapsed, regConsonant, C);
-          const string collapsedVC = regex_replace(temp, regVowel, V);
+        if (_regexEnabled) {
+          const string temp = regex_replace(collapsed, _regConsonant, C);
+          const string collapsedVC = regex_replace(temp, _regVowel, V);
           addFeatureId(prefix.str() + collapsedVC, featureIds);
         }
       }

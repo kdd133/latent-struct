@@ -7,20 +7,23 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include <boost/program_options.hpp>
-#include <tr1/unordered_map>
-#include <sstream>
-#include <string>
-#include <vector>
-using namespace std;
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "FeatureGenConstants.h"
-#include "KlementievRothWordFeatureGen.h"
 #include "FeatureVector.h"
+#include "KlementievRothWordFeatureGen.h"
 #include "Label.h"
 #include "RealWeight.h"
 #include "StringPair.h"
+#include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
+#include <boost/regex.hpp>
+#include <sstream>
+#include <string>
+#include <tr1/unordered_map>
+#include <vector>
+using namespace boost;
+using namespace std;
 
 const string KlementievRothWordFeatureGen::CHAR_JOINER = "+";
 const string KlementievRothWordFeatureGen::SUB_JOINER = ",";
@@ -28,14 +31,21 @@ const string KlementievRothWordFeatureGen::SUB_JOINER = ",";
 KlementievRothWordFeatureGen::KlementievRothWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _offsetSize(1),
-    _normalize(normalize), _addBias(true) {
+    _normalize(normalize), _addBias(true), _regexEnabled(false) {
 }
 
 int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
+  const string NONE = "None";
+  stringstream vowelsHelp;
+  vowelsHelp << "the name of a file whose first line contains a string of "
+      << "vowels (case-insensitive), e.g., \"aeiou\" (sans quotes), (note: "
+      << "this option activates consonant/vowel n-gram features); pass \""
+      << NONE << "\" instead of a filename to disable";
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   bool noBias = false;
   bool noNormalize = false;
+  string vowelsFname;
   options.add_options()
     ("kr-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
     ("kr-no-normalize", opt::bool_switch(&noNormalize),
@@ -44,6 +54,7 @@ int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
         "allow substring positions to differ by up to +- this number")
     ("substring-size", opt::value<int>(&_substringSize)->default_value(2),
         "extract substrings up to this length")
+    ("vowels-file", opt::value<string>(&vowelsFname), vowelsHelp.str().c_str())
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -62,7 +73,33 @@ int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
   if (noNormalize) {
     _normalize = false;
   }
-  
+
+  if (vowelsFname != "" && !iequals(vowelsFname, NONE))
+  {
+    string vowelsRegexStr;
+    ifstream fin(vowelsFname.c_str());
+    if (!fin.good()) {
+      cout << "Error: Unable to open " << vowelsFname << endl;
+      return 1;
+    }
+    getline(fin, vowelsRegexStr);
+    fin.close();
+    if (vowelsRegexStr.size() == 0) {
+      cout << "Error: The first line of the vowels file does not contain a "
+          << "string\n";
+      return 1;
+    }
+    _regexEnabled = true;
+    
+    // The vowel regex matches any of the characters read from the vowels file.
+    _regVowel = regex("[" + vowelsRegexStr + "]", regex::icase|regex::perl);
+    
+    // The consonant regex matches anything that's not a vowel, punctuation, or
+    // a space.
+    string patt = "[^[:punct:]" + vowelsRegexStr + "\\s]";
+    _regConsonant = regex(patt, regex::icase|regex::perl);
+  }
+
   return 0;
 }
 
@@ -70,8 +107,10 @@ FeatureVector<RealWeight>* KlementievRothWordFeatureGen::getFeatures(
     const Pattern& x, const Label y) {
   const StringPair& pair = (const StringPair&)x;
   
-  // copy the source and target strings into s and t
-  // append beginning/end of word markers
+  // Vowel and consonant markers (used by regex_replace below).
+  const string V = "[V]";
+  const string C = "[C]";
+  
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
   assert(s.size() > 0 && t.size() > 0);
@@ -112,20 +151,30 @@ FeatureVector<RealWeight>* KlementievRothWordFeatureGen::getFeatures(
         appendSubstrings(longest, i + j, _substringSize, longest->size(),
             subs_lo);
     }
+    
+    stringstream prefix;
+    prefix << y << FeatureGenConstants::PART_SEP;
 
     // pair each source substring with each target substring
     for (vector<string>::const_iterator subs_source_it = subs_source->begin();
         subs_source_it != subs_source->end(); subs_source_it++)
       for (vector<string>::const_iterator subs_target_it = subs_target->begin();
           subs_target_it != subs_target->end(); subs_target_it++) {
-        stringstream ss;
-        ss << y << FeatureGenConstants::PART_SEP << *subs_source_it <<
-            SUB_JOINER << *subs_target_it;
+        stringstream phrasePair;
+        phrasePair << *subs_source_it << SUB_JOINER << *subs_target_it;
         // At test time, the alphabet will presumably be locked, and we don't
         // want to count unseen features; so, we pretend we never saw them.
-        const int fId = _alphabet->lookup(ss.str(), true);
+        int fId = _alphabet->lookup(prefix.str() + phrasePair.str(), true);
         if (fId >= 0)
           sub_pair_counts[fId].plusEquals(RealWeight::kOne);
+          
+        if (_regexEnabled) {
+          const string temp = regex_replace(phrasePair.str(), _regConsonant, C);
+          const string VC = regex_replace(temp, _regVowel, V);
+          fId = _alphabet->lookup(prefix.str() + VC, true);
+          if (fId >= 0)
+            sub_pair_counts[fId].plusEquals(RealWeight::kOne);
+        }
       }
   }
   

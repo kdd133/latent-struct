@@ -10,13 +10,15 @@
 #ifndef _KLEMENTIEVROTHWORDFEATUREGEN_H
 #define _KLEMENTIEVROTHWORDFEATUREGEN_H
 
-#include <string>
-#include <vector>
-using namespace std;
 #include "Alphabet.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include <boost/regex.hpp>
+#include <string>
+#include <vector>
+using boost::regex;
+using namespace std;
 
 class Pattern;
 class RealWeight;
@@ -51,6 +53,12 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     bool _normalize;
     
     bool _addBias;
+    
+    bool _regexEnabled;
+    
+    regex _regVowel;
+  
+    regex _regConsonant;
     
     static void appendSubstrings(const vector<string>* s, size_t i, size_t k,
       size_t end, vector<string>& subs);
