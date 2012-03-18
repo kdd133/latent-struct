@@ -667,6 +667,7 @@ criterion used by the optimizer")
     }
   }
   assert(evalData.numExamples() > 0);
+  assert(evalData.getLabelSet().size() > 1);
   
   // Classify eval examples and optionally write the predictions to files.
   vector<string> identifiers;

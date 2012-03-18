@@ -63,6 +63,7 @@ void Utility::evaluate(const vector<WeightVector>& weightVectors,
     
   assert(obj.getModel(0).getFgenLatent()->getAlphabet()->isLocked());
   assert(obj.getModel(0).getFgenObserved()->getAlphabet()->isLocked());
+  assert(evalData.getLabelSet().size() > 1);
   
   const size_t numWeightVectors = weightVectors.size();
   assert(numWeightVectors > 0);
@@ -106,6 +107,8 @@ void Utility::evaluate(const vector<WeightVector>& weightVectors,
     for (Dataset::iterator it = begin; it != end; ++it) {
       partData.addExample(*it);
     }
+    partData.addLabels(evalData.getLabelSet());
+    assert(partData.getLabelSet().size() == evalData.getLabelSet().size());
     obj.predict(weightVectors[0], partData, labelScores[0]);
     
     // We have now cached the fsts for the first (original) partition of the
