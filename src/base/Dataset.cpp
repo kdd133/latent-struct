@@ -27,7 +27,12 @@ void Dataset::addExample(const Example& ex) {
 
 void Dataset::clear() {
   _examples.clear();
-  _labels.clear();
+  //_labels.clear(); // Keep the label set for e.g., copying from train to eval
   for (size_t i = 0; i < _numPartitions; i++)
     _partitions[i].clear();
+}
+
+void Dataset::addLabels(const set<Label>& labels) {
+  for (set<Label>::const_iterator it = labels.begin(); it != labels.end(); ++it)
+    _labels.insert(*it);
 }

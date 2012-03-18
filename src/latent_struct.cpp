@@ -656,6 +656,15 @@ criterion used by the optimizer")
     }
     cout << "Read " << evalData.numExamples() << " eval examples, " <<
         evalData.getLabelSet().size() << " classes\n";
+        
+    // This situation can arise if, e.g., the eval set only contains examples
+    // from one class.
+    if (evalData.getLabelSet().size() < trainData.getLabelSet().size()) {
+      evalData.addLabels(trainData.getLabelSet());
+      cout << "The eval set has fewer classes than train. Adding labels from "
+          << "train set to eval set. Number of classes is now "
+          << evalData.getLabelSet().size() << ".\n";
+    }
   }
   assert(evalData.numExamples() > 0);
   

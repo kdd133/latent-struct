@@ -32,8 +32,6 @@ class Dataset {
     
     size_t numPartitions() const;
     
-    size_t partitionSize(size_t i) const;
-    
     iterator partitionBegin(size_t i) const;
     
     iterator partitionEnd(size_t i) const;
@@ -44,7 +42,7 @@ class Dataset {
     
     const set<Label>& getLabelSet() const;
     
-    void setLabelSet(set<Label> labels);
+    void addLabels(const set<Label>& labels);
 
   private:
   
@@ -74,20 +72,12 @@ inline Dataset::iterator Dataset::partitionEnd(size_t i) const {
   return _partitions[i].end();
 }
 
-inline size_t Dataset::partitionSize(size_t i) const {
-  return _partitions[i].size();
-}
-
 inline const vector<Example>& Dataset::getExamples() const {
   return _examples;
 }
 
 inline const set<Label>& Dataset::getLabelSet() const {
   return _labels;
-}
-
-inline void Dataset::setLabelSet(set<Label> labels) {
-  _labels = labels;
 }
 
 #endif
