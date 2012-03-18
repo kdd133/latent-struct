@@ -83,16 +83,21 @@ for n in xrange(len(combinations)):
   options = []
   for param in comb:
     arg, val = tuple(param.split(':'))
-    if val == 'true':
+    # the short forms of beta (-b) and tolerance (-t) get special treatment
+    if arg == 'b' or arg == 't':
+      options.append('-%s%s' % (arg,val))
+    # boolean switches are included if true, omitted if false
+    elif val == 'true':
       options.append('--%s' % arg)
     elif val == 'false':
       continue
+    # all other options are included in long format
     else:
       options.append('--%s=%s' % (arg, val))
-#  options = ['--%s=%s' % tuple(param.split(':')) for param in comb]
-  commands.append('if [ ! -e %s ]; then mkdir -p %s && \
-%s %s %s >& %s/output && gzip %s/*; fi\n' \
-    % (dir_n, dir_n, opts.executable, required, ' '.join(options), dir_n, dir_n))
+
+  cmd = 'if [ ! -e %s ]; then mkdir -p %s && %s %s %s >& %s/output && gzip %s/*; fi\n' \
+    % (dir_n, dir_n, opts.executable, required, ' '.join(options), dir_n, dir_n)
+  commands.append(cmd)
 
 #FIXME: It is possible for the last job to be allocated zero commands.
 cmds_per_job = int(math.ceil(len(commands)/float(opts.num_jobs)))
@@ -102,23 +107,22 @@ it = commands.__iter__()
 for n in range(opts.num_jobs):
   fname = '%s_%03d.sh' % (opts.prefix, n)
   if os.path.exists(fname):
-    print 'Error: Job script already exists: ' + fname
+    print 'Error: Script %s already exists' % fname
     sys.exit(1)
   f = open(fname, 'w')
   f.write('#!/bin/bash\n')
-  f.write('if [ -e /usr/eureka ]; then\n  cd $PBS_O_WORKDIR\nfi\n')
+  f.write('if [ "$PBS_O_WORKDIR" != "" ]; then\n  cd $PBS_O_WORKDIR\nfi\n')
   f.write('\n# %s\n\n' % ' '.join(sys.argv))
-  f.write('touch %s.lock\n\n' % fname)
   for _ in range(cmds_per_job):
     try:
       f.write(it.next() + '\n')
     except:
       break  # we've used up all the commands
-  f.write('\ntouch %s.done\n' % fname)
   f.write('\nexit 0\n')
+  print 'Wrote ' + fname
   try:
     os.fchmod(f.fileno(), 0500)
   except Exception:
-    print "Warning: fchmod failed"
+    print '  Please run "chmod +x %s" to make the script executable' % fname
   f.close()
 
