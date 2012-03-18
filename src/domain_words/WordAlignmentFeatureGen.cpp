@@ -121,9 +121,19 @@ features of the state sequence")
     _regConsonant = regex(patt, regex::icase|regex::perl);
   }
   
-  // For some features, we will want to remove any separators from phrases.
-  string escape = "\\";
-  _regPhraseSep = regex(escape + FeatureGenConstants::PHRASE_SEP);
+  if (string(FeatureGenConstants::PHRASE_SEP) != "+") {
+    cout << "Error: The value of FeatureGenConstants::PHRASE_SEP is assumed to \
+be '+', but it was changed. The regular expression(s) in WordAlignmentFeature\
+Gen need to be updated!\n";
+    return 1;
+  }
+  // For some features, we will want to remove redundant phrase separators.
+  // These may be introduced when as we concatenate phrases in the if statement 
+  // involving _includeCollapsedAlignNgrams in getFeatures() below.
+  // The first regex matches 2 or more consecutive + signs; the second matches
+  // a leading or trailing + sign.
+  _regPhraseSepMulti = regex("\\+{2,}");
+  _regPhraseSepLeadTrail = regex("(^\\+|\\+$)");
   
   return 0;
 }
@@ -166,36 +176,58 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
       s = FeatureGenConstants::OP_SEP + s;
     }
   }
+  
+  //DEBUGGING CODE
+  //for (size_t k = 0; k < history.size(); k++)
+  //  cout << "(" << history[k].source << ">" << history[k].target << " " <<
+  //    history[k].state.getName() << ")";
+  //cout << endl;
 
   // These features only fire if we didn't perform a no-op on this arc.
   if (op.getId() != OpNone::ID) {
     stringstream prefix;
     prefix << label << sep << "A:";
     
-    if (_includeAlignNgrams) {
-      string s;
+    if (_includeAlignNgrams || _includeCollapsedAlignNgrams) {
+      string alignNgram;
       for (int k = histLen - 1; k >= left; k--) {
-        s = history[k].source + FeatureGenConstants::OP_SEP +
-            history[k].target + s;
-        addFeatureId(prefix.str() + s, featureIds);
+        alignNgram = history[k].source + FeatureGenConstants::OP_SEP +
+            history[k].target + alignNgram;
+        addFeatureId(prefix.str() + alignNgram, featureIds);
         if (_regexEnabled) {
-          const string temp = regex_replace(s, _regConsonant, C);
-          const string fVC = regex_replace(temp, _regVowel, V);
-          addFeatureId(prefix.str() + fVC, featureIds);
+          const string temp = regex_replace(alignNgram, _regConsonant, C);
+          const string alignNgramVC = regex_replace(temp, _regVowel, V);
+          addFeatureId(prefix.str() + alignNgramVC, featureIds);
         }
-        s = FeatureGenConstants::PART_SEP + s;
+        if (k > left)
+          alignNgram = FeatureGenConstants::PART_SEP + alignNgram;
       }
     }
     
-    if (_includeCollapsedAlignNgrams) {
+    // Collapsed n-gram features discard epsilons, so that strings aligned as
+    // (i,-)(e,e) and (-,i)(e,e) both produce the collapsed feature (ie,e).
+    // Note that in the case of a zero order model, the collapsed features are
+    // always redundant, so we omit them in this case.
+    if (_includeCollapsedAlignNgrams && _order > 0) {
       string s, t;
+      const string sep = FeatureGenConstants::PHRASE_SEP;
       for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
         if (history[k].source != FeatureGenConstants::EPSILON)
-          s = history[k].source + s;
+          s = history[k].source + sep + s;
         if (history[k].target != FeatureGenConstants::EPSILON)
-          t = history[k].target + t;
-        string collapsed = s + FeatureGenConstants::OP_SEP + t;
-        collapsed = regex_replace(collapsed, _regPhraseSep, "");
+          t = history[k].target + sep + t;
+          
+        if (l == 1)
+          continue; // Omit zero order feature
+
+        // Replace two or more consecutive seps with a single sep, then remove
+        // any leading or trailing sep(s).
+        string sStrip = regex_replace(s, _regPhraseSepMulti, sep);
+        sStrip = regex_replace(sStrip, _regPhraseSepLeadTrail, "");
+        string tStrip = regex_replace(t, _regPhraseSepMulti, sep);
+        tStrip = regex_replace(tStrip, _regPhraseSepLeadTrail, "");
+        string collapsed = sStrip + FeatureGenConstants::OP_SEP + tStrip;
+        
         addFeatureId(prefix.str() + collapsed, featureIds);
         if (_regexEnabled) {
           const string temp = regex_replace(collapsed, _regConsonant, C);

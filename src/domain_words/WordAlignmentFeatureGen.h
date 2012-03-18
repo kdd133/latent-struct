@@ -76,7 +76,9 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
   
     regex _regConsonant;
     
-    regex _regPhraseSep;
+    regex _regPhraseSepMulti;
+    
+    regex _regPhraseSepLeadTrail;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)
