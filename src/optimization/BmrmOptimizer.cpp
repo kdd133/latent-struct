@@ -200,8 +200,8 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     }
     
     if (!_quiet) {
-      printf("%s: t = %d\tJw_t = %0.5e\tepsilon_t = %0.5e\n", name().c_str(),
-          (int)t, Jw, epsilon_t);
+      printf("%s: t = %d\tbundle = %d\tJw_t = %0.5e\tepsilon_t = %0.5e\n",
+          name().c_str(), (int)t, (int)bs, Jw, epsilon_t);
     }
     
     if (epsilon_t <= tol) {
