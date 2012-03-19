@@ -665,24 +665,24 @@ criterion used by the optimizer")
           << "train set to eval set. Number of classes is now "
           << evalData.getLabelSet().size() << ".\n";
     }
-  }
-  assert(evalData.numExamples() > 0);
-  assert(evalData.getLabelSet().size() > 1);
-  
-  // Classify eval examples and optionally write the predictions to files.
-  vector<string> identifiers;
-  vector<string> fnames;
-  for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
-    stringstream fname;
-    if (writeFiles) {
-      fname << dirPath << wvIndex << "-eval_predictions.txt";
-      fnames.push_back(fname.str());
+    assert(evalData.numExamples() > 0);
+    assert(evalData.getLabelSet().size() > 1);
+    
+    // Classify eval examples and optionally write the predictions to files.
+    vector<string> identifiers;
+    vector<string> fnames;
+    for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
+      stringstream fname;
+      if (writeFiles) {
+        fname << dirPath << wvIndex << "-eval_predictions.txt";
+        fnames.push_back(fname.str());
+      }
+      stringstream identifier;
+      identifier << wvIndex << "-Eval";
+      identifiers.push_back(identifier.str());
     }
-    stringstream identifier;
-    identifier << wvIndex << "-Eval";
-    identifiers.push_back(identifier.str());
+    Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
   }
-  Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
 
   return 0;
 }
