@@ -15,7 +15,7 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
-#include <boost/numeric/ublas/io.hpp>
+//#include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_expression.hpp>
@@ -59,6 +59,9 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   namespace ublas = boost::numeric::ublas;
   const size_t d = w.getDim();
   assert(d > 0);
+  
+  const double TINY = 1e-6; // Add this value to D to ensure pos-def.
+  const double ALPHA_TOL = 1e-12; // Value below which alpha is considered zero
 
   // Some variables we'll need to reuse inside the main loop.
   boost::ptr_deque<ublas::vector<double> > grads;
@@ -69,6 +72,12 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   FeatureVector<RealWeight> grad_t(d);
   double Remp;
   
+  // Since this is (presumably) a convex objective, the starting point should
+  // not matter. We'll silently set it to zero here, because taking the
+  // starting point from the last EM iteration sometimes causes issues (i.e.,
+  // we may be starting at the minimizer).
+  w.zero();
+  
   // Compute the initial objective value and gradient.
   _objective.valueAndGradient(w, Remp, grad_t);
   double min_Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
@@ -77,7 +86,6 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   if (!_quiet)
     cout << name() << ": Starting objective value is " << min_Jw << endl;
   
-  const double tiny = 1e-12; // Add this value to D to ensure pos-def.
   bool converged = false;
   bool dropped = false; // Did we discard any gradient vectors during prev t?
   for (size_t t = 1; t <= _maxIters; t++) {
@@ -93,8 +101,8 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     const size_t bs = grads.size(); // The current bundle size.
 
     // Set the quadratic term to G := A'*A.
-    // Note: We could rebuild G from scratch each time (and then add tiny values
-    // to the diagonal), but that's much slower, e.g.:
+    // Note: We could rebuild G from scratch each time (and then add tiny
+    // values to the diagonal), but that's much slower, e.g.:
     // ublas::matrix<double> G = ublas::prod(ublas::trans(A), A) / _beta;
     G = copyG;
     if (!dropped) {
@@ -103,7 +111,7 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
       for (size_t i = 0; i < bs; i++) {
         const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
         if (i == j)
-          G(i, j) = temp + tiny; // Add a small value to diag to ensure pos-def.
+          G(i, j) = temp + TINY; // Add a small value to diag to ensure pos-def.
         else {
           G(i, j) = temp;
           G(j, i) = temp;
@@ -117,7 +125,7 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
         for (size_t j = 0; j <= i; j++) {
           const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
           if (i == j)
-            G(i, j) = temp + tiny;
+            G(i, j) = temp + TINY;
           else {
             G(i, j) = temp;
             G(j, i) = temp;
@@ -151,13 +159,13 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     ublas::vector<double> alpha(bs);
     
     // Note: solve_quadprog may modify G, which is why we make a copy above.
-    double JwCP_ = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
-    if (JwCP_ == numeric_limits<double>::infinity()) {
+    double JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
+    if (JwCP == numeric_limits<double>::infinity()) {
       // Signal to the caller that something went wrong...
       return numeric_limits<double>::infinity();
     }
     // Negate the optimal value returned, since BMRM thinks we're maximizing.
-    JwCP_ = -JwCP_;
+    JwCP = -JwCP;
     
     // The qp solution gives us alpha; we need to now compute
     // wTemp = -1/beta*(A*alpha).
@@ -173,11 +181,27 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     _objective.valueAndGradient(w, Remp, grad_t);
     Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
     
+    if (Jw < min_Jw)
+      min_Jw = Jw;
+
+    double epsilon_t = min_Jw - JwCP;
+    if (epsilon_t < 0) {
+      cout << name() << ": Warning: epsilon_t = " << epsilon_t << " < 0" <<
+          " ... Saying converged.\n";
+      epsilon_t = 0;
+    }
+    
+    if (!_quiet) {
+      printf("%s: t = %d  bundle = %d  Jw_t = %0.4e  min_Jw = %0.4e  \
+JwCP = %0.4e  epsilon_t = %0.4e\n", name().c_str(), (int)t, (int)bs, Jw,
+        min_Jw, JwCP, epsilon_t);
+    }
+    
     // Shrinking heuristic: Discard (grad,b) pairs for which alpha == 0.
     if (!_noShrinking) {
       dropped = false;
-      for (int i = bs - 1; i >= 0; i--) {
-        if (alpha(i) <= tiny) {
+      for (int i = bs-2; i >= 0; i--) { // bs-2 b/c we must keep the most recent
+        if (alpha(i) <= ALPHA_TOL) {
           // Discard the gradient vector
           grads.erase(grads.begin() + i);
           // Shift the entries in b
@@ -187,21 +211,6 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
             dropped = true;
         }
       }
-    }
-    
-    if (Jw < min_Jw)
-      min_Jw = Jw;
-
-    double epsilon_t = min_Jw - JwCP_;
-    if (epsilon_t < 0) {
-      cout << name() << ": Warning: epsilon_t = " << epsilon_t << " < 0" <<
-          " ... Saying converged.\n";
-      epsilon_t = 0;
-    }
-    
-    if (!_quiet) {
-      printf("%s: t = %d\tbundle = %d\tJw_t = %0.5e\tepsilon_t = %0.5e\n",
-          name().c_str(), (int)t, (int)bs, Jw, epsilon_t);
     }
     
     if (epsilon_t <= tol) {
