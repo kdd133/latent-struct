@@ -52,6 +52,8 @@ class MaxMarginMulti : public TrainingObjective {
         const Dataset::iterator& begin, const Dataset::iterator& end);
         
     virtual void initLatentFeatureVectors(const WeightVector& w);
+    
+    virtual void clearLatentFeatureVectors();
   
     boost::scoped_ptr<FeatureVector<RealWeight> > _imputedFv;
     

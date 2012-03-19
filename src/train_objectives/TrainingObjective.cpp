@@ -96,6 +96,7 @@ void TrainingObjective::predict(const WeightVector& w, const Dataset& evalData,
 void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
+  clearLatentFeatureVectors();
   ptr_vector<thread> threads;
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = _dataset.partitionBegin(i);
@@ -112,6 +113,11 @@ void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
 
 void TrainingObjective::setLatentFeatureVectorsPart(const WeightVector& w,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
+  assert(0); // Not implemented by the given TrainingObjective subclass.
+             // Should not be called for an objective that doesn't use it.
+}
+
+void TrainingObjective::clearLatentFeatureVectors() {
   assert(0); // Not implemented by the given TrainingObjective subclass.
              // Should not be called for an objective that doesn't use it.
 }

@@ -80,8 +80,6 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
   const int d = w.getDim();
   FeatureVector<RealWeight> fv(d, true);  
-  assert(_imputedFv);
-  _imputedFv->zero();
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -94,13 +92,17 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
     model.maxFeatures(w, fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
     fv.addTo(*_imputedFv.get());
-    //fv.zero(); // not needed: maxFeatures calls fv.reinit()
   }
 }
 
 void MaxMarginMulti::initLatentFeatureVectors(const WeightVector& w) {
   assert(_dataset.numExamples() > 0);
   _imputedFv.reset(new FeatureVector<RealWeight>(w.getDim()));
+}
+
+void MaxMarginMulti::clearLatentFeatureVectors() {
+  assert(_imputedFv);
+  _imputedFv->zero();
 }
 
 void MaxMarginMulti::predictPart(const WeightVector& w, Model& model,

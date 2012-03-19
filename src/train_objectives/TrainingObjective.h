@@ -37,8 +37,13 @@ class TrainingObjective {
     virtual void predict(const WeightVector& w, const Dataset& evalData,
       LabelScoreTable& scores);
     
+    // Called once, prior to training. Typically used to allocate on or more
+    // FeatureVector objects.
     virtual void initLatentFeatureVectors(const WeightVector& w);
     
+    // Assigns each thread a partition of the data, and instructs it to
+    // compute the latent feature vectors for the given partition, via
+    // setLatentFeatureVectorsPart.
     virtual void setLatentFeatureVectors(const WeightVector& w);
     
     virtual bool isBinary() const = 0;
@@ -86,6 +91,11 @@ class TrainingObjective {
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label maxLabel, LabelScoreTable& scores) = 0;
+      
+    // Called by setLatentFeatureVectors prior to delegating computations to
+    // setLatentFeatureVectorsPart. For example, used to zero out the feature
+    // vectors that were computed on the previous iteration.
+    virtual void clearLatentFeatureVectors();
       
     virtual void setLatentFeatureVectorsPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end);

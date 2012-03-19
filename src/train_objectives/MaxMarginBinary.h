@@ -50,6 +50,8 @@ class MaxMarginBinary : public TrainingObjective {
         const Dataset::iterator& begin, const Dataset::iterator& end);
         
     virtual void initLatentFeatureVectors(const WeightVector& w);
+    
+    virtual void clearLatentFeatureVectors();
   
     std::vector<FeatureVector<RealWeight>* > _imputedFvs;
 };

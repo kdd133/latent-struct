@@ -106,6 +106,11 @@ void MaxMarginBinary::initLatentFeatureVectors(const WeightVector& w) {
   }
 }
 
+void MaxMarginBinary::clearLatentFeatureVectors() {
+  // Do nothing. FeatureVectors will be overwritten by calls to maxFeatures()
+  // in setLatentFeatureVectorsPart().
+}
+
 MaxMarginBinary::~MaxMarginBinary() {
   if (_imputedFvs.size() > 0) {
     for (size_t i = 0; i < _imputedFvs.size(); i++)
