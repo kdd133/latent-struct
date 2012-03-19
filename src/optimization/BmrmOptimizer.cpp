@@ -15,11 +15,12 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
+#include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_expression.hpp>
 #include <boost/program_options.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
 #include <iostream>
@@ -39,6 +40,8 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
   options.add_options()
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
         "maximum number of iterations")
+    ("no-shrinking", opt::bool_switch(&_noShrinking),
+        "disable the shrinking heuristic")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("help", "display a help message")
   ;
@@ -58,7 +61,7 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   assert(d > 0);
 
   // Some variables we'll need to reuse inside the main loop.
-  boost::ptr_vector<ublas::vector<double> > grads;
+  boost::ptr_deque<ublas::vector<double> > grads;
   ublas::vector<double> b(1);
   ublas::matrix<double> G(1, 1);
   ublas::matrix<double> copyG(1, 1);
@@ -76,8 +79,8 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   
   const double tiny = 1e-12; // Add this value to D to ensure pos-def.
   bool converged = false;
-  size_t t;
-  for (t = 1; t <= _maxIters; t++) {
+  bool dropped = false; // Did we discard any gradient vectors during prev t?
+  for (size_t t = 1; t <= _maxIters; t++) {
     boost::timer::auto_cpu_timer timer;
     
     // Add the next column to the matrix "A", which we'll actually represent as
@@ -86,46 +89,66 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     for (size_t i = 0; i < d; i++)
       (*g_t)(i) = grad_t.getValueAtLocation(i);
     grads.push_back(g_t);
-      
+    
+    const size_t bs = grads.size(); // The current bundle size.
+
     // Set the quadratic term to G := A'*A.
     // Note: We could rebuild G from scratch each time (and then add tiny values
     // to the diagonal), but that's much slower, e.g.:
     // ublas::matrix<double> G = ublas::prod(ublas::trans(A), A) / _beta;
     G = copyG;
-    G.resize(t, t, true); // Note: true --> preserve existing entries
-    const size_t ti = t - 1; // Index of the grad vector added during this step.
-    double temp;
-    for (size_t i = 0; i < t; i++) {
-      temp = ublas::inner_prod(grads[i], grads[ti]) / _beta;
-      if (i == ti)
-        G(i, i) = temp + tiny; // Add a small value to diag to ensure pos-def.
-      else {
-        G(i, ti) = temp;
-        G(ti, i) = temp;
+    if (!dropped) {
+      G.resize(bs, bs, true); // Note: true --> preserve existing entries
+      const size_t j = bs -1;
+      for (size_t i = 0; i < bs; i++) {
+        const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
+        if (i == j)
+          G(i, j) = temp + tiny; // Add a small value to diag to ensure pos-def.
+        else {
+          G(i, j) = temp;
+          G(j, i) = temp;
+        }
+      }
+    }
+    else {
+      assert(!_noShrinking);
+      G.resize(bs, bs, false);
+      for (size_t i = 0; i < bs; i++) {
+        for (size_t j = 0; j <= i; j++) {
+          const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
+          if (i == j)
+            G(i, j) = temp + tiny;
+          else {
+            G(i, j) = temp;
+            G(j, i) = temp;
+          }
+        }
       }
     }
     copyG = G;
     
-    // Set b, the linear component of the objective.
-    const double b_t = Remp - w.innerProd(grad_t);     
-    b.resize(t, true);
-    b(t-1) = -b_t;
+    // If dropped=true, we already shifted the entries in b during the previous
+    // iteration. Therefore, regardless of the value of dropped, we simply have
+    // to append the entry corresponding to the current gradient.
+    const double b_t = Remp - w.innerProd(grad_t);
+    b.resize(bs, true);
+    b(bs - 1) = -b_t;
     
     // Encode the constraint: L1-norm(alpha) = 1.
-    ublas::matrix<double> CE(t, 1);
+    ublas::matrix<double> CE(bs, 1);
     ublas::vector<double> ce0(1);    
-    for (size_t i = 0; i < t; i++)
+    for (size_t i = 0; i < bs; i++)
       CE(i, 0) = 1;
     ce0(0) = -1;
     
     // Encode the constraint: alpha >= 0.
-    ublas::identity_matrix<double> CI(t);
-    ublas::vector<double> ci0(t);
-    for (size_t i = 0; i < t; i++)
+    ublas::identity_matrix<double> CI(bs);
+    ublas::vector<double> ci0(bs);
+    for (size_t i = 0; i < bs; i++)
       ci0(i) = 0;
     
     // Allocate a vector to hold the solution.
-    ublas::vector<double> alpha(t);
+    ublas::vector<double> alpha(bs);
     
     // Note: solve_quadprog may modify G, which is why we make a copy above.
     double JwCP_ = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
@@ -139,7 +162,7 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     // The qp solution gives us alpha; we need to now compute
     // wTemp = -1/beta*(A*alpha).
     wTemp = alpha(0) * grads[0];
-    for (size_t i = 1; i < t; i++)
+    for (size_t i = 1; i < bs; i++)
       wTemp += alpha(i) * grads[i];
     wTemp /= -_beta;
     
@@ -149,6 +172,22 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     // Recompute the objective value and gradient.
     _objective.valueAndGradient(w, Remp, grad_t);
     Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
+    
+    // Shrinking heuristic: Discard (grad,b) pairs for which alpha == 0.
+    if (!_noShrinking) {
+      dropped = false;
+      for (int i = bs - 1; i >= 0; i--) {
+        if (alpha(i) <= tiny) {
+          // Discard the gradient vector
+          grads.erase(grads.begin() + i);
+          // Shift the entries in b
+          for (int j = i; j < bs - 1; j++)
+            b(j) = b(j + 1);
+          if (!dropped)
+            dropped = true;
+        }
+      }
+    }
     
     if (Jw < min_Jw)
       min_Jw = Jw;

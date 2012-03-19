@@ -38,6 +38,8 @@ class BmrmOptimizer : public Optimizer {
     size_t _maxIters; // maximum number of iterations
     
     bool _quiet; // suppress optimization output
+    
+    bool _noShrinking; // if true, disable the shrinking heuristic
 };
 
 #endif
