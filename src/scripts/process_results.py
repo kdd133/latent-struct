@@ -7,15 +7,24 @@
 #
 # Copyright (c) 2012 Kenneth Dwyer
 
+import glob
 import gzip
 import optparse
 import re
 import sys
 
-# names of fields to (attempt to) extract from the output files
-field_names = ('Train-Accuracy', 'Train-Precision', 'Train-Recall',
-               'Train-Fscore', 'Eval-Accuracy', 'Eval-Precision',
-               'Eval-Recall', 'Eval-Fscore', '11-pt')
+# labels of fields to (attempt to) extract from the output files
+field_names = ('^([0-9]+)-(Train-Accuracy)',
+               '^([0-9]+)-(Train-Precision)',
+               '^([0-9]+)-(Train-Recall)',
+               '^([0-9]+)-(Train-Fscore)',
+               '^([0-9]+)-(Eval-Accuracy)',
+               '^([0-9]+)-(Eval-Precision)',
+               '^([0-9]+)-(Eval-Recall)',
+               '^([0-9]+)-(Eval-Fscore)',
+               '^([0-9]+)-(beta)',
+               '^([0-9]+)-(tolerance)',
+               '^ *(11-pt) avg')
 
 # map cryptic names to "pretty" names; columns will be printed in this order  
 stat_names = {'Train-Accuracy' : 'Train acc',
@@ -31,21 +40,47 @@ stat_names = {'Train-Accuracy' : 'Train acc',
 option_names_to_skip = ('dir',)
 
 
-def extract_fields(f, fields, values, prepend='', index=1):
+def extract_fields(f, fields, results, id, prepend='', index=1):
   for line in f.readlines():
     for (field_name, regex) in fields:
-      if regex.match(line):
-        values[prepend+field_name] = float(line.rstrip().split()[index])
-        
-def read_options(s, results):
-  results['flags'] = ''
+      m = regex.search(line)
+      if m:
+        if len(m.groups()) == 2:
+          key = '%s-%s' % (id, m.group(1))
+          if key not in results:
+            results[key] = {}
+          stat = prepend + m.group(2)
+          results[key][stat] = float(line.rstrip().split()[index])
+        elif len(m.groups()) == 1:
+          if id not in results:
+            results[id] = {}
+          stat = prepend + m.group(1)
+          results[id][stat] = float(line.rstrip().split()[index])
+        else:
+          raise Exception('An unexpected number of groups was encountered.')
+
+def read_options(s, results, id):
+  opts = {}
+  opts['flags'] = ''
+  grid_options = re.compile('^\-([bt]|\-beta|\-tolerance)')
   for o in s.split():
+    if grid_options.match(o):
+      continue
     try:
       option, value = o.split('=')
       option = option[2:] # remove the -- that's prepended to the option name    
-      results[option] = value
+      opts[option] = value
     except ValueError:
-      results['flags'] += o[2:] + ' '    
+      opts['flags'] += o[2:] + ' '
+
+  # the options are the same for a given id/subfolder (e.g., results/001), so
+  # we copy them to the sub id's (e.g., results/001-0, results/001-1) that
+  # correspond to this "primary" id
+  id_re = re.compile(id + '\-[0-9]+')
+  for sub_id in results.keys():
+    if id_re.match(sub_id):
+      for option, value in opts.items():
+        results[sub_id][option] = value    
   
 def results_txt(fout, results):
   fout.write('ID\t')
@@ -92,7 +127,7 @@ def results_html(fout, results):
 ###################
 
 if __name__ == '__main__':
-  usage = 'Usage: %prog [options] EXPERIMENT_SUBDIR_0 [EXPERIMENT_SUBDIR_1] ...\n\n\
+  usage = '%prog [options] EXPERIMENT_SUBDIR_0 [EXPERIMENT_SUBDIR_1] ...\n\n\
     This script extracts statistics from the output files produced by one or more\n\
     runs of latent_struct, and aggregates them into a single html file that contains\n\
     a large table, which can be sorted according to a chosen column.\n\n\
@@ -115,7 +150,7 @@ if __name__ == '__main__':
 
   field_res = []
   for field in field_names:
-    field_res.append(re.compile('.*%s' % field))
+    field_res.append(re.compile(field))
   fields = zip(field_names, field_res)
 
   results = {}
@@ -128,33 +163,31 @@ if __name__ == '__main__':
     except IOError:
       print 'Skipping incomplete result in %s' % folder_name
       continue;
-    results[folder_name] = {}    
     fin = gzip.open(output_fname)
-    extract_fields(fin, fields, results[folder_name])
+    extract_fields(fin, fields, results, folder_name)
     fin.close()
         
     options_fname = '%s/%s' % (folder_name, 'options.txt.gz')
     fin = gzip.open(options_fname)
-    read_options(fin.readline().rstrip(), results[folder_name])
+    read_options(fin.readline().rstrip(), results, folder_name)
     fin.close()
     
     # Get the 11-pt avg precision for train and eval if the files are present
     try :
-      fname = '%s/%s' % (folder_name, 'train_11pt_avg_prec.txt')
-      fin = open(fname)
-      extract_fields(fin, fields, results[folder_name], 'Train ', 2)
-      fin.close()
-    except IOError:
-      pass
-    try :
-      fname = '%s/%s' % (folder_name, 'eval_11pt_avg_prec.txt')
-      fin = open(fname)
-      extract_fields(fin, fields, results[folder_name], 'Eval ', 2)
-      fin.close()
+      wild = glob.glob('%s/*-%s' % (folder_name, '*_11pt_avg_prec.txt.gz'))
+      for fname in wild:
+        fin = gzip.open(fname)
+        id = '%s-%s' % (folder_name, (fname.split('/')[-1]).split('-')[0])
+        if re.search('train_11pt_avg_prec', fname):
+          label = 'Train '
+        else:
+          label = 'Eval '
+        extract_fields(fin, fields, results, id, label, 2)
+        fin.close()
     except IOError:
       pass
 
-  experiment_name = args[0].split('/')[0]
+  experiment_name = '/'.join(args[0].split('/')[:-1])
 
   # output a table of results to a plain text file
   txt_name = '%s.txt' % experiment_name
