@@ -59,8 +59,8 @@ double EmOptimizer::train(WeightVector& w, double tol) const {
     
     if (valCur == numeric_limits<double>::infinity()) {
       cout << name() << ": Inner solver returned an infinite objective value. "
-          << "Aborting via exit(1).\n";
-      exit(1);
+          << "Returning -1.0.\n";
+      return -1.0;
     }
     if (!_quiet)
       cout << name() << ": prev=" << valPrev << " current=" << valCur << endl; 
