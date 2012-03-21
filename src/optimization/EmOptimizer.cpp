@@ -25,14 +25,14 @@ using namespace std;
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,
     shared_ptr<Optimizer> opt) :
-    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(10) {
+    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20) {
 }
 
 int EmOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("em-max-iters", opt::value<int>(&_maxIters)->default_value(10),
+    ("em-max-iters", opt::value<int>(&_maxIters)->default_value(20),
         "maximum number of iterations")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
   ;

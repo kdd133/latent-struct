@@ -24,6 +24,7 @@ field_names = ('^([0-9]+)-(Train-Accuracy)',
                '^([0-9]+)-(Eval-Fscore)',
                '^([0-9]+)-(beta)',
                '^([0-9]+)-(tolerance)',
+               '^([0-9]+)-(status)',
                '^ *(11-pt) avg')
 
 # map cryptic names to "pretty" names; columns will be printed in this order  

@@ -121,8 +121,8 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
     params.epsilon = tol; // use the tolerance passed to train()
     ret = lbfgs(d, x, &objVal, evaluate, _quiet ? 0 : progress, &inst, &params);
     bool terminate = false;
+    cout << name() << ": ";
     switch (ret) {
-      cout << name() << ": ";
       case LBFGSERR_ROUNDING_ERROR:
       case LBFGSERR_MINIMUMSTEP:
       case LBFGSERR_MAXIMUMSTEP:

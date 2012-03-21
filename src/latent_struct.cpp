@@ -71,7 +71,16 @@ int main(int argc, char** argv) {
 
   // Parse the options.
   namespace opt = boost::program_options;
+  bool keepAllPositives = false;
+  bool noEarlyGridStop = false;
+  bool optEM = false;
+  bool split = false;
   const string blank("<NONE>");
+  const string optAuto("Auto");
+  double negativeRatio = 0.0;
+  double trainFraction = 1.0;
+  int seed = 0;
+  size_t threads = 1;
   string dirPath("./");
   string evalFilename(blank);
   string fgenNameLat(blank);
@@ -83,14 +92,6 @@ int main(int argc, char** argv) {
   string readerName(blank);
   string trainFilename(blank);
   string weightsInit(blank);
-  int seed = 0;
-  size_t threads = 1;
-  double negativeRatio = 0.0;
-  double trainFraction = 1.0;
-  bool optEM = false;
-  bool split = false;
-  bool keepAllPositives = false;
-  const string optAuto = "Auto";
   vector<double> betas;
   vector<double> tolerances;
   
@@ -140,6 +141,10 @@ positive examples present in the data are retained")
         "load weights and features from directory and predict on eval data")
     ("model", opt::value<string>(&modelName)->default_value(
         StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
+    ("no-early-grid-stop", opt::bool_switch(&noEarlyGridStop),
+        "by default, we break from the grid search loop (over the tolerance \
+and beta values) if the optimizer failed to converge; however, if this flag is \
+present, all points on the grid will be visited")
     ("objective", opt::value<string>(&objName)->default_value(
         LogLinearMulti::name()), objMsgObs.str().c_str())
     ("optimizer", opt::value<string>(&optName)->default_value(optAuto),
@@ -561,10 +566,7 @@ criterion used by the optimizer")
   
   assert(betas.size() > 0);
   assert(tolerances.size() > 0);
-  const size_t numWeightVectors = betas.size() * tolerances.size();
-  vector<WeightVector> weightVectors;
-  for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++)
-    weightVectors.push_back(WeightVector(d));
+  WeightVector wInit(d); // zero vector
 
   // Set initial weights (Note: the reAlloc above set them all to zero).
   if (weightsInit != "zero") {
@@ -584,24 +586,26 @@ criterion used by the optimizer")
       for (int i = 0; i < d; i++)
         v[i] += rgen();
     }
-    BOOST_FOREACH(WeightVector& w, weightVectors) {
-      w.setWeights(v, d);
-    }
+    wInit.setWeights(v, d);
     delete[] v;
   }
 
   // Train weights for each combination of the beta and tolerance parameters.
   // Note that the fsts (if caching is enabled) will be reused after being
   // built during the first parameter combination.
-  int wvIndex = 0;
-  BOOST_FOREACH(const double beta, betas) {
-    BOOST_FOREACH(const double tol, tolerances) {
+  vector<WeightVector> weightVectors;
+  sort(tolerances.rbegin(), tolerances.rend()); // sort in descending order
+  sort(betas.rbegin(), betas.rend()); // sort in descending order
+  BOOST_FOREACH(const double tol, tolerances) {
+    BOOST_FOREACH(const double beta, betas) {    
       assert(beta > 0); // by definition, these should be positive values
       assert(tol > 0);
       
-      WeightVector& w = weightVectors[wvIndex];      
-      cout << wvIndex << "-beta: " << beta << endl;
-      cout << wvIndex << "-tolerance: " << tol << endl;
+      weightVectors.push_back(WeightVector(d));
+      WeightVector& w = weightVectors.back();
+      w.setWeights(wInit.getWeights(), d);      
+      assert(weightVectors.size() > 0);
+      const size_t wvIndex = weightVectors.size() - 1;
       
       // Train the model.
       Optimizer::status status = Optimizer::FAILURE;
@@ -612,6 +616,18 @@ criterion used by the optimizer")
         optimizer->setBeta(beta);
         status = optimizer->train(w, fval, tol);
       }
+      
+      if (!noEarlyGridStop && (status == Optimizer::FAILURE ||
+          status == Optimizer::MAX_ITERS)) {
+        cout << "Warning: Optimizer returned status " << status << ". " <<
+            "Discarding classifier and skipping to next tolerance value.\n";
+        weightVectors.pop_back();
+        break;
+      }
+      
+      cout << wvIndex << "-beta: " << beta << endl;
+      cout << wvIndex << "-tolerance: " << tol << endl;
+      cout << wvIndex << "-status: " << status << endl;
 
       // If an output directory was specfied, save the weight vector.
       if (writeFiles) {
@@ -635,8 +651,6 @@ criterion used by the optimizer")
         Utility::evaluate(w, *objective, trainData, identifier.str(),
             fname.str());
       }
-      
-      wvIndex++;
     }
   }
   
@@ -649,7 +663,7 @@ criterion used by the optimizer")
   }
   
   // Load the eval examples from the specified file.
-  if (!split && vm.count("eval")) {
+  if (!split && vm.count("eval") && weightVectors.size() > 0) {
     cout << "Loading " << evalFilename << " ...\n";
     boost::timer::auto_cpu_timer loadEvalTimer;
     if (Utility::loadDataset(*reader, evalFilename, evalData)) {
@@ -673,7 +687,7 @@ criterion used by the optimizer")
     // Classify eval examples and optionally write the predictions to files.
     vector<string> identifiers;
     vector<string> fnames;
-    for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
+    for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
       stringstream fname;
       if (writeFiles) {
         fname << dirPath << wvIndex << "-eval_predictions.txt";
@@ -684,6 +698,12 @@ criterion used by the optimizer")
       identifiers.push_back(identifier.str());
     }
     Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
+  }
+  else if (weightVectors.size() == 0) {
+    cout << "Warning: No classifiers were successfully trained; therefore, "
+        << "no evaluation will be performed. Perhaps the range of the "
+        << "tolerance and/or beta parameters should be adjusted. Or, you may "
+        << "re-run the experiment with the --no-early-grid-stop flag.\n";
   }
 
   return 0;
