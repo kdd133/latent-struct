@@ -21,10 +21,18 @@ class Optimizer {
       : _objective(objective), _beta(beta) {}
     
     virtual ~Optimizer() {}
+    
+    enum status {
+      CONVERGED,
+      MAX_ITERS,
+      BACKWARD_PROGRESS,
+      FAILURE
+    };
 
-    // Returns the objective value at the optimal point, or infinity if an
-    // error was encountered.
-    virtual double train(WeightVector& w, double tolerance) const = 0;
+    // Returns a status code; stores the objective value at the optimal point
+    // in funcVal.
+    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+      double tolerance) const = 0;
 
     virtual int processOptions(int argc, char** argv) = 0;
     

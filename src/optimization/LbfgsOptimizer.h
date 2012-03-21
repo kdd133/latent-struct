@@ -26,7 +26,8 @@ class LbfgsOptimizer : public Optimizer {
     
     virtual ~LbfgsOptimizer() {}
 
-    virtual double train(WeightVector& w, double tolerance) const;
+    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+      double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);
     

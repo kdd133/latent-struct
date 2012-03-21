@@ -18,6 +18,7 @@ using namespace std;
 #include "FeatureVector.h"
 #include "EmOptimizer.h"
 #include "Model.h"
+#include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "WeightVector.h"
@@ -47,26 +48,40 @@ int EmOptimizer::processOptions(int argc, char** argv) {
   return 0;
 }
 
-double EmOptimizer::train(WeightVector& w, double tol) const {
+Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
+    double tol) const {
   _objective.initLatentFeatureVectors(w);
   double valPrev = numeric_limits<double>::infinity();
-  double valCur = valPrev;
   bool converged = false;  
   for (int iter = 0; iter < _maxIters; iter++) {
     boost::timer::auto_cpu_timer timer;
-    _objective.setLatentFeatureVectors(w); // E-step (uses new W)
-    valCur = _convexOpt->train(w, tol); // M-step (modifies W)
     
-    if (valCur == numeric_limits<double>::infinity()) {
-      cout << name() << ": Inner solver returned an infinite objective value. "
-          << "Returning -1.0.\n";
-      return -1.0;
+    // E-step (uses new W)
+    _objective.setLatentFeatureVectors(w);
+    
+    // M-step (modifies W)
+    const Optimizer::status status = _convexOpt->train(w, valCur, tol);
+    
+    if (status == Optimizer::FAILURE) {
+      cout << name() << ": Inner solver reported a failure. Terminating.\n";
+      return Optimizer::FAILURE;
     }
+    
     if (!_quiet)
-      cout << name() << ": prev=" << valPrev << " current=" << valCur << endl; 
+      cout << name() << ": prev=" << valPrev << " current=" << valCur << endl;
+      
+    if (status == Optimizer::BACKWARD_PROGRESS) {
+      cout << name() << ": Inner solver reported backward progress. " <<
+          "Terminating.\n";
+      return status;
+    }
+    if (status == Optimizer::MAX_ITERS) {
+      cout << name() << ": Inner solver reached max iterations. Terminating\n";
+      return status;
+    }
     if (valCur - valPrev > 0) {
       cout << name() << ": Objective value increased?! Terminating.\n";
-      return valCur;
+      return Optimizer::BACKWARD_PROGRESS;
     }
     if (valPrev - valCur < tol) {
       if (!_quiet)
@@ -78,10 +93,12 @@ double EmOptimizer::train(WeightVector& w, double tol) const {
     valPrev = valCur;
   }
   
-  if (!converged)
+  if (!converged) {
     cout << name() << ": Max iterations reached; objective value " << valCur
         << endl;
-  return valCur;
+    return Optimizer::MAX_ITERS;
+  }
+  return Optimizer::CONVERGED;
 }
 
 void EmOptimizer::setBeta(double beta) {

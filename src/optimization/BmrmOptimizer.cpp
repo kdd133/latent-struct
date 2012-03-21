@@ -10,6 +10,7 @@
 #include "BmrmOptimizer.h"
 #include "FeatureVector.h"
 #include "Model.h"
+#include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
@@ -55,7 +56,8 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
   return 0;
 }
 
-double BmrmOptimizer::train(WeightVector& w, double tol) const {
+Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
+    double tol) const {
   namespace ublas = boost::numeric::ublas;
   const size_t d = w.getDim();
   assert(d > 0);
@@ -80,7 +82,7 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
   
   // Compute the initial objective value and gradient.
   _objective.valueAndGradient(w, Remp, grad_t);
-  double min_Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
+  min_Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
   double Jw = 0; // initialized in the loop
   
   if (!_quiet)
@@ -160,10 +162,9 @@ double BmrmOptimizer::train(WeightVector& w, double tol) const {
     
     // Note: solve_quadprog may modify G, which is why we make a copy above.
     double JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
-    if (JwCP == numeric_limits<double>::infinity()) {
-      // Signal to the caller that something went wrong...
-      return numeric_limits<double>::infinity();
-    }
+    if (JwCP == numeric_limits<double>::infinity())
+      return Optimizer::FAILURE;
+      
     // Negate the optimal value returned, since BMRM thinks we're maximizing.
     JwCP = -JwCP;
     
@@ -225,6 +226,7 @@ JwCP = %0.4e  epsilon_t = %0.4e\n", name().c_str(), (int)t, (int)bs, Jw,
   if (!converged) {
     cout << name() << ": Max iterations reached; objective value " << Jw
       << endl;
+    return Optimizer::MAX_ITERS;
   }  
-  return min_Jw;
+  return Optimizer::CONVERGED;
 }

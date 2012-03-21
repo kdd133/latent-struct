@@ -10,6 +10,7 @@
 #include "FeatureVector.h"
 #include "LbfgsOptimizer.h"
 #include "Model.h"
+#include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
@@ -100,7 +101,8 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
   return 0;
 }
 
-double LbfgsOptimizer::train(WeightVector& w, double tol) const {
+Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
+    double tol) const {
   boost::timer::auto_cpu_timer timer;
   const int d = w.getDim();
   assert(d > 0);
@@ -109,8 +111,10 @@ double LbfgsOptimizer::train(WeightVector& w, double tol) const {
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
     x[i] = w.getWeight(i); // set the starting point to be w
+
   lbfgsfloatval_t objVal = 0.0;
   int ret = -1;
+  Optimizer::status status = Optimizer::FAILURE;
   
   for (int t = 0; t < _restarts; t++) {
     lbfgs_parameter_t params = _params; // make a copy, since train() is const
@@ -126,25 +130,31 @@ double LbfgsOptimizer::train(WeightVector& w, double tol) const {
       case LBFGSERR_INVALIDPARAMETERS:
         cout << "Caught non-convex related error (code " << ret <<
           "). Performing restart.\n";
+        status = Optimizer::FAILURE;
         break;
       case LBFGS_CONVERGENCE:
         cout << "Convergence detected. Performing restart.\n";
+        status = Optimizer::CONVERGED;
         break;
       case LBFGSERR_MAXIMUMLINESEARCH:
         cout << "Reached max number of line search iterations. Terminating\n";
         terminate = true;
+        status = Optimizer::FAILURE;
         break;
       case LBFGSERR_MAXIMUMITERATION:
         cout << "Reached maximum number of iterations. Terminating.\n";
         terminate = true;
+        status = Optimizer::MAX_ITERS;
         break;
       case LBFGS_ALREADY_MINIMIZED:
         cout << "Function appears to be already minimized. Terminating.\n";
         terminate = true;
+        status = Optimizer::CONVERGED;
         break;
       default:
         cout << "lbfgs() returned code " << ret << ". Terminating.\n";
         terminate = true;
+        status = Optimizer::FAILURE;
         break;
     }
     if (terminate)
@@ -155,5 +165,5 @@ double LbfgsOptimizer::train(WeightVector& w, double tol) const {
   w.setWeights(x, d); // copy the final point into w
   
   lbfgs_free(x);
-  return objVal;
+  return status;
 }

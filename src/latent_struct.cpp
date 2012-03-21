@@ -604,11 +604,13 @@ criterion used by the optimizer")
       cout << wvIndex << "-tolerance: " << tol << endl;
       
       // Train the model.
+      Optimizer::status status = Optimizer::FAILURE;
       cout << "Calling Optimizer.train()\n";
-      {        
+      {
         boost::timer::auto_cpu_timer trainTimer;
+        double fval = 0.0; // (not used)
         optimizer->setBeta(beta);
-        optimizer->train(w, tol);
+        status = optimizer->train(w, fval, tol);
       }
 
       // If an output directory was specfied, save the weight vector.
