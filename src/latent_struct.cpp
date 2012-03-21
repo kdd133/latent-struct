@@ -609,7 +609,8 @@ criterion used by the optimizer")
       
       // Train the model.
       Optimizer::status status = Optimizer::FAILURE;
-      cout << "Calling Optimizer.train()\n";
+      cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
+          "tolerance=" << tol << endl;
       {
         boost::timer::auto_cpu_timer trainTimer;
         double fval = 0.0; // (not used)
@@ -617,8 +618,7 @@ criterion used by the optimizer")
         status = optimizer->train(w, fval, tol);
       }
       
-      if (!noEarlyGridStop && (status == Optimizer::FAILURE ||
-          status == Optimizer::MAX_ITERS)) {
+      if (!noEarlyGridStop && status == Optimizer::FAILURE) {
         cout << "Warning: Optimizer returned status " << status << ". " <<
             "Discarding classifier and skipping to next tolerance value.\n";
         weightVectors.pop_back();

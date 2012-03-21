@@ -7,21 +7,21 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include <boost/program_options.hpp>
-#include <boost/timer/timer.hpp>
-#include <assert.h>
-#include <iostream>
-#include <limits>
-#include <stdio.h>
-#include <stdlib.h>
-using namespace std;
-#include "FeatureVector.h"
 #include "EmOptimizer.h"
+#include "FeatureVector.h"
 #include "Model.h"
 #include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "WeightVector.h"
+#include <assert.h>
+#include <boost/program_options.hpp>
+#include <boost/timer/timer.hpp>
+#include <iostream>
+#include <limits>
+#include <stdio.h>
+#include <stdlib.h>
+using namespace std;
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,
     shared_ptr<Optimizer> opt) :
@@ -53,6 +53,8 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
   _objective.initLatentFeatureVectors(w);
   double valPrev = numeric_limits<double>::infinity();
   bool converged = false;  
+  bool innerMaxItersPrev = false; // True if inner solver reached max iterations
+                                  // on the previous EM iteration.
   for (int iter = 0; iter < _maxIters; iter++) {
     boost::timer::auto_cpu_timer timer;
     
@@ -75,14 +77,24 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
           "Terminating.\n";
       return status;
     }
+    
     if (status == Optimizer::MAX_ITERS) {
-      cout << name() << ": Inner solver reached max iterations. Terminating\n";
-      return status;
+      if (innerMaxItersPrev) {
+        cout << name() << ": Inner solver reached max iterations on two " <<
+            "consecutive EM iterations. Terminating\n";
+        return Optimizer::FAILURE;
+      }
+      innerMaxItersPrev = true;
     }
+    else {
+      innerMaxItersPrev = false;
+    }
+    
     if (valCur - valPrev > 0) {
       cout << name() << ": Objective value increased?! Terminating.\n";
       return Optimizer::BACKWARD_PROGRESS;
     }
+    
     if (valPrev - valCur < tol) {
       if (!_quiet)
         cout << name() << ": Convergence detected; objective value " << valCur
@@ -90,6 +102,7 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
       converged = true;
       break;
     }
+    
     valPrev = valCur;
   }
   

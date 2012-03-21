@@ -12,7 +12,8 @@
 
 #include "Optimizer.h"
 #include <boost/shared_ptr.hpp>
-using namespace boost;
+#include <string>
+using std::string;
 
 class WeightVector;
 class Dataset;
@@ -21,7 +22,7 @@ class TrainingObjective;
 class EmOptimizer : public Optimizer {
 
   public:
-    EmOptimizer(TrainingObjective& objective, shared_ptr<Optimizer> opt);
+    EmOptimizer(TrainingObjective& objective, boost::shared_ptr<Optimizer> opt);
     
     virtual ~EmOptimizer() {}
 
@@ -39,7 +40,7 @@ class EmOptimizer : public Optimizer {
     
   private:
   
-    shared_ptr<Optimizer> _convexOpt; // the convex optimization procedure
+    boost::shared_ptr<Optimizer> _convexOpt; // the convex optimizer
   
     int _maxIters; // maximum number of iterations
     
