@@ -21,6 +21,7 @@
 #include "OpDelete.h"
 #include "OpInsert.h"
 #include "OpMatch.h"
+#include "OpNone.h"
 #include "OpSubstitute.h"
 #include "OpReplace.h"
 #include "Pattern.h"
@@ -28,7 +29,6 @@
 #include "StdFeatArc.h"
 #include "StringEditModel.h"
 #include "StringPair.h"
-#include "Transducer.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
@@ -37,6 +37,7 @@
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <iostream>
 #include <list>
 #include <set>
 #include <string>
@@ -74,6 +75,9 @@ class StringEditModel : public Model {
       
     virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
+      
+    virtual void printAlignment(ostream& out, const WeightVector& w,
+      const Pattern& pattern, const Label label);
     
     static const string& name() {
       static const string _name = "StringEdit";
@@ -537,6 +541,78 @@ LogWeight StringEditModel<Arc>::expectedFeatures(const WeightVector& w,
   if (normalize)
     fv.timesEquals(-logZ);
   return logZ;
+}
+
+template <typename Arc>
+void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
+    const Pattern& x, const Label y) {
+  Fst* fst = getFst(_fstCache, w, (StringPair&)x, y, true);
+  assert(fst);
+  list<int> alignmentOps;
+  fst->maxAlignment(alignmentOps);
+  fst->clearDynProgVariables();
+  
+  const StringPair& pair = (StringPair&)x;
+  const vector<string>& s = pair.getSource();
+  const vector<string>& t = pair.getTarget();
+  
+  stringstream alignedSource, alignedTarget;
+  int i = 0, j = 0, iNew = -1, jNew = -1;
+  size_t alignPos = 0;
+  // Note: The following assumes that start state is the first entry in _states.
+  int sourceId = _states[0].getId();
+  // Recall that AlignmentTransducer places the ops in reverse order.
+  BOOST_REVERSE_FOREACH(int opId, alignmentOps) {
+    if (opId == OpNone::ID)
+      continue;
+    assert(opId >= 0);
+    // FIXME: This inner loop is inefficient. We should create a lookup table
+    // that maps op ids to ops.
+    BOOST_FOREACH(const EditOperation* op, _ops) {
+      if (op->getId() == opId) {
+        sourceId = op->apply(s, t, sourceId, i, j, iNew, jNew);
+        assert(sourceId >= 0);
+        assert(iNew >= i && jNew >= j);
+        int iPhraseLen = iNew - i;
+        int jPhraseLen = jNew - j;
+        
+        out << op->getName() << " "; // Print the name of the edit operation.        
+        alignedSource << "|";
+        alignedTarget << "|";
+        
+        if (iNew > i) {
+          alignedSource << s[i];
+          for (size_t k = i + 1; k < iNew; k++)
+            alignedSource << " " << s[k];
+        }
+        if (jNew > j) {
+          alignedTarget << t[j];
+          for (size_t k = j + 1; k < jNew; k++)
+            alignedTarget << " " << t[k];
+        }
+        
+        if (jPhraseLen < iPhraseLen) {
+          alignedTarget << (jPhraseLen > 0 ? "  " : " ");
+          for (size_t k = jPhraseLen + 1; k < iPhraseLen; k++)
+            alignedTarget << " " << " ";
+        }
+        else if (iPhraseLen < jPhraseLen) {
+          alignedSource << (iPhraseLen > 0 ? "  " : " ");
+          for (size_t k = iPhraseLen + 1; k < jPhraseLen; k++)
+            alignedSource << " " << " ";
+        }
+
+        i = iNew;
+        j = jNew;
+        alignPos++;
+        break;
+      }
+    }
+  }
+  out << endl;
+  // Print the strings with alignment markers.
+  out << alignedSource.str() << endl;
+  out << alignedTarget.str() << endl;
 }
 
 template <typename Arc>

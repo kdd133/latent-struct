@@ -24,7 +24,6 @@
 #include "StateType.h"
 #include "StdFeatArc.h"
 #include "StringPair.h"
-#include "Transducer.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/foreach.hpp>
@@ -51,7 +50,7 @@ using namespace std;
 //i.e., maxFeatureVector() is valid only for the Viterbi semiring, while the
 //logPartition() and other "log" operations are only valid for the Log semiring.
 template<typename Arc>
-class AlignmentTransducer : public Transducer {
+class AlignmentTransducer {
   public:
     typedef typename Arc::StateId StateId;
     typedef typename Arc::Weight ArcWeight;
@@ -65,7 +64,7 @@ class AlignmentTransducer : public Transducer {
                         boost::shared_ptr<ObservedFeatureGen> fgenObs,
                         bool includeFinalFeats = true);
                         
-    virtual ~AlignmentTransducer();
+    ~AlignmentTransducer();
                         
     void build(const WeightVector& w, const StringPair& pair, Label label,
       bool includeObservedFeaturesArc = true);
@@ -81,8 +80,13 @@ class AlignmentTransducer : public Transducer {
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
         bool getCostOnly = false);
+        
+    // Returns the *reverse* sequence of edit operations in to the maximum
+    // scoring alignment. i.e., The operations corresponding to these ids can
+    // be applied in reverse order to reconstruct the optimal alignment.
+    void maxAlignment(list<int>& opIds) const;
     
-    void toGraphviz(const string& fname);
+    void toGraphviz(const string& fname) const;
     
     const fst::VectorFst<Arc>* getFst() { return _fst; }
     
@@ -182,7 +186,7 @@ inline void AlignmentTransducer<Arc>::clearBuildVariables() {
 }
 
 template<typename Arc>
-void AlignmentTransducer<Arc>::toGraphviz(const string& fname) {
+void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
   ofstream fout(fname.c_str());
   assert(fout.good());
   
@@ -448,7 +452,7 @@ RealWeight AlignmentTransducer<Arc>::maxFeatureVector(
   fst::VectorFst<Arc> viterbiFst;
   fst::ShortestPath(*_fst, &viterbiFst);
   
-  tr1::unordered_map<int,RealWeight> sparse;
+  tr1::unordered_map<int, RealWeight> sparse;
 
   // ShortestPath builds an fst in reverse order, assigning id 0 to the Final
   // state, and then incrementing the id for each state along the path. So, if
@@ -456,21 +460,45 @@ RealWeight AlignmentTransducer<Arc>::maxFeatureVector(
   // which point we are done.
   assert(viterbiFst.Start() != 0);
   double cost = 0;
-  fst::StateIterator< fst::VectorFst<Arc> > sIt(viterbiFst);
+  fst::StateIterator<fst::VectorFst<Arc> > sIt(viterbiFst);
   for (; !sIt.Done(); sIt.Next()) {
-    const StateId prevstate = sIt.Value();
-    fst::ArcIterator< fst::VectorFst<Arc> > aIt(viterbiFst, prevstate);
-    for (; !aIt.Done(); aIt.Next()) {
+    fst::ArcIterator<fst::VectorFst<Arc> > aIt(viterbiFst, sIt.Value());
+    if (!aIt.Done()) {
       const Arc& arc = aIt.Value();
       // Avoid performing the vector additions if we only want to know the cost.
       if (arc.fv && !getCostOnly)
         arc.fv->addTo(sparse);
-      cost += arc.weight.Value();
+      cost += arc.weight.Value();    
+      // There should be at most one outgoing arc per state in the Viterbi fst.
+      aIt.Next();
+      assert(aIt.Done());
     }
   }
   if (!getCostOnly)
     fv.reinit(sparse);
   return RealWeight(-cost); // the arc weights were negated in build()
+}
+
+template<typename Arc>
+void AlignmentTransducer<Arc>::maxAlignment(list<int>& opIds) const {
+  assert(_fst);
+  opIds.clear();
+  
+  fst::VectorFst<Arc> viterbiFst;
+  fst::ShortestPath(*_fst, &viterbiFst);
+  assert(viterbiFst.Start() != 0);
+  
+  fst::StateIterator<fst::VectorFst<Arc> > sIt(viterbiFst);
+  for (; !sIt.Done(); sIt.Next()) {
+    const StateId stateId = sIt.Value();
+    fst::ArcIterator<fst::VectorFst<Arc> > aIt(viterbiFst, stateId);
+    if (!aIt.Done()) {
+      opIds.push_back(aIt.Value().ilabel);
+      // There should be at most one outgoing arc per state in the Viterbi fst.
+      aIt.Next();
+      assert(aIt.Done());
+    }
+  }
 }
 
 template<typename Arc>

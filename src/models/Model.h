@@ -16,6 +16,7 @@
 #include "ObservedFeatureGen.h"
 #include "WeightVector.h"
 #include <boost/shared_ptr.hpp>
+#include <iostream>
 using boost::shared_ptr;
 
 class InputReader;
@@ -56,6 +57,9 @@ class Model {
     // Returns true of the caller assumes ownership of the FeatureVector.
     virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns) = 0;
+      
+    virtual void printAlignment(std::ostream& out, const WeightVector& w,
+      const Pattern& pattern, const Label label) = 0;
     
     virtual void emptyCache() = 0;
     

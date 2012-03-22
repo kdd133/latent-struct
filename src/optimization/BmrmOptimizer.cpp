@@ -121,6 +121,8 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
       }
     }
     else {
+      // TODO: Drop entries one-by-one from G and avoid these redundant
+      // computations, as we do with b below: see if (!_noShrinking)
       assert(!_noShrinking);
       G.resize(bs, bs, false);
       for (size_t i = 0; i < bs; i++) {
