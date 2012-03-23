@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
   bool keepAllPositives = false;
   bool noEarlyGridStop = false;
   bool optEM = false;
+  bool printAlignments = false;
   bool split = false;
   const string blank("<NONE>");
   const string optAuto("Auto");
@@ -149,6 +150,10 @@ present, all points on the grid will be visited")
         LogLinearMulti::name()), objMsgObs.str().c_str())
     ("optimizer", opt::value<string>(&optName)->default_value(optAuto),
         optMsgObs.str().c_str())
+    ("print-alignments", opt::bool_switch(&printAlignments), "print the max-\
+scoring alignment for each eval example to a file (requires --eval); note: \
+this operation is relatively slow, since it does not make use of multi-\
+threading or fst caching")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
@@ -658,8 +663,11 @@ criterion used by the optimizer")
 
   // Clear the fsts that were cached for the training data.
   if (cachingEnabled) {
-    for (size_t i = 0; i < objective->getNumModels(); i++)
-      objective->getModel(i).emptyCache();
+    for (size_t i = 0; i < objective->getNumModels(); i++) {
+      Model& model = objective->getModel(i);
+      model.setCacheEnabled(false);
+      model.emptyCache();
+    }
   }
   
   // Load the eval examples from the specified file.
@@ -696,6 +704,28 @@ criterion used by the optimizer")
       stringstream identifier;
       identifier << wvIndex << "-Eval";
       identifiers.push_back(identifier.str());
+      
+      if (printAlignments) {
+        // FIXME: This does not make use of multiple threads or of caching. It
+        // should probably be performed alongside the eval predictions. 
+        stringstream alignFname;
+        alignFname << dirPath << wvIndex << "-eval_alignments_yi.txt";
+        ofstream alignOut(alignFname.str().c_str());
+        if (!alignOut.good()) {
+          cout << "Warning: Unable to write " << alignFname.str() << endl;
+          continue;
+        }
+        Model& model = objective->getModel(0);
+        assert(!model.getCacheEnabled()); // this would waste memory
+        const WeightVector& w = weightVectors[wvIndex];
+        cout << "Printing alignments to " << alignFname.str() << ".\n";
+        BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
+          alignOut << ex.x()->getId() << endl; // print the pattern id
+          model.printAlignment(alignOut, w, *ex.x(), ex.y());
+          alignOut << endl;
+        }
+        alignOut.close();
+      }
     }
     Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
   }
