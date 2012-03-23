@@ -546,11 +546,19 @@ LogWeight StringEditModel<Arc>::expectedFeatures(const WeightVector& w,
 template <typename Arc>
 void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
     const Pattern& x, const Label y) {
-  Fst* fst = getFst(_fstCache, w, (StringPair&)x, y, true);
+  // We do not call getFst here because we need a StdFeatArc transducer,
+  // whether we are using a MaxMargin or LogLinear objective. Therefore, we
+  // own the fst and must delete it when we are done with it.
+  AlignmentTransducer<StdFeatArc>* fst = new AlignmentTransducer<StdFeatArc>(
+      _states, _ops, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
   assert(fst);
+  fst->build(w, (const StringPair&)x, y, true);
+  fst->clearBuildVariables();
+  
   list<int> alignmentOps;
   fst->maxAlignment(alignmentOps);
   fst->clearDynProgVariables();
+  delete fst;
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();
@@ -609,6 +617,7 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
       }
     }
   }
+  
   out << endl;
   // Print the strings with alignment markers.
   out << alignedSource.str() << endl;
