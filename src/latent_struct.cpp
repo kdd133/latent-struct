@@ -720,9 +720,14 @@ criterion used by the optimizer")
         const WeightVector& w = weightVectors[wvIndex];
         cout << "Printing alignments to " << alignFname.str() << ".\n";
         BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
-          alignOut << ex.x()->getId() << endl; // print the pattern id
-          model.printAlignment(alignOut, w, *ex.x(), ex.y());
-          alignOut << endl;
+          BOOST_FOREACH(const Label y, evalData.getLabelSet()) {
+            if (objective->isBinary() && y != 1)
+              continue;
+            alignOut << ex.x()->getId() << " (yi = " << ex.y() << ")  y = "
+                << y << endl;
+            model.printAlignment(alignOut, w, *ex.x(), y);
+            alignOut << endl;
+          }
         }
         alignOut.close();
       }

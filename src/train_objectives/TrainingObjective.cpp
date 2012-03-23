@@ -162,11 +162,10 @@ void TrainingObjective::gatherFeaturesPart(Model& model,
     const Label k, size_t& maxFvs, size_t& totalFvs) {
   totalFvs = 0;
   maxFvs = 0;
-  const bool binaryObjective = isBinary();
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     for (Label y = 0; y < k; y++) {
-      if (!(binaryObjective && y != 1)) { 
+      if (!(isBinary() && y != 1)) { 
         const size_t numFvs = model.gatherFeatures(x, y);
         totalFvs += numFvs;
         if (numFvs > maxFvs)
