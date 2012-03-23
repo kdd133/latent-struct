@@ -24,6 +24,7 @@
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <limits>
 #include <stdio.h>
@@ -163,7 +164,14 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     ublas::vector<double> alpha(bs);
     
     // Note: solve_quadprog may modify G, which is why we make a copy above.
-    double JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
+    double JwCP;
+    try {
+      JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
+    }
+    catch (exception& e) {
+      cout << "uQuadProgPP threw an exception: " << e.what() << endl;
+      return Optimizer::FAILURE;
+    }
     if (JwCP == numeric_limits<double>::infinity())
       return Optimizer::FAILURE;
       
