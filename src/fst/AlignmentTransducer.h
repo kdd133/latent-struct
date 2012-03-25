@@ -287,6 +287,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     // The type of the first state in the list defines the type of the start
     // state and the finish state.
     const StateType& startFinishStateType = _stateTypes.front();
+    assert(startFinishStateType.getName() == "sta");
     // FIXME: The 0 value should not be hard-coded (tied to StringEditModel.h)
     assert(startFinishStateType.getId() == 0);
     FeatureVector<RealWeight>* fv = 0;
@@ -315,11 +316,11 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
   ptr_list<EditOperation>::const_iterator op;
   for (op = ops.begin(); op != ops.end(); ++op) {
     int iNew = -1, jNew = -1;
-    const int destStateTypeId = op->apply(s, t, sourceStateType.getId(), i, j,
+    const StateType* destStateType = op->apply(s, t, &sourceStateType, i, j,
         iNew, jNew);
-    if (destStateTypeId >= 0) { // was the operation successfully applied?
+    if (destStateType != 0) { // was the operation successfully applied?
       assert(iNew >= 0 && jNew >= 0);
-      StateId& destStateId = _stateIdTable[iNew][jNew][destStateTypeId];
+      StateId& destStateId = _stateIdTable[iNew][jNew][destStateType->getId()];
       // If the destination state already exists in the fst, we need to check
       // to see if this particular arc is already present, in which case there
       // is no need to continue down this branch (because this is a depth-first
@@ -341,10 +342,6 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
         destStateId = _fst->AddState(); // note: updates the stateIdTable
       }
       
-      // By construction (see, e.g., StringEditModel.h), we may assume that a
-      // given StateType's id corresponds to its index in the vector.
-      const StateType& destState = _stateTypes[destStateTypeId];
-      
       // Determine the portions of the strings that were consumed by the op. 
       string sourceConsumed = (i == iNew) ? FeatureGenConstants::EPSILON : s[i];
       for (int k = i + 1; k < iNew; k++)
@@ -355,11 +352,12 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
 
       // Append the state and the consumed strings to the alignment history.
-      AlignmentPart part = {&destState, sourceConsumed, targetConsumed};
+      AlignmentPart part = {destStateType, sourceConsumed, targetConsumed};
       history.push_back(part);      
       FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
           jNew, *op, history);
-      addArc(op->getId(), destStateTypeId, sourceStateId, destStateId, fv, w);
+      addArc(op->getId(), destStateType->getId(), sourceStateId, destStateId,
+          fv, w);
       applyOperations(w, pair, label, history, finishStateId, iNew, jNew);
       history.pop_back();
     }

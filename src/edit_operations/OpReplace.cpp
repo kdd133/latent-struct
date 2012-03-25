@@ -14,9 +14,9 @@
 #include <vector>
 using namespace std;
 
-OpReplace::OpReplace(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthSource, int phraseLengthTarget) :
-    EditOperation(opId, name, defaultDestinationStateId),
+OpReplace::OpReplace(int opId, const StateType* defaultDestinationState,
+    string name, int phraseLengthSource, int phraseLengthTarget) :
+    EditOperation(opId, name, defaultDestinationState),
     _phraseLengthSource(phraseLengthSource),
     _phraseLengthTarget(phraseLengthTarget),
     _conditionEnabledSource(false),
@@ -38,32 +38,33 @@ void OpReplace::setCondition(string tokenRegexStrSource,
   }
 }
 
-int OpReplace::apply(const vector<string>& source, const vector<string>& target,
-    const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
+const StateType* OpReplace::apply(const vector<string>& source,
+    const vector<string>& target, const StateType* prevStateType,
+    const int i, const int j, int& iNew, int& jNew) const {
   if (i + _phraseLengthSource > source.size() ||
       j + _phraseLengthTarget > target.size())
-    return -1;
+    return 0;
   if (_conditionEnabledSource) {
     for (int l = 0; l < _phraseLengthSource; l++) {
       if (boost::regex_match(source[i + l], _tokenRegexSource)) {
         if (!_acceptMatchingSource)
-          return -1;
+          return 0;
       }
       else if (_acceptMatchingSource)
-        return -1;
+        return 0;
     }
   }
   if (_conditionEnabledTarget) {
     for (int l = 0; l < _phraseLengthTarget; l++) {
       if (boost::regex_match(target[j + l], _tokenRegexTarget)) {
         if (!_acceptMatchingTarget)
-          return -1;
+          return 0;
       }
       else if (_acceptMatchingTarget)
-        return -1;
+        return 0;
     }
   }
   iNew = i + _phraseLengthSource;
   jNew = j + _phraseLengthTarget;
-  return _defaultDestinationStateId;
+  return _defaultDestinationState;
 }

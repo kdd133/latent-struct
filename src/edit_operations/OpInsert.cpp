@@ -14,9 +14,9 @@
 #include <vector>
 using namespace std;
 
-OpInsert::OpInsert(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthTarget) :
-    EditOperation(opId, name, defaultDestinationStateId),
+OpInsert::OpInsert(int opId, const StateType* defaultDestinationState,
+    string name, int phraseLengthTarget) :
+    EditOperation(opId, name, defaultDestinationState),
     _phraseLengthTarget(phraseLengthTarget),
     _conditionEnabled(false) {
 }
@@ -29,21 +29,22 @@ void OpInsert::setCondition(string tokenRegexStr, bool acceptMatching) {
   }
 }
 
-int OpInsert::apply(const vector<string>& source, const vector<string>& target,
-    const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
+const StateType* OpInsert::apply(const vector<string>& source,
+    const vector<string>& target, const StateType* prevStateType,
+    const int i, const int j, int& iNew, int& jNew) const {
   if (j + _phraseLengthTarget > target.size())
-    return -1;
+    return 0;
   if (_conditionEnabled) {
     for (int l = 0; l < _phraseLengthTarget; l++) {
       if (boost::regex_match(target[j + l], _tokenRegex)) {
         if (!_acceptMatching)
-          return -1;
+          return 0;
       }
       else if (_acceptMatching)
-        return -1;
+        return 0;
     }
   }
   iNew = i;
   jNew = j + _phraseLengthTarget;
-  return _defaultDestinationStateId;
+  return _defaultDestinationState;
 }

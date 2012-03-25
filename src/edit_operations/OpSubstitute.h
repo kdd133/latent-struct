@@ -23,18 +23,19 @@ class OpSubstitute : public EditOperation {
 
   public:
   
-    OpSubstitute(int opId, int defaultDestinationStateId, string name =
-      "Substitute", int phraseLengthSource = 1, int phraseLengthTarget = 1);
+    OpSubstitute(int opId, const StateType* defaultDestinationState,
+      string name = "Substitute", int phraseLengthSource = 1,
+      int phraseLengthTarget = 1);
     
     virtual ~OpSubstitute() {}
     
-    int apply(const vector<string>& source,
-              const vector<string>& target,
-              const int prevStateTypeId,
-              const int i,
-              const int j,
-              int& iNew,
-              int& jNew) const;
+    virtual const StateType* apply(const vector<string>& source,
+                                   const vector<string>& target,
+                                   const StateType* prevStateType,
+                                   const int i,
+                                   const int j,
+                                   int& iNew,
+                                   int& jNew) const;
               
     void setCondition(string tokenRegexStrSource, string tokenRegexStrTarget,
       bool acceptMatchingSource = true, bool acceptMatchingTarget = true);

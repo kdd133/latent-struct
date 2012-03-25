@@ -21,18 +21,18 @@ class OpMatch : public EditOperation {
 
   public:
   
-    OpMatch(int opId, int defaultDestinationStateId, string name =
+    OpMatch(int opId, const StateType* defaultDestinationState, string name =
       "Match", int phraseLength = 1);
     
     virtual ~OpMatch() {}
     
-    int apply(const vector<string>& source,
-              const vector<string>& target,
-              const int prevStateTypeId,
-              const int i,
-              const int j,
-              int& iNew,
-              int& jNew) const;
+    virtual const StateType* apply(const vector<string>& source,
+                                   const vector<string>& target,
+                                   const StateType* prevStateType,
+                                   const int i,
+                                   const int j,
+                                   int& iNew,
+                                   int& jNew) const;
               
     void setCondition(string tokenRegexStr, bool acceptMatching = true);
               

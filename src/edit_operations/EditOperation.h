@@ -16,31 +16,23 @@
 using namespace std;
 
 class StateType;
-class StringPair;
 
 class EditOperation {
 
   public:
   
-    EditOperation(int id, string name, int defaultDestStateId = -1)
-      : _id(id), _name(name), _defaultDestinationStateId(defaultDestStateId) {}
+    EditOperation(int id, string name, const StateType* defaultDestState = 0)
+      : _id(id), _name(name), _defaultDestinationState(defaultDestState) {}
     
     virtual ~EditOperation() {}
     
-    // Returns a non-negative state Id if the operation could be legally
-    // applied; or, -1 otherwise.
-    //
-    //i: Position in source string.
-    //j: Position in target string.
-    //iNew: Position in source string after applying the operation.
-    //jNew: Position in target string after applying the operation.
-    virtual int apply(const vector<string>& source,
-                      const vector<string>& target,
-                      const int prevStateTypeId,
-                      const int i,
-                      const int j,
-                      int& iNew,
-                      int& jNew) const = 0;
+    virtual const StateType* apply(const vector<string>& source,
+                                   const vector<string>& target,
+                                   const StateType* prevStateType,
+                                   const int i,
+                                   const int j,
+                                   int& iNew,
+                                   int& jNew) const = 0;
 
     int getId() const {
       return _id;
@@ -51,8 +43,8 @@ class EditOperation {
       return _name;
     }
     
-    int getDefaultDestinationStateId() const {
-      return _defaultDestinationStateId;
+    const StateType* getDefaultDestinationState() const {
+      return _defaultDestinationState;
     }
 
   protected:
@@ -61,6 +53,6 @@ class EditOperation {
     
     string _name;
     
-    int _defaultDestinationStateId;
+    const StateType* _defaultDestinationState;
 };
 #endif

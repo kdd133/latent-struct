@@ -16,9 +16,9 @@
 #include <vector>
 using namespace std;
 
-OpDelete::OpDelete(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthSource) :
-    EditOperation(opId, name, defaultDestinationStateId),
+OpDelete::OpDelete(int opId, const StateType* defaultDestinationState,
+    string name, int phraseLengthSource) :
+    EditOperation(opId, name, defaultDestinationState),
     _phraseLengthSource(phraseLengthSource),
     _conditionEnabled(false) {
 }
@@ -31,21 +31,22 @@ void OpDelete::setCondition(string tokenRegexStr, bool acceptMatching) {
   }
 }
 
-int OpDelete::apply(const vector<string>& source, const vector<string>& target,
-    const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
+const StateType* OpDelete::apply(const vector<string>& source,
+    const vector<string>& target, const StateType* prevStateType,
+    const int i, const int j, int& iNew, int& jNew) const {
   if (i + _phraseLengthSource > source.size())
-    return -1;
+    return 0;
   if (_conditionEnabled) {
     for (int l = 0; l < _phraseLengthSource; l++) {
       if (boost::regex_match(source[i + l], _tokenRegex)) {
         if (!_acceptMatching)
-          return -1;
+          return 0;
       }
       else if (_acceptMatching)
-        return -1;
+        return 0;
     }
   }
   iNew = i + _phraseLengthSource;
   jNew = j;
-  return _defaultDestinationStateId;
+  return _defaultDestinationState;
 }

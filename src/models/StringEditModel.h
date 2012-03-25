@@ -163,12 +163,12 @@ void StringEditModel<Arc>::addZeroOrderStates() {
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     string opName = "DEL" + lexical_cast<string>(s);
-    start.addValidOperation(new OpDelete(opId++, start.getId(), opName, s));
+    start.addValidOperation(new OpDelete(opId++, &start, opName, s));
   }
   
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
     string opName = "INS" + lexical_cast<string>(t);
-    start.addValidOperation(new OpInsert(opId++, start.getId(), opName, t));
+    start.addValidOperation(new OpInsert(opId++, &start, opName, t));
   }
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
@@ -177,19 +177,16 @@ void StringEditModel<Arc>::addZeroOrderStates() {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
         string opName = "SUB" + sStr + tStr;
-        start.addValidOperation(new OpSubstitute(opId++, start.getId(), opName,
-            s, t));
+        start.addValidOperation(new OpSubstitute(opId++, &start, opName, s, t));
             
         if (s == t) { // can't possibly match phrases of different lengths
           opName =  "MAT" + sStr + tStr;
-          start.addValidOperation(new OpMatch(opId++, start.getId(), opName,
-              s));
+          start.addValidOperation(new OpMatch(opId++, &start, opName, s));
         }
       }
       else { // !_useMatch: Use Replace only, instead of Substitute and Match.
         string opName = "REP" + sStr + tStr;
-        start.addValidOperation(new OpReplace(opId++, start.getId(), opName,
-            s, t));
+        start.addValidOperation(new OpReplace(opId++, &start, opName, s, t));
       }
     }
   }
@@ -238,8 +235,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength; ++sourceLen) {
       const string opName = opBaseName + lexical_cast<string>(sourceLen);
       if (iends_with(dest.getName(), opBaseName)) {
-        EditOperation* op = new OpDelete(opId++, dest.getId(), opName,
-            sourceLen);
+        EditOperation* op = new OpDelete(opId++, &dest, opName, sourceLen);
         const string destFirst = dest.getName().substr(0, 3);
         BOOST_FOREACH(StateType& source, _states) {
           // If this is not a transition to start/finish and the last state name
@@ -261,8 +257,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     for (int targetLen = 1; targetLen <= _maxTargetPhraseLength; ++targetLen) {
       const string opName = opBaseName + lexical_cast<string>(targetLen);
       if (iends_with(dest.getName(), opBaseName)) {
-        EditOperation* op = new OpInsert(opId++, dest.getId(), opName,
-            targetLen);
+        EditOperation* op = new OpInsert(opId++, &dest, opName, targetLen);
         const string destFirst = dest.getName().substr(0, 3);
         BOOST_FOREACH(StateType& source, _states) {
           // If this is not a transition to start/finish and the last state name
@@ -290,12 +285,10 @@ void StringEditModel<Arc>::addFirstOrderStates() {
         if (iends_with(dest.getName(), opBaseName)) {
           EditOperation* op;
           if (_useMatch) {
-            op = new OpSubstitute(opId++, dest.getId(), opName, sourceLen,
-                targetLen);
+            op = new OpSubstitute(opId++, &dest, opName, sourceLen, targetLen);
           }
           else {
-            op = new OpReplace(opId++, dest.getId(), opName, sourceLen,
-                targetLen);
+            op = new OpReplace(opId++, &dest, opName, sourceLen, targetLen);
           }
           const string destFirst = dest.getName().substr(0, 3);
           BOOST_FOREACH(StateType& source, _states) {
@@ -321,7 +314,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
       for (int len = 1; len <= maxMatchLength; ++len) {
         const string opName = opBaseName + lexical_cast<string>(len);
         if (iends_with(dest.getName(), opBaseName)) {
-          EditOperation* op = new OpMatch(opId++, dest.getId(), opName, len);
+          EditOperation* op = new OpMatch(opId++, &dest, opName, len);
           const string destFirst = dest.getName().substr(0, 3);
           BOOST_FOREACH(StateType& source, _states) {
             if (!iends_with(source.getName(), transToStart) &&
@@ -339,8 +332,8 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     const ptr_list<EditOperation>& ops = state.getValidOperations();
     ptr_list<EditOperation>::const_iterator op;
     for (op = ops.begin(); op != ops.end(); ++op)
-      cout << "  " << op->getName() << ">" << op->getDefaultDestinationStateId()
-        << endl;
+      cout << "  " << op->getName() << ">" <<
+        op->getDefaultDestinationState()->getName() << endl;
   }
 }
 
@@ -735,9 +728,8 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   stringstream alignedSource, alignedTarget;
   int i = 0, j = 0, iNew = -1, jNew = -1;
   size_t alignPos = 0;
-  // Note: The following assumes that start state is the first entry in _states.
-  int sourceId = _states.front().getId();
-  assert(_states.front().getName() == "sta");
+  const StateType* source = &_states.front();
+  assert(source->getName() == "sta");
   
   // Recall that AlignmentTransducer places the ops in reverse order.
   list<int>::const_reverse_iterator it;
@@ -746,17 +738,15 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
     if (opId == OpNone::ID)
       continue;
     assert(opId >= 0);
-    // The following should be true by construction.
-    assert(_states[sourceId].getId() == sourceId);
-    const ptr_list<EditOperation>& ops = _states[sourceId].getValidOperations();
+    const ptr_list<EditOperation>& ops = source->getValidOperations();
     
     // FIXME: This inner loop is inefficient. We should create a lookup table
     // that maps op ids to ops.
     ptr_list<EditOperation>::const_iterator op;
     for (op = ops.begin(); op != ops.end(); ++op) {
       if (op->getId() == opId) {
-        sourceId = op->apply(s, t, sourceId, i, j, iNew, jNew);
-        assert(sourceId >= 0);
+        source = op->apply(s, t, source, i, j, iNew, jNew);
+        assert(source->getId() >= 0);
         assert(iNew >= i && jNew >= j);
         int iPhraseLen = iNew - i;
         int jPhraseLen = jNew - j;

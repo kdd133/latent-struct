@@ -11,6 +11,7 @@
 #define _OPNONE_H
 
 #include "EditOperation.h"
+#include <assert.h>
 #include <string>
 #include <vector>
 using namespace std;
@@ -21,20 +22,20 @@ class OpNone : public EditOperation {
   
     OpNone(string name = "None") : EditOperation(ID, name) {}
     
-    int apply(const vector<string>& source,
-              const vector<string>& target,
-              const int prevStateTypeId,
-              const int i,
-              const int j,
-              int& iNew,
-              int& jNew) const {
+    virtual const StateType* apply(const vector<string>& source,
+                                   const vector<string>& target,
+                                   const StateType* prevStateType,
+                                   const int i,
+                                   const int j,
+                                   int& iNew,
+                                   int& jNew) const {
       iNew = i;
       jNew = j;
-      return prevStateTypeId;
+      assert(prevStateType != 0);
+      return prevStateType;
     }
     
-    static const int ID;
-              
+    static const int ID;              
 };
 
 #endif

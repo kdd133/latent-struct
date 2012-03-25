@@ -17,18 +17,20 @@
 #include <vector>
 using namespace std;
 
+class StateType;
+
 class OpDelete : public EditOperation {
   public:
-    OpDelete(int opId, int defaultDestinationStateId, string name = "Delete",
-        int phraseLengthSource = 1);
+    OpDelete(int opId, const StateType* defaultDestinationState,
+      string name = "Delete", int phraseLengthSource = 1);
     
-    int apply(const vector<string>& source,
-              const vector<string>& target,
-              const int prevStateTypeId,
-              const int i,
-              const int j,
-              int& iNew,
-              int& jNew) const;
+    virtual const StateType* apply(const vector<string>& source,
+                                   const vector<string>& target,
+                                   const StateType* prevStateType,
+                                   const int i,
+                                   const int j,
+                                   int& iNew,
+                                   int& jNew) const;
               
     void setCondition(string tokenRegexStr, bool acceptMatching = true);
               
