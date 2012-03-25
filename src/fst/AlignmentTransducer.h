@@ -288,8 +288,6 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     // state and the finish state.
     const StateType& startFinishStateType = _stateTypes.front();
     assert(startFinishStateType.getName() == "sta");
-    // FIXME: The 0 value should not be hard-coded (tied to StringEditModel.h)
-    assert(startFinishStateType.getId() == 0);
     FeatureVector<RealWeight>* fv = 0;
     OpNone noOp;
     if (_includeFinalFeats) {
