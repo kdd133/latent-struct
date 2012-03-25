@@ -186,6 +186,19 @@ inline void AlignmentTransducer<Arc>::clearBuildVariables() {
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
+  // Build lookup tables for state names and edit operation names.
+  tr1::unordered_map<int, string> stateNames;
+  tr1::unordered_map<int, string> opNames;
+  typedef tr1::unordered_map<int, string>::value_type PairType;  
+  ptr_vector<StateType>::const_iterator st;
+  for (st = _stateTypes.begin(); st != _stateTypes.end(); ++st) {
+    stateNames.insert(PairType(st->getId(), st->getName()));
+    const ptr_list<EditOperation>& ops = st->getValidOperations();
+    ptr_list<EditOperation>::const_iterator op;
+    for (op = ops.begin(); op != ops.end(); ++op)
+      opNames.insert(PairType(op->getId(), op->getName()));
+  }
+
   ofstream fout(fname.c_str());
   assert(fout.good());
   
@@ -196,15 +209,9 @@ void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
     fout << "node" << prev << " [label=" << prev << "];\n";
     fst::ArcIterator< fst::VectorFst<Arc> > aIt(*_fst, prev);
     for (; !aIt.Done(); aIt.Next()) {
-      stringstream ss;
       const Arc& arc = aIt.Value();
-      if (arc.fv) {
-        for (int i = 0; i < arc.fv->getNumEntries(); i++)
-          ss << arc.fv->getIndexAtLocation(i) << ",";
-      }
-      const StateId next = arc.nextstate;
-      fout << "node" << prev << " -> node" << next << " [label=\"fv:" <<
-          ss.str() << " w:" << arc.weight << "\"];\n";
+      fout << "node" << prev << " -> node" << arc.nextstate << " [label=\"op:"
+        << opNames[arc.ilabel] << " st:" << stateNames[arc.olabel] << "\"];\n";
     }
   }
   fout << "}\n";
