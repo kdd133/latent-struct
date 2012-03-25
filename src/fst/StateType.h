@@ -11,8 +11,9 @@
 #define _STATE_H
 
 #include "EditOperation.h"
-#include <boost/ptr_container/ptr_list.hpp>
+#include <list>
 #include <string>
+using std::list;
 using std::string;
 
 class StateType {
@@ -35,11 +36,11 @@ class StateType {
       return _name;
     }
     
-    void addValidOperation(EditOperation* op) {
+    void addValidOperation(const EditOperation* op) {
       _validOps.push_back(op);
     }
     
-    const boost::ptr_list<EditOperation>& getValidOperations() const {
+    const list<const EditOperation*>& getValidOperations() const {
       return _validOps;
     }
 
@@ -50,9 +51,13 @@ class StateType {
     
     string _name;
     
-    boost::ptr_list<EditOperation> _validOps;
+    // Each pointer in this list represents a valid/legal edit operation that
+    // may be applied while in this state. We do not own the EditOperation
+    // objects and are therefore not responsible for deleting them.
+    list<const EditOperation*> _validOps;
     
-    // Copying is complicated by the ptr_list, so we'll just disallow it.
+    // We disallow copying in order to avoid accidental (and unnecessary)
+    // expense of copying the list member.
     StateType& operator=(const StateType& other);
     StateType(const StateType& other);
 };

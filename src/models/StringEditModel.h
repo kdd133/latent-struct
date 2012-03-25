@@ -35,14 +35,12 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
-#include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
 #include <list>
-#include <set>
 #include <string>
 using namespace boost;
 using namespace std;
@@ -115,6 +113,9 @@ class StringEditModel : public Model {
     // A list of state types that comprise the nodes in an fst.
     ptr_vector<StateType> _states;
     
+    // A list of the edit operations that are in use.
+    ptr_vector<EditOperation> _ops;
+    
     // If true, do not fire any features for arc connecting to the final state.
     bool _noFinalArcFeats;
 
@@ -159,16 +160,18 @@ void StringEditModel<Arc>::addZeroOrderStates() {
   _states.push_back(new StateType(0, "sta"));
   StateType& start = _states.front();
   
-  int opId = 0;
-  
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     string opName = "DEL" + lexical_cast<string>(s);
-    start.addValidOperation(new OpDelete(opId++, &start, opName, s));
+    EditOperation* op = new OpDelete(_ops.size(), &start, opName, s);
+    _ops.push_back(op);
+    start.addValidOperation(op);
   }
   
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
     string opName = "INS" + lexical_cast<string>(t);
-    start.addValidOperation(new OpInsert(opId++, &start, opName, t));
+    EditOperation* op = new OpInsert(_ops.size(), &start, opName, t);
+    _ops.push_back(op);
+    start.addValidOperation(op);
   }
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
@@ -177,16 +180,22 @@ void StringEditModel<Arc>::addZeroOrderStates() {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
         string opName = "SUB" + sStr + tStr;
-        start.addValidOperation(new OpSubstitute(opId++, &start, opName, s, t));
+        EditOperation* op = new OpSubstitute(_ops.size(), &start, opName, s, t);
+        _ops.push_back(op);
+        start.addValidOperation(op);
             
         if (s == t) { // can't possibly match phrases of different lengths
           opName =  "MAT" + sStr + tStr;
-          start.addValidOperation(new OpMatch(opId++, &start, opName, s));
+          EditOperation* op = new OpMatch(_ops.size(), &start, opName, s);
+          _ops.push_back(op);
+          start.addValidOperation(op);
         }
       }
       else { // !_useMatch: Use Replace only, instead of Substitute and Match.
         string opName = "REP" + sStr + tStr;
-        start.addValidOperation(new OpReplace(opId++, &start, opName, s, t));
+        EditOperation* op = new OpReplace(_ops.size(), &start, opName, s, t);
+        _ops.push_back(op);
+        start.addValidOperation(op);
       }
     }
   }
@@ -194,8 +203,9 @@ void StringEditModel<Arc>::addZeroOrderStates() {
 
 template <typename Arc>
 void StringEditModel<Arc>::addFirstOrderStates() {
-
-  const string trans = "->";
+  // Note: Chosen so as not to overlap with anything in FeatureGenConstants.
+  const string trans = "2";
+  
   const string start = "sta";
   const string ins = "ins";
   const string del = "del";
@@ -224,8 +234,6 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     }
   }
   
-  int opId = 0;
-  
   string opBaseName = "Del";
   BOOST_FOREACH(const StateType& dest, _states) {
     // Nothing transitions to the single start state.
@@ -234,7 +242,8 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength; ++sourceLen) {
       const string opName = opBaseName + lexical_cast<string>(sourceLen);
       if (iends_with(dest.getName(), opBaseName)) {
-        EditOperation* op = new OpDelete(opId++, &dest, opName, sourceLen);
+        EditOperation* op = new OpDelete(_ops.size(), &dest, opName, sourceLen);
+        _ops.push_back(op);
         const string destFirst = dest.getName().substr(0, 3);
         BOOST_FOREACH(StateType& source, _states) {
           // If this is not a transition to start/finish and the last state name
@@ -256,7 +265,8 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     for (int targetLen = 1; targetLen <= _maxTargetPhraseLength; ++targetLen) {
       const string opName = opBaseName + lexical_cast<string>(targetLen);
       if (iends_with(dest.getName(), opBaseName)) {
-        EditOperation* op = new OpInsert(opId++, &dest, opName, targetLen);
+        EditOperation* op = new OpInsert(_ops.size(), &dest, opName, targetLen);
+        _ops.push_back(op);
         const string destFirst = dest.getName().substr(0, 3);
         BOOST_FOREACH(StateType& source, _states) {
           // If this is not a transition to start/finish and the last state name
@@ -284,11 +294,14 @@ void StringEditModel<Arc>::addFirstOrderStates() {
         if (iends_with(dest.getName(), opBaseName)) {
           EditOperation* op;
           if (_useMatch) {
-            op = new OpSubstitute(opId++, &dest, opName, sourceLen, targetLen);
+            op = new OpSubstitute(_ops.size(), &dest, opName, sourceLen,
+                targetLen);
           }
           else {
-            op = new OpReplace(opId++, &dest, opName, sourceLen, targetLen);
+            op = new OpReplace(_ops.size(), &dest, opName, sourceLen,
+                targetLen);
           }
+          _ops.push_back(op);
           const string destFirst = dest.getName().substr(0, 3);
           BOOST_FOREACH(StateType& source, _states) {
             if (!iends_with(source.getName(), transToStart) &&
@@ -313,7 +326,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
       for (int len = 1; len <= maxMatchLength; ++len) {
         const string opName = opBaseName + lexical_cast<string>(len);
         if (iends_with(dest.getName(), opBaseName)) {
-          EditOperation* op = new OpMatch(opId++, &dest, opName, len);
+          EditOperation* op = new OpMatch(_ops.size(), &dest, opName, len);
           const string destFirst = dest.getName().substr(0, 3);
           BOOST_FOREACH(StateType& source, _states) {
             if (!iends_with(source.getName(), transToStart) &&
@@ -376,11 +389,10 @@ to the final state")
   // Print information about the edit operations and states that were added.
   BOOST_FOREACH(const StateType& state, _states) {
     cout << state.getName() << ":\n";
-    const ptr_list<EditOperation>& ops = state.getValidOperations();
-    ptr_list<EditOperation>::const_iterator op;
-    for (op = ops.begin(); op != ops.end(); ++op)
+    BOOST_FOREACH(const EditOperation* op, state.getValidOperations()) {
       cout << "\top:" << op->getName() << " \tdestState:" <<
         op->getDefaultDestinationState()->getName() << endl;
+    }
   }
 #endif
   
@@ -476,12 +488,10 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
     if (opId == OpNone::ID)
       continue;
     assert(opId >= 0);
-    const ptr_list<EditOperation>& ops = source->getValidOperations();
     
     // FIXME: This inner loop is inefficient. We should create a lookup table
     // that maps op ids to ops.
-    ptr_list<EditOperation>::const_iterator op;
-    for (op = ops.begin(); op != ops.end(); ++op) {
+    BOOST_FOREACH(const EditOperation* op, source->getValidOperations()) {
       if (op->getId() == opId) {
         source = op->apply(s, t, source, i, j, iNew, jNew);
         assert(source->getId() >= 0);
@@ -489,7 +499,7 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
         int iPhraseLen = iNew - i;
         int jPhraseLen = jNew - j;
         
-        out << op->getName() << " "; // Print the name of the edit operation.        
+        out << op->getName() << " "; // Print the name of the edit operation.
         alignedSource << "|";
         alignedTarget << "|";
         

@@ -193,9 +193,7 @@ void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
   ptr_vector<StateType>::const_iterator st;
   for (st = _stateTypes.begin(); st != _stateTypes.end(); ++st) {
     stateNames.insert(PairType(st->getId(), st->getName()));
-    const ptr_list<EditOperation>& ops = st->getValidOperations();
-    ptr_list<EditOperation>::const_iterator op;
-    for (op = ops.begin(); op != ops.end(); ++op)
+    BOOST_FOREACH(const EditOperation* op, st->getValidOperations())
       opNames.insert(PairType(op->getId(), op->getName()));
   }
 
@@ -317,9 +315,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
   
-  const ptr_list<EditOperation>& ops = sourceStateType.getValidOperations();
-  ptr_list<EditOperation>::const_iterator op;
-  for (op = ops.begin(); op != ops.end(); ++op) {
+  BOOST_FOREACH(const EditOperation* op, sourceStateType.getValidOperations()) {
     int iNew = -1, jNew = -1;
     const StateType* destStateType = op->apply(s, t, &sourceStateType, i, j,
         iNew, jNew);
