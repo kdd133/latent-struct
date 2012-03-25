@@ -17,11 +17,10 @@
 using namespace std;
 
 OpDelete::OpDelete(int opId, int defaultDestinationStateId, string name,
-    int phraseLengthSource, list<int> cantFollowStateTypeIds) :
+    int phraseLengthSource) :
     EditOperation(opId, name),
     _defaultDestinationStateId(defaultDestinationStateId),
     _phraseLengthSource(phraseLengthSource),
-    _cantFollowStateTypeIds(cantFollowStateTypeIds),
     _conditionEnabled(false) {
 }
 
@@ -35,14 +34,6 @@ void OpDelete::setCondition(string tokenRegexStr, bool acceptMatching) {
 
 int OpDelete::apply(const vector<string>& source, const vector<string>& target,
     const int prevStateTypeId, const int i, const int j, int& iNew, int& jNew) const {
-  if (_cantFollowStateTypeIds.size() > 0) {
-    list<int>::const_iterator it = _cantFollowStateTypeIds.begin();
-    for (; it != _cantFollowStateTypeIds.end(); ++it) {
-      assert(*it != -1);
-      if (*it == prevStateTypeId)
-        return -1;
-    }
-  }
   if (i + _phraseLengthSource > source.size())
     return -1;
   if (_conditionEnabled) {

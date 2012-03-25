@@ -28,6 +28,8 @@
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/ptr_container/ptr_list.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <fst/shortest-distance.h>
@@ -40,6 +42,7 @@
 #include <stdexcept>
 #include <tr1/unordered_map>
 #include <vector>
+using namespace boost;
 using namespace std;
 
 
@@ -54,15 +57,14 @@ class AlignmentTransducer {
   public:
     typedef typename Arc::StateId StateId;
     typedef typename Arc::Weight ArcWeight;
-    typedef boost::multi_array<StateId, 3> StateIdTable;
+    typedef multi_array<StateId, 3> StateIdTable;
     
     // The first stateType in the list will be used as the start state and as
     // the finish state.
-    AlignmentTransducer(const vector<StateType>& stateTypes,
-                        const list<const EditOperation*>& ops,
-                        boost::shared_ptr<AlignmentFeatureGen> fgen,
-                        boost::shared_ptr<ObservedFeatureGen> fgenObs,
-                        bool includeFinalFeats = true);
+    AlignmentTransducer(const ptr_vector<StateType>& stateTypes,
+        shared_ptr<AlignmentFeatureGen> fgen,
+        shared_ptr<ObservedFeatureGen> fgenObs,
+        bool includeFinalFeats = true);
                         
     ~AlignmentTransducer();
                         
@@ -75,7 +77,7 @@ class AlignmentTransducer {
 
     // Note: Assumes fv has been zeroed out.
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
-        boost::shared_array<LogWeight> buffer); 
+        shared_array<LogWeight> buffer); 
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -112,13 +114,11 @@ class AlignmentTransducer {
         
     void clear();
     
-    const vector<StateType>& _stateTypes;
+    const ptr_vector<StateType>& _stateTypes;
     
-    const list<const EditOperation*>& _ops;
+    shared_ptr<AlignmentFeatureGen> _fgen;
     
-    boost::shared_ptr<AlignmentFeatureGen> _fgen;
-    
-    boost::shared_ptr<ObservedFeatureGen> _fgenObs;
+    shared_ptr<ObservedFeatureGen> _fgenObs;
 
     fst::VectorFst<Arc>* _fst;
     
@@ -145,12 +145,11 @@ class AlignmentTransducer {
 
 template<typename Arc>
 AlignmentTransducer<Arc>::AlignmentTransducer(
-    const vector<StateType>& stateTypes,
-    const list<const EditOperation*>& ops,
-    boost::shared_ptr<AlignmentFeatureGen> fgen,
-    boost::shared_ptr<ObservedFeatureGen> fgenObs,
+    const ptr_vector<StateType>& stateTypes,
+    shared_ptr<AlignmentFeatureGen> fgen,
+    shared_ptr<ObservedFeatureGen> fgenObs,
     bool includeFinalFeats) :
-    _stateTypes(stateTypes), _ops(ops), _fgen(fgen), _fgenObs(fgenObs), _fst(0),
+    _stateTypes(stateTypes), _fgen(fgen), _fgenObs(fgenObs), _fst(0),
     _numArcs(0), _includeFinalFeats(includeFinalFeats) {
 }
 
@@ -182,7 +181,7 @@ inline void AlignmentTransducer<Arc>::clearDynProgVariables() {
 
 template<typename Arc>
 inline void AlignmentTransducer<Arc>::clearBuildVariables() {
-  _stateIdTable.resize(boost::extents[0][0][0]);
+  _stateIdTable.resize(extents[0][0][0]);
 }
 
 template<typename Arc>
@@ -237,7 +236,7 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   if (_stateIdTable.shape()[0] < s.size()+1 ||
       _stateIdTable.shape()[1] < t.size()+1) {
     _stateIdTable.resize(
-        boost::extents[s.size()+1][t.size()+1][_stateTypes.size()]);
+        extents[s.size()+1][t.size()+1][_stateTypes.size()]);
   }
   for (size_t i = 0; i <= s.size(); i++)
     for (size_t j = 0; j <= t.size(); j++)
@@ -247,7 +246,7 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
   
   vector<AlignmentPart> history;
-  AlignmentPart part = {startFinishStateType, FeatureGenConstants::EPSILON,
+  AlignmentPart part = {&startFinishStateType, FeatureGenConstants::EPSILON,
       FeatureGenConstants::EPSILON};
   history.push_back(part);
 
@@ -275,7 +274,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
   const int S = pair.getSource().size();
   const int T = pair.getTarget().size();
   assert(i <= S && j <= T); // an op should never take us out of bounds
-  const StateType& sourceStateType = history.back().state;
+  const StateType& sourceStateType = *history.back().state;
   const StateId& sourceStateId = _stateIdTable[i][j][sourceStateType.getId()];
   
   if (i == S && j == T) { // reached finish
@@ -294,7 +293,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     OpNone noOp;
     if (_includeFinalFeats) {
       // The OpNone doesn't consume any of the strings, hence the epsilons below.
-      AlignmentPart part = {startFinishStateType, FeatureGenConstants::EPSILON,
+      AlignmentPart part = {&startFinishStateType, FeatureGenConstants::EPSILON,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
       fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
@@ -311,7 +310,10 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
 
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
-  BOOST_FOREACH(const EditOperation* op, _ops) {
+  
+  const ptr_list<EditOperation>& ops = sourceStateType.getValidOperations();
+  ptr_list<EditOperation>::const_iterator op;
+  for (op = ops.begin(); op != ops.end(); ++op) {
     int iNew = -1, jNew = -1;
     const int destStateTypeId = op->apply(s, t, sourceStateType.getId(), i, j,
         iNew, jNew);
@@ -353,7 +355,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
 
       // Append the state and the consumed strings to the alignment history.
-      AlignmentPart part = {destState, sourceConsumed, targetConsumed};
+      AlignmentPart part = {&destState, sourceConsumed, targetConsumed};
       history.push_back(part);      
       FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
           jNew, *op, history);
@@ -399,7 +401,7 @@ LogWeight AlignmentTransducer<Arc>::logPartition() {
 
 template<typename Arc>
 LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv, boost::shared_array<LogWeight> logArray) {
+    FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
   assert(_fst);
   assert(!fv.isDense());
   
@@ -530,7 +532,7 @@ AlignmentTransducer<StdFeatArc>::logPartition() {
 
 template<> inline LogWeight
 AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv, boost::shared_array<LogWeight> buffer) {
+    FeatureVector<LogWeight>& fv, shared_array<LogWeight> buffer) {
   throw logic_error("Can't compute expectations in the Tropical semiring.");
 }
 

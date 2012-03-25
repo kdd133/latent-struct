@@ -34,7 +34,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
+#include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
@@ -52,7 +54,7 @@ class StringEditModel : public Model {
     StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
       shared_ptr<ObservedFeatureGen> fgenObserved);
     
-    ~StringEditModel();
+    ~StringEditModel() {};
     
     virtual int processOptions(int argc, char** argv);
     
@@ -110,10 +112,7 @@ class StringEditModel : public Model {
     int _order;
     
     // A list of state types that comprise the nodes in an fst.
-    vector<StateType> _states;
-    
-    // A list of edit operations that comprise the arcs in an fst.
-    list<const EditOperation*> _ops;
+    ptr_vector<StateType> _states;
     
     // If true, do not fire any features for arc connecting to the final state.
     bool _noFinalArcFeats;
@@ -137,6 +136,10 @@ class StringEditModel : public Model {
     Fst* getFst(ptr_map<ExampleId, Fst>& cache, const WeightVector& w,
         const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
+        
+    void addZeroOrderStates();
+    
+    void addFirstOrderStates();
     
     StringEditModel(const StringEditModel& x);
     StringEditModel& operator=(const StringEditModel& x);
@@ -148,6 +151,99 @@ StringEditModel<Arc>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
     _noFinalArcFeats(false) {
+}
+
+template <typename Arc>
+void StringEditModel<Arc>::addZeroOrderStates() {
+  _states.push_back(new StateType(0, "sta"));
+  StateType& start = _states.front();
+  
+  int opId = 0;
+  
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    string opName = "DEL" + lexical_cast<string>(s);
+    start.addValidOperation(new OpDelete(opId++, start.getId(), opName, s));
+  }
+  
+  for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+    string opName = "INS" + lexical_cast<string>(t);
+    start.addValidOperation(new OpInsert(opId++, start.getId(), opName, t));
+  }
+  
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    const string sStr = lexical_cast<string>(s);
+    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+      const string tStr = lexical_cast<string>(t);
+      if (_useMatch) { // Distinguish between Substitutes and Matches.
+        string opName = "SUB" + sStr + tStr;
+        start.addValidOperation(new OpSubstitute(opId++, start.getId(), opName,
+            s, t));
+            
+        if (s == t) { // can't possibly match phrases of different lengths
+          opName =  "MAT" + sStr + tStr;
+          start.addValidOperation(new OpMatch(opId++, start.getId(), opName,
+              s));
+        }
+      }
+      else { // !_useMatch: Use Replace only, instead of Substitute and Match.
+        string opName = "REP" + sStr + tStr;
+        start.addValidOperation(new OpReplace(opId++, start.getId(), opName,
+            s, t));
+      }
+    }
+  }
+}
+
+template <typename Arc>
+void StringEditModel<Arc>::addFirstOrderStates() {  
+  vector<string> baseEditNames;
+  baseEditNames.push_back("ins");
+  baseEditNames.push_back("del");
+  if (_useMatch) {
+    baseEditNames.push_back("mat");
+    baseEditNames.push_back("sub");
+  }
+  else
+    baseEditNames.push_back("rep");
+  
+  const string trans = "->";
+  const string start = "sta";
+  _states.push_back(new StateType(0, start)); // start state
+
+  // Create all state bigrams, except sta->sta.
+  BOOST_FOREACH(const string& dest, baseEditNames) {
+    _states.push_back(new StateType(_states.size(), start + trans + dest));
+    _states.push_back(new StateType(_states.size(), dest + trans + start));
+    BOOST_FOREACH(const string& source, baseEditNames) {
+      _states.push_back(new StateType(_states.size(), source + trans + dest));
+    }
+  }
+  
+  vector<string>::const_iterator sourceState, destState;
+  int opId = 0;
+  
+  for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength; ++sourceLen) {
+    const string opBaseName = "DEL"; 
+    const string opName = opBaseName + lexical_cast<string>(sourceLen);
+    BOOST_FOREACH(const StateType& dest, _states) {
+      cout << dest.getName() << endl;
+      if (dest.getName() == start)
+        continue;
+      if (iends_with(dest.getName(), opBaseName)) {
+        EditOperation* op = new OpDelete(opId++, dest.getId(), opName,
+            sourceLen);
+        cout << opName << endl;
+        BOOST_FOREACH(StateType& source, _states) {
+          if (iends_with(source.getName(), opBaseName)) {
+            source.addValidOperation(op);
+            cout << source.getName() << ":" << op->getName() << ":" <<
+                dest.getName() << endl;
+          }
+        }
+      }
+    }    
+  }
+  cout << "Done adding OpDelete\n";
 }
 
 template <typename Arc>
@@ -219,273 +315,247 @@ to the final state")
     }
   }
   
-  // Generic states.
-  StateType sta("sta");
-  StateType ins("ins");
-  StateType del("del");
-  StateType sub("sub");
-  StateType mat("mat");
-  StateType rep("rep");
-  
-  // Character class states (_c denotes member of class, _o denotes other).
-  StateType ins_c("ins_c");
-  StateType ins_o("ins_o");
-  StateType del_c("del_c");
-  StateType del_o("del_o");
-  StateType sub_co("sub_co");
-  StateType sub_cc("sub_cc");
-  StateType sub_oc("sub_oc");
-  StateType sub_oo("sub_oo");
-  StateType mat_c("mat_c");
-  StateType mat_o("mat_o");
-  StateType rep_co("rep_co");
-  StateType rep_cc("rep_cc");
-  StateType rep_oc("rep_oc");
-  StateType rep_oo("rep_oo");
-  
-  // We will set the id of each StateType to its position in the _states vector.
-  int stateId = 0;
-  
-  // Note: In a zero-order model, we'll only use one state.
-  sta.setId(stateId++);
-  _states.push_back(sta);
-  
-  const bool firstOrder = _order == 1;
-  
-  if (firstOrder) {
-    if (charClassActive) {
-      ins_c.setId(stateId++);
-      _states.push_back(ins_c);
-      ins_o.setId(stateId++);
-      _states.push_back(ins_o);
-      del_c.setId(stateId++);
-      _states.push_back(del_c);
-      del_o.setId(stateId++);
-      _states.push_back(del_o);
-      if (_useMatch) {
-        mat_c.setId(stateId++);
-        _states.push_back(mat_c);
-        mat_o.setId(stateId++);
-        _states.push_back(mat_o);
-        sub_co.setId(stateId++);
-        _states.push_back(sub_co);
-        sub_cc.setId(stateId++);
-        _states.push_back(sub_cc);
-        sub_oc.setId(stateId++);
-        _states.push_back(sub_oc);
-        sub_oo.setId(stateId++);
-        _states.push_back(sub_oo);
-      }
-      else {
-        rep_co.setId(stateId++);
-        _states.push_back(rep_co);
-        rep_cc.setId(stateId++);
-        _states.push_back(rep_cc);
-        rep_oc.setId(stateId++);
-        _states.push_back(rep_oc);
-        rep_oo.setId(stateId++);
-        _states.push_back(rep_oo);
-      }
-    }
-    else {
-      ins.setId(stateId++);
-      _states.push_back(ins);
-      del.setId(stateId++);
-      _states.push_back(del);
-      if (_useMatch) {
-        mat.setId(stateId++);
-        _states.push_back(mat);
-        sub.setId(stateId++);
-        _states.push_back(sub);
-      }
-      else {
-        rep.setId(stateId++);
-        _states.push_back(rep);
-      }
-    }
+  if (_order == 0)
+    addZeroOrderStates();
+  else {
+    assert(_order == 1);
+    addFirstOrderStates();
   }
   
-  // We will assign a unique identifier to each edit operation.  
-  int opId = 0;
-  
-  if (charClassActive) {
-    list<int> deleteNoFollow;
-    if (firstOrder && !_allowRedundant) {
-      deleteNoFollow.push_back(ins_c.getId());
-      deleteNoFollow.push_back(ins_o.getId());
-    }
-    
-    int destStateId = firstOrder ? del_c.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-      OpDelete* op = new OpDelete(opId++, destStateId, "DeleteClass" +
-          lexical_cast<string>(s), s, deleteNoFollow);
-      op->setCondition(charClassRegexStr, true);
-      _ops.push_back(op);
-    }
-    
-    destStateId = firstOrder ? del_o.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-      OpDelete* op = new OpDelete(opId++, destStateId, "DeleteOther" +
-          lexical_cast<string>(s), s, deleteNoFollow);
-      op->setCondition(charClassRegexStr, false);
-      _ops.push_back(op);
-    }
-    
-    destStateId = firstOrder ? ins_c.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-      OpInsert *op = new OpInsert(opId++, destStateId, "InsertClass" +
-          lexical_cast<string>(t), t);
-      op->setCondition(charClassRegexStr, true);
-      _ops.push_back(op);
-    }
-    
-    destStateId = firstOrder ? ins_o.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-      OpInsert *op = new OpInsert(opId++, destStateId, "InsertOther" +
-          lexical_cast<string>(t), t);
-      op->setCondition(charClassRegexStr, false);
-      _ops.push_back(op);
-    }
-    
-    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-      for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-        if (_useMatch) { // Distinguish between Substitutes and Matches.
-          destStateId = firstOrder ? sub_cc.getId() : sta.getId();
-          assert(destStateId >= 0);
-          OpSubstitute* op = 0;
-          op = new OpSubstitute(opId++, destStateId, "SubstituteClassClass" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, true, true);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? sub_co.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpSubstitute(opId++, destStateId, "SubstituteClassOther" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, true, false);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? sub_oc.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpSubstitute(opId++, destStateId, "SubstituteOtherClass" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, false, true);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? sub_oo.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpSubstitute(opId++, destStateId, "SubstituteOtherOther" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, false, false);
-          _ops.push_back(op);
-          
-          if (s == t) { // can't possibly match phrases of different lengths
-            destStateId = firstOrder ? mat_c.getId() : sta.getId();
-            assert(destStateId >= 0);
-            OpMatch* op = new OpMatch(opId++, destStateId, "MatchClass" +
-                lexical_cast<string>(s) + lexical_cast<string>(t), s);
-            op->setCondition(charClassRegexStr, true);
-            _ops.push_back(op);
-            
-            destStateId = firstOrder ? mat_o.getId() : sta.getId();
-            assert(destStateId >= 0);
-            op = new OpMatch(opId++, destStateId, "MatchOther" +
-                lexical_cast<string>(s) + lexical_cast<string>(t), s);
-            op->setCondition(charClassRegexStr, false);
-            _ops.push_back(op);
-          }
-        }
-        else { // !_useMatch: Use Replace only, instead of Substitute and Match.
-          destStateId = firstOrder ? rep_cc.getId() : sta.getId();
-          assert(destStateId >= 0);
-          OpReplace* op = 0;
-          op = new OpReplace(opId++, destStateId, "ReplaceClassClass" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, true, true);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? rep_co.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpReplace(opId++, destStateId, "ReplaceClassOther" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, true, false);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? rep_oc.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpReplace(opId++, destStateId, "ReplaceOtherClass" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, false, true);
-          _ops.push_back(op);
-          
-          destStateId = firstOrder ? rep_oo.getId() : sta.getId();
-          assert(destStateId >= 0);
-          op = new OpReplace(opId++, destStateId, "ReplaceOtherOther" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
-          op->setCondition(charClassRegexStr, charClassRegexStr, false, false);
-          _ops.push_back(op);
-        }
-      }
-    }
-  }
-  else { // No character classes...
-    list<int> deleteNoFollow;
-    if (firstOrder && !_allowRedundant)
-      deleteNoFollow.push_back(ins.getId());
-      
-    int destStateId = firstOrder ? del.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-      _ops.push_back(new OpDelete(opId++, destStateId, "Delete" +
-          lexical_cast<string>(s), s, deleteNoFollow));
-    }
-    
-    destStateId = firstOrder ? ins.getId() : sta.getId();
-    assert(destStateId >= 0);
-    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-      _ops.push_back(new OpInsert(opId++, destStateId, "Insert" +
-          lexical_cast<string>(t), t));
-    }
-    
-    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-      for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-        if (_useMatch) { // Distinguish between Substitutes and Matches.
-          destStateId = firstOrder ? sub.getId() : sta.getId();
-          assert(destStateId >= 0);
-          _ops.push_back(new OpSubstitute(opId++, destStateId, "Substitute" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
-              
-          if (s == t) { // can't possibly match phrases of different lengths
-            destStateId = firstOrder ? mat.getId() : sta.getId();
-            assert(destStateId >= 0);
-            _ops.push_back(new OpMatch(opId++, destStateId, "Match" +
-                lexical_cast<string>(s) + lexical_cast<string>(t), s));
-          }
-        }
-        else { // !_useMatch: Use Replace only, instead of Substitute and Match.
-          destStateId = firstOrder ? rep.getId() : sta.getId();
-          assert(destStateId >= 0);
-          _ops.push_back(new OpReplace(opId++, destStateId, "Replace" +
-              lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
-        }
-      }
-    }
-  }
+//  // We will set the id of each StateType to its position in the _states vector.
+//  int stateId = 0;
+//  
+//  // Note: In a zero-order model, we'll only use one state.
+//  sta.setId(stateId++);
+//  _states.push_back(sta);
+//  
+//  const bool firstOrder = _order == 1;
+//  
+//  if (firstOrder) {
+//    if (charClassActive) {
+//      ins_c.setId(stateId++);
+//      _states.push_back(ins_c);
+//      ins_o.setId(stateId++);
+//      _states.push_back(ins_o);
+//      del_c.setId(stateId++);
+//      _states.push_back(del_c);
+//      del_o.setId(stateId++);
+//      _states.push_back(del_o);
+//      if (_useMatch) {
+//        mat_c.setId(stateId++);
+//        _states.push_back(mat_c);
+//        mat_o.setId(stateId++);
+//        _states.push_back(mat_o);
+//        sub_co.setId(stateId++);
+//        _states.push_back(sub_co);
+//        sub_cc.setId(stateId++);
+//        _states.push_back(sub_cc);
+//        sub_oc.setId(stateId++);
+//        _states.push_back(sub_oc);
+//        sub_oo.setId(stateId++);
+//        _states.push_back(sub_oo);
+//      }
+//      else {
+//        rep_co.setId(stateId++);
+//        _states.push_back(rep_co);
+//        rep_cc.setId(stateId++);
+//        _states.push_back(rep_cc);
+//        rep_oc.setId(stateId++);
+//        _states.push_back(rep_oc);
+//        rep_oo.setId(stateId++);
+//        _states.push_back(rep_oo);
+//      }
+//    }
+//    else {
+//      ins.setId(stateId++);
+//      _states.push_back(ins);
+//      del.setId(stateId++);
+//      _states.push_back(del);
+//      if (_useMatch) {
+//        mat.setId(stateId++);
+//        _states.push_back(mat);
+//        sub.setId(stateId++);
+//        _states.push_back(sub);
+//      }
+//      else {
+//        rep.setId(stateId++);
+//        _states.push_back(rep);
+//      }
+//    }
+//  }
+//  
+//  // We will assign a unique identifier to each edit operation.  
+//  int opId = 0;
+//  
+//  if (charClassActive) {
+//    list<int> deleteNoFollow;
+//    if (firstOrder && !_allowRedundant) {
+//      deleteNoFollow.push_back(ins_c.getId());
+//      deleteNoFollow.push_back(ins_o.getId());
+//    }
+//    
+//    int destStateId = firstOrder ? del_c.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+//      OpDelete* op = new OpDelete(opId++, destStateId, "DeleteClass" +
+//          lexical_cast<string>(s), s, deleteNoFollow);
+//      op->setCondition(charClassRegexStr, true);
+//      _allOps.push_back(op);
+//    }
+//    
+//    destStateId = firstOrder ? del_o.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+//      OpDelete* op = new OpDelete(opId++, destStateId, "DeleteOther" +
+//          lexical_cast<string>(s), s, deleteNoFollow);
+//      op->setCondition(charClassRegexStr, false);
+//      _allOps.push_back(op);
+//    }
+//    
+//    destStateId = firstOrder ? ins_c.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+//      OpInsert *op = new OpInsert(opId++, destStateId, "InsertClass" +
+//          lexical_cast<string>(t), t);
+//      op->setCondition(charClassRegexStr, true);
+//      _allOps.push_back(op);
+//    }
+//    
+//    destStateId = firstOrder ? ins_o.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+//      OpInsert *op = new OpInsert(opId++, destStateId, "InsertOther" +
+//          lexical_cast<string>(t), t);
+//      op->setCondition(charClassRegexStr, false);
+//      _allOps.push_back(op);
+//    }
+//    
+//    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+//      for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+//        if (_useMatch) { // Distinguish between Substitutes and Matches.
+//          destStateId = firstOrder ? sub_cc.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          OpSubstitute* op = 0;
+//          op = new OpSubstitute(opId++, destStateId, "SubstituteClassClass" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, true, true);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? sub_co.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpSubstitute(opId++, destStateId, "SubstituteClassOther" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, true, false);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? sub_oc.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpSubstitute(opId++, destStateId, "SubstituteOtherClass" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, false, true);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? sub_oo.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpSubstitute(opId++, destStateId, "SubstituteOtherOther" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, false, false);
+//          _allOps.push_back(op);
+//          
+//          if (s == t) { // can't possibly match phrases of different lengths
+//            destStateId = firstOrder ? mat_c.getId() : sta.getId();
+//            assert(destStateId >= 0);
+//            OpMatch* op = new OpMatch(opId++, destStateId, "MatchClass" +
+//                lexical_cast<string>(s) + lexical_cast<string>(t), s);
+//            op->setCondition(charClassRegexStr, true);
+//            _allOps.push_back(op);
+//            
+//            destStateId = firstOrder ? mat_o.getId() : sta.getId();
+//            assert(destStateId >= 0);
+//            op = new OpMatch(opId++, destStateId, "MatchOther" +
+//                lexical_cast<string>(s) + lexical_cast<string>(t), s);
+//            op->setCondition(charClassRegexStr, false);
+//            _allOps.push_back(op);
+//          }
+//        }
+//        else { // !_useMatch: Use Replace only, instead of Substitute and Match.
+//          destStateId = firstOrder ? rep_cc.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          OpReplace* op = 0;
+//          op = new OpReplace(opId++, destStateId, "ReplaceClassClass" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, true, true);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? rep_co.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpReplace(opId++, destStateId, "ReplaceClassOther" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, true, false);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? rep_oc.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpReplace(opId++, destStateId, "ReplaceOtherClass" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, false, true);
+//          _allOps.push_back(op);
+//          
+//          destStateId = firstOrder ? rep_oo.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          op = new OpReplace(opId++, destStateId, "ReplaceOtherOther" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t);
+//          op->setCondition(charClassRegexStr, charClassRegexStr, false, false);
+//          _allOps.push_back(op);
+//        }
+//      }
+//    }
+//  }
+//  else { // No character classes...
+//    list<int> deleteNoFollow;
+//    if (firstOrder && !_allowRedundant)
+//      deleteNoFollow.push_back(ins.getId());
+//      
+//    int destStateId = firstOrder ? del.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+//      _allOps.push_back(new OpDelete(opId++, destStateId, "Delete" +
+//          lexical_cast<string>(s), s, deleteNoFollow));
+//    }
+//    
+//    destStateId = firstOrder ? ins.getId() : sta.getId();
+//    assert(destStateId >= 0);
+//    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+//      _allOps.push_back(new OpInsert(opId++, destStateId, "Insert" +
+//          lexical_cast<string>(t), t));
+//    }
+//    
+//    for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+//      for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+//        if (_useMatch) { // Distinguish between Substitutes and Matches.
+//          destStateId = firstOrder ? sub.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          _allOps.push_back(new OpSubstitute(opId++, destStateId, "Substitute" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
+//              
+//          if (s == t) { // can't possibly match phrases of different lengths
+//            destStateId = firstOrder ? mat.getId() : sta.getId();
+//            assert(destStateId >= 0);
+//            _allOps.push_back(new OpMatch(opId++, destStateId, "Match" +
+//                lexical_cast<string>(s) + lexical_cast<string>(t), s));
+//          }
+//        }
+//        else { // !_useMatch: Use Replace only, instead of Substitute and Match.
+//          destStateId = firstOrder ? rep.getId() : sta.getId();
+//          assert(destStateId >= 0);
+//          _allOps.push_back(new OpReplace(opId++, destStateId, "Replace" +
+//              lexical_cast<string>(s) + lexical_cast<string>(t), s, t));
+//        }
+//      }
+//    }
+//  }
   
   return 0;
-}
-
-template <typename Arc>
-StringEditModel<Arc>::~StringEditModel() {
-  // dellocate the EditOperations that were created in processOptions()
-  BOOST_FOREACH(const EditOperation* op, _ops) {
-    assert(op != 0);
-    delete op;
-  }  
 }
 
 template <typename Arc>
@@ -550,7 +620,7 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   // whether we are using a MaxMargin or LogLinear objective. Therefore, we
   // own the fst and must delete it when we are done with it.
   AlignmentTransducer<StdFeatArc>* fst = new AlignmentTransducer<StdFeatArc>(
-      _states, _ops, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
+      _states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
   assert(fst);
   fst->build(w, (const StringPair&)x, y, true);
   fst->clearBuildVariables();
@@ -568,15 +638,24 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   int i = 0, j = 0, iNew = -1, jNew = -1;
   size_t alignPos = 0;
   // Note: The following assumes that start state is the first entry in _states.
-  int sourceId = _states[0].getId();
+  int sourceId = _states.front().getId();
+  assert(_states.front().getName() == "sta");
+  
   // Recall that AlignmentTransducer places the ops in reverse order.
-  BOOST_REVERSE_FOREACH(int opId, alignmentOps) {
+  list<int>::const_reverse_iterator it;
+  for (it = alignmentOps.rbegin(); it != alignmentOps.rend(); ++it) {
+    const int opId = *it;
     if (opId == OpNone::ID)
       continue;
     assert(opId >= 0);
+    // The following should be true by construction.
+    assert(_states[sourceId].getId() == sourceId);
+    const ptr_list<EditOperation>& ops = _states[sourceId].getValidOperations();
+    
     // FIXME: This inner loop is inefficient. We should create a lookup table
     // that maps op ids to ops.
-    BOOST_FOREACH(const EditOperation* op, _ops) {
+    ptr_list<EditOperation>::const_iterator op;
+    for (op = ops.begin(); op != ops.end(); ++op) {
       if (op->getId() == opId) {
         sourceId = op->apply(s, t, sourceId, i, j, iNew, jNew);
         assert(sourceId >= 0);
@@ -635,15 +714,13 @@ template <typename Arc>
 AlignmentTransducer<Arc>* StringEditModel<Arc>::getFst(
     ptr_map<ExampleId, Fst>& cache, const WeightVector& w, const Pattern& x,
     const Label y, bool includeObs) {
-  assert(_ops.size() > 0);
   assert(_states.size() > 0);
   Fst* fst = 0;
   if (_cacheFsts) {
     ExampleId id = make_pair(x.getId(), y);
     typename ptr_map<ExampleId, Fst>::iterator it = cache.find(id);
     if (it == cache.end()) {
-      fst = new Fst(_states, _ops, _fgenAlign, _fgenObserved,
-          !_noFinalArcFeats);
+      fst = new Fst(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
       assert(fst);
       fst->build(w, (const StringPair&)x, y, includeObs);
       fst->clearBuildVariables();
@@ -659,7 +736,7 @@ AlignmentTransducer<Arc>* StringEditModel<Arc>::getFst(
     if (cache.size() == 0) {
       // Initialize a "reusable" fst.
       ExampleId id = make_pair(0, 0);
-      cache.insert(id, new Fst(_states, _ops, _fgenAlign, _fgenObserved,
+      cache.insert(id, new Fst(_states, _fgenAlign, _fgenObserved,
           !_noFinalArcFeats));
     }
     assert(cache.size() == 1);

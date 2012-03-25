@@ -15,7 +15,7 @@
 
 typedef struct alignment_part {
 
-  StateType state;
+  const StateType* state;
   
   std::string source;
   

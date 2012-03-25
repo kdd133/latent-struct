@@ -20,7 +20,7 @@ using namespace std;
 class OpDelete : public EditOperation {
   public:
     OpDelete(int opId, int defaultDestinationStateId, string name = "Delete",
-        int phraseLengthSource = 1, list<int> cantFollowStateIds = list<int>());
+        int phraseLengthSource = 1);
     
     int apply(const vector<string>& source,
               const vector<string>& target,
@@ -36,8 +36,6 @@ class OpDelete : public EditOperation {
     int _defaultDestinationStateId;
     
     int _phraseLengthSource;
-    
-    list<int> _cantFollowStateTypeIds;
     
     // If _acceptMatching is true, then all tokens (i.e., in a phrase) must
     // match this regex in order for the the apply method to return true;
