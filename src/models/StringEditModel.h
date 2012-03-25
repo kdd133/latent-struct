@@ -30,6 +30,7 @@
 #include "StringEditModel.h"
 #include "StringPair.h"
 #include "WeightVector.h"
+#include <algorithm>
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -195,7 +196,14 @@ void StringEditModel<Arc>::addZeroOrderStates() {
 }
 
 template <typename Arc>
-void StringEditModel<Arc>::addFirstOrderStates() {  
+void StringEditModel<Arc>::addFirstOrderStates() {
+
+  const string trans = "->";
+  const string start = "sta";
+  const string ins = "ins";
+  const string del = "del";
+  const string transToStart = trans + start;
+
   vector<string> baseEditNames;
   baseEditNames.push_back("ins");
   baseEditNames.push_back("del");
@@ -206,8 +214,6 @@ void StringEditModel<Arc>::addFirstOrderStates() {
   else
     baseEditNames.push_back("rep");
   
-  const string trans = "->";
-  const string start = "sta";
   _states.push_back(new StateType(0, start)); // start state
 
   // Create all state bigrams, except sta->sta.
@@ -215,35 +221,127 @@ void StringEditModel<Arc>::addFirstOrderStates() {
     _states.push_back(new StateType(_states.size(), start + trans + dest));
     _states.push_back(new StateType(_states.size(), dest + trans + start));
     BOOST_FOREACH(const string& source, baseEditNames) {
+      // Disallow ins->del if the --allow-redundant flag is absent.
+      if (!_allowRedundant && source == ins && dest == del)
+        continue;
       _states.push_back(new StateType(_states.size(), source + trans + dest));
     }
   }
   
-  vector<string>::const_iterator sourceState, destState;
   int opId = 0;
   
-  for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength; ++sourceLen) {
-    const string opBaseName = "DEL"; 
-    const string opName = opBaseName + lexical_cast<string>(sourceLen);
-    BOOST_FOREACH(const StateType& dest, _states) {
-      cout << dest.getName() << endl;
-      if (dest.getName() == start)
-        continue;
+  string opBaseName = "Del";
+  BOOST_FOREACH(const StateType& dest, _states) {
+    // Nothing transitions to the single start state.
+    if (dest.getName() == start)
+      continue;
+    for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength; ++sourceLen) {
+      const string opName = opBaseName + lexical_cast<string>(sourceLen);
       if (iends_with(dest.getName(), opBaseName)) {
         EditOperation* op = new OpDelete(opId++, dest.getId(), opName,
             sourceLen);
-        cout << opName << endl;
+        const string destFirst = dest.getName().substr(0, 3);
         BOOST_FOREACH(StateType& source, _states) {
-          if (iends_with(source.getName(), opBaseName)) {
+          // If this is not a transition to start/finish and the last state name
+          // in the source matches the first state name in the destination:
+          if (!iends_with(source.getName(), transToStart) &&
+              iends_with(source.getName(), destFirst)) {
             source.addValidOperation(op);
-            cout << source.getName() << ":" << op->getName() << ":" <<
-                dest.getName() << endl;
           }
         }
       }
-    }    
+    }
   }
-  cout << "Done adding OpDelete\n";
+  
+  opBaseName = "Ins";
+  BOOST_FOREACH(const StateType& dest, _states) {
+    // Nothing transitions to the single start state.
+    if (dest.getName() == start)
+      continue;
+    for (int targetLen = 1; targetLen <= _maxTargetPhraseLength; ++targetLen) {
+      const string opName = opBaseName + lexical_cast<string>(targetLen);
+      if (iends_with(dest.getName(), opBaseName)) {
+        EditOperation* op = new OpInsert(opId++, dest.getId(), opName,
+            targetLen);
+        const string destFirst = dest.getName().substr(0, 3);
+        BOOST_FOREACH(StateType& source, _states) {
+          // If this is not a transition to start/finish and the last state name
+          // in the source matches the first state name in the destination:
+          if (!iends_with(source.getName(), transToStart) &&
+              iends_with(source.getName(), destFirst)) {
+            source.addValidOperation(op);
+          }
+        }
+      }
+    }
+  }
+    
+  opBaseName = _useMatch ? "Sub" : "Rep";
+  BOOST_FOREACH(const StateType& dest, _states) {
+    // Nothing transitions to the single start state.
+    if (dest.getName() == start)
+      continue;
+    for (int sourceLen = 1; sourceLen <= _maxSourcePhraseLength;
+        ++sourceLen) {
+      for (int targetLen = 1; targetLen <= _maxTargetPhraseLength;
+          ++targetLen) {
+        const string opName = opBaseName + lexical_cast<string>(sourceLen) +
+            lexical_cast<string>(targetLen);
+        if (iends_with(dest.getName(), opBaseName)) {
+          EditOperation* op;
+          if (_useMatch) {
+            op = new OpSubstitute(opId++, dest.getId(), opName, sourceLen,
+                targetLen);
+          }
+          else {
+            op = new OpReplace(opId++, dest.getId(), opName, sourceLen,
+                targetLen);
+          }
+          const string destFirst = dest.getName().substr(0, 3);
+          BOOST_FOREACH(StateType& source, _states) {
+            if (!iends_with(source.getName(), transToStart) &&
+                iends_with(source.getName(), destFirst)) {
+              source.addValidOperation(op);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  if (_useMatch) {
+    opBaseName = "Mat";
+    // We can't possibly match 1-2, 2-1, etc.
+    const int maxMatchLength = min(_maxSourcePhraseLength,
+        _maxTargetPhraseLength);
+    BOOST_FOREACH(const StateType& dest, _states) {
+      // Nothing transitions to the single start state.
+      if (dest.getName() == start)
+        continue;
+      for (int len = 1; len <= maxMatchLength; ++len) {
+        const string opName = opBaseName + lexical_cast<string>(len);
+        if (iends_with(dest.getName(), opBaseName)) {
+          EditOperation* op = new OpMatch(opId++, dest.getId(), opName, len);
+          const string destFirst = dest.getName().substr(0, 3);
+          BOOST_FOREACH(StateType& source, _states) {
+            if (!iends_with(source.getName(), transToStart) &&
+                iends_with(source.getName(), destFirst)) {
+              source.addValidOperation(op);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  BOOST_FOREACH(const StateType& state, _states) {
+    cout << state.getName() << ":\n";
+    const ptr_list<EditOperation>& ops = state.getValidOperations();
+    ptr_list<EditOperation>::const_iterator op;
+    for (op = ops.begin(); op != ops.end(); ++op)
+      cout << "  " << op->getName() << ">" << op->getDefaultDestinationStateId()
+        << endl;
+  }
 }
 
 template <typename Arc>

@@ -22,7 +22,8 @@ class EditOperation {
 
   public:
   
-    EditOperation(int id, string name) : _id(id), _name(name) {}
+    EditOperation(int id, string name, int defaultDestStateId = -1)
+      : _id(id), _name(name), _defaultDestinationStateId(defaultDestStateId) {}
     
     virtual ~EditOperation() {}
     
@@ -41,16 +42,25 @@ class EditOperation {
                       int& iNew,
                       int& jNew) const = 0;
 
-    int getId() const { return _id; }
+    int getId() const {
+      return _id;
+    }
     
     //Returns the name that uniquely identifies this edit operation.
-    const string& getName() const { return _name; }
+    const string& getName() const {
+      return _name;
+    }
+    
+    int getDefaultDestinationStateId() const {
+      return _defaultDestinationStateId;
+    }
 
   protected:
   
     int _id;
     
     string _name;
-
+    
+    int _defaultDestinationStateId;
 };
 #endif

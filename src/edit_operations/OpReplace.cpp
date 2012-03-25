@@ -16,8 +16,7 @@ using namespace std;
 
 OpReplace::OpReplace(int opId, int defaultDestinationStateId, string name,
     int phraseLengthSource, int phraseLengthTarget) :
-    EditOperation(opId, name),
-    _defaultDestinationStateId(defaultDestinationStateId),
+    EditOperation(opId, name, defaultDestinationStateId),
     _phraseLengthSource(phraseLengthSource),
     _phraseLengthTarget(phraseLengthTarget),
     _conditionEnabledSource(false),

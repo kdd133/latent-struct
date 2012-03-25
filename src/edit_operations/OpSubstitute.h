@@ -40,8 +40,6 @@ class OpSubstitute : public EditOperation {
       bool acceptMatchingSource = true, bool acceptMatchingTarget = true);
         
   private:
-  
-    int _defaultDestinationStateId;
     
     int _phraseLengthSource;
     

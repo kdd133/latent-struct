@@ -16,8 +16,7 @@ using namespace std;
 
 OpInsert::OpInsert(int opId, int defaultDestinationStateId, string name,
     int phraseLengthTarget) :
-    EditOperation(opId, name),
-    _defaultDestinationStateId(defaultDestinationStateId),
+    EditOperation(opId, name, defaultDestinationStateId),
     _phraseLengthTarget(phraseLengthTarget),
     _conditionEnabled(false) {
 }

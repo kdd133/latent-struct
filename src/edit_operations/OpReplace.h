@@ -41,8 +41,6 @@ class OpReplace : public EditOperation {
       
   private:
   
-    int _defaultDestinationStateId;
-    
     int _phraseLengthSource;
     
     int _phraseLengthTarget;

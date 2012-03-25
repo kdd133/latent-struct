@@ -15,8 +15,7 @@
 using namespace std;
 
 OpMatch::OpMatch(int opId, int defaultDestinationStateId, string name,
-    int phraseLength) : EditOperation(opId, name),
-    _defaultDestinationStateId(defaultDestinationStateId),
+    int phraseLength) : EditOperation(opId, name, defaultDestinationStateId),
     _phraseLength(phraseLength),
     _conditionEnabled(false) {
 }

@@ -33,8 +33,7 @@ class OpDelete : public EditOperation {
     void setCondition(string tokenRegexStr, bool acceptMatching = true);
               
   private:
-    int _defaultDestinationStateId;
-    
+  
     int _phraseLengthSource;
     
     // If _acceptMatching is true, then all tokens (i.e., in a phrase) must

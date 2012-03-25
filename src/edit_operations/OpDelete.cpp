@@ -18,8 +18,7 @@ using namespace std;
 
 OpDelete::OpDelete(int opId, int defaultDestinationStateId, string name,
     int phraseLengthSource) :
-    EditOperation(opId, name),
-    _defaultDestinationStateId(defaultDestinationStateId),
+    EditOperation(opId, name, defaultDestinationStateId),
     _phraseLengthSource(phraseLengthSource),
     _conditionEnabled(false) {
 }

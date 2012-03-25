@@ -35,8 +35,6 @@ class OpInsert : public EditOperation {
               
   private:
   
-    int _defaultDestinationStateId;
-    
     int _phraseLengthTarget;
 
     // If _acceptMatching is true, then all tokens (i.e., in a phrase) must
