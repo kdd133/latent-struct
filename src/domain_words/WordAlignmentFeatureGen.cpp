@@ -171,17 +171,17 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     prefix << label << sep << "S:";
     string s;
     for (int k = histLen - 1; k >= left; k--) {
-      s = history[k].state->getName() + s;
+      s = history[k].opName + s;
       addFeatureId(prefix.str() + s, featureIds);
       s = FeatureGenConstants::OP_SEP + s;
     }
   }
   
   //DEBUGGING CODE
-  //for (size_t k = 0; k < history.size(); k++)
-  //  cout << "(" << history[k].source << ">" << history[k].target << " " <<
-  //    history[k].state.getName() << ")";
-  //cout << endl;
+  for (size_t k = 0; k < history.size(); k++)
+    cout << "(" << history[k].source << ">" << history[k].target << " " <<
+      history[k].opName << ")";
+  cout << endl;
 
   // These features only fire if we didn't perform a no-op on this arc.
   if (op.getId() != OpNone::ID) {

@@ -104,7 +104,7 @@ class AlignmentTransducer {
                          const StringPair& pair,
                          const Label label,
                          vector<AlignmentPart>& history,
-                         const StateId finishStateId,
+                         const StateType* sourceStateType,
                          const int i,
                          const int j);
     
@@ -129,6 +129,8 @@ class AlignmentTransducer {
     vector<ArcWeight> _betas;
     
     StateIdTable _stateIdTable;
+    
+    StateId _finishStateId;
     
     int _numArcs;
     
@@ -227,8 +229,8 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   _fst = new fst::VectorFst<Arc>();
   
   const StateId startStateId = _fst->AddState();
-  const StateId finishStateId = _fst->AddState();
-  _fst->SetFinal(finishStateId, 0); // 2nd parameter is the final weight
+  _finishStateId = _fst->AddState();
+  _fst->SetFinal(_finishStateId, 0); // 2nd parameter is the final weight
   
   // The type of the first state in the list defines the type of the start
   // state and the finish state.
@@ -251,7 +253,7 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
   
   vector<AlignmentPart> history;
-  AlignmentPart part = {&startFinishStateType, FeatureGenConstants::EPSILON,
+  AlignmentPart part = {OpNone().getName(), FeatureGenConstants::EPSILON,
       FeatureGenConstants::EPSILON};
   history.push_back(part);
 
@@ -260,14 +262,14 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   if (includeObsArc) {
     FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
     const StateId preStartStateId = _fst->AddState();
-    addArc(OpNone::ID, startFinishStateTypeId, preStartStateId, startStateId,
-        fv, w);
+    addArc(OpNone().getId(), startFinishStateTypeId, preStartStateId,
+        startStateId, fv, w);
     _fst->SetStart(preStartStateId);
   }
   else
     _fst->SetStart(startStateId);
 
-  applyOperations(w, pair, label, history, finishStateId, 0, 0);
+  applyOperations(w, pair, label, history, &startFinishStateType, 0, 0);
   
   assert(_fvecs.size() > 0);
 }
@@ -275,12 +277,11 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
 template<typename Arc>
 void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     const StringPair& pair, const Label label, vector<AlignmentPart>& history,
-    const StateId finishStateId, const int i, const int j) {
+    const StateType* sourceStateType, const int i, const int j) {
   const int S = pair.getSource().size();
   const int T = pair.getTarget().size();
   assert(i <= S && j <= T); // an op should never take us out of bounds
-  const StateType& sourceStateType = *history.back().state;
-  const StateId& sourceStateId = _stateIdTable[i][j][sourceStateType.getId()];
+  const StateId& sourceStateId = _stateIdTable[i][j][sourceStateType->getId()];
   
   if (i == S && j == T) { // reached finish
     // There must be exactly one outgoing arc from any state at position (S,T).
@@ -297,17 +298,17 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     OpNone noOp;
     if (_includeFinalFeats) {
       // The OpNone doesn't consume any of the strings, hence the epsilons below.
-      AlignmentPart part = {&startFinishStateType, FeatureGenConstants::EPSILON,
+      AlignmentPart part = {noOp.getName(), FeatureGenConstants::EPSILON,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
       fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
       addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          finishStateId, fv, w);
+          _finishStateId, fv, w);
       history.pop_back();
     }
     else {
       addArc(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          finishStateId, fv, w); // Note: using zero fv
+          _finishStateId, fv, w); // Note: using zero fv
     }
     return;
   }
@@ -315,9 +316,9 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
   
-  BOOST_FOREACH(const EditOperation* op, sourceStateType.getValidOperations()) {
+  BOOST_FOREACH(const EditOperation* op, sourceStateType->getValidOperations()) {
     int iNew = -1, jNew = -1;
-    const StateType* destStateType = op->apply(s, t, &sourceStateType, i, j,
+    const StateType* destStateType = op->apply(s, t, sourceStateType, i, j,
         iNew, jNew);
     if (destStateType != 0) { // was the operation successfully applied?
       assert(iNew >= 0 && jNew >= 0);
@@ -332,6 +333,8 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
             !it.Done(); it.Next()) {
           const Arc& arc = it.Value();
           if (arc.nextstate == destStateId) {
+            assert(arc.ilabel == op->getId());
+            assert(arc.olabel == destStateType->getId());
             arcAlreadyPresent = true;
             break;
           }
@@ -353,13 +356,13 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
 
       // Append the state and the consumed strings to the alignment history.
-      AlignmentPart part = {destStateType, sourceConsumed, targetConsumed};
-      history.push_back(part);      
+      AlignmentPart part = {op->getName(), sourceConsumed, targetConsumed};
+      history.push_back(part);
       FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
           jNew, *op, history);
       addArc(op->getId(), destStateType->getId(), sourceStateId, destStateId,
           fv, w);
-      applyOperations(w, pair, label, history, finishStateId, iNew, jNew);
+      applyOperations(w, pair, label, history, destStateType, iNew, jNew);
       history.pop_back();
     }
   }
@@ -372,6 +375,7 @@ inline void AlignmentTransducer<Arc>::addArc(const int opId,
   // Note that we negate the innerProd so that the dynamic programming
   // routines (e.g., ShortestPath) will return max instead of min.
   Arc arc(opId, destStateTypeId, (double)-w.innerProd(fv), destId, fv);
+  assert(sourceId >= 0);
   _fst->AddArc(sourceId, arc);
   if (fv)
     _fvecs.push_back(fv);  

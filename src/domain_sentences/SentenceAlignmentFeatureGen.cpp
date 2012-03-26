@@ -121,7 +121,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     prefix << label << sep << "S:";
     string s;
     for (int k = histLen - 1; k >= left; k--) {
-      s = history[k].state->getName() + s;
+      s = history[k].opName + s;
       addFeatureId(prefix.str() + s, featureIds);
       s = FeatureGenConstants::OP_SEP + s;
     }
