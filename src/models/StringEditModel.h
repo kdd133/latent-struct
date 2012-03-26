@@ -411,6 +411,7 @@ void StringEditModel<Arc>::addSecondOrderStates() {
         const string opName = opBaseName + lexical_cast<string>(len);
         if (iends_with(dest.getName(), opBaseName)) {
           EditOperation* op = new OpMatch(_ops.size(), &dest, opName, len);
+          _ops.push_back(op);
           const string destFirst = dest.getName().substr(0, 3);
           BOOST_FOREACH(StateType& source, _states) {
             if (!iends_with(source.getName(), transToStart) &&
