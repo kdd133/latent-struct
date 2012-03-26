@@ -40,7 +40,6 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(
         _includeStateNgrams(includeStateNgrams),
         _includeAlignNgrams(includeAlignNgrams),
         _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
-        _includeOpFeature(includeOpFeature),
         _normalize(normalize), _regexEnabled(false) {
 }
 
@@ -55,7 +54,6 @@ int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   bool noAlign = false;
   bool noCollapse = false;
   bool noNormalize = false;
-  bool noOpFeature = false;
   bool noState = false;
   string vowelsFname;
   opt::options_description options(name() + " options");
@@ -66,8 +64,6 @@ features of the aligned strings")
 include backoff features of the aligned strings that discard the gaps/epsilons")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
 length of the longer word")
-    ("no-op-feature", opt::bool_switch(&noOpFeature), "do not include a \
-feature that indicates the edit operation that was used")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
@@ -90,8 +86,6 @@ features of the state sequence")
     _includeCollapsedAlignNgrams = false;
   if (noNormalize)
     _normalize = false;
-  if (noOpFeature)
-    _includeOpFeature = false;
   if (noState)
     _includeStateNgrams = false;
 
@@ -176,72 +170,68 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
       s = FeatureGenConstants::OP_SEP + s;
     }
   }
-  
-  //DEBUGGING CODE
+
+#if 0
+  // Show the history.
   for (size_t k = 0; k < history.size(); k++)
     cout << "(" << history[k].source << ">" << history[k].target << " " <<
       history[k].opName << ")";
   cout << endl;
-
-  // These features only fire if we didn't perform a no-op on this arc.
-  if (op.getId() != OpNone::ID) {
+#endif
+    
+  if (_includeAlignNgrams || _includeCollapsedAlignNgrams) {
     stringstream prefix;
     prefix << label << sep << "A:";
-    
-    if (_includeAlignNgrams || _includeCollapsedAlignNgrams) {
-      string alignNgram;
-      for (int k = histLen - 1; k >= left; k--) {
-        alignNgram = history[k].source + FeatureGenConstants::OP_SEP +
-            history[k].target + alignNgram;
+    string alignNgram;
+    for (int k = histLen - 1; k >= left; k--) {
+      alignNgram = history[k].source + FeatureGenConstants::OP_SEP +
+          history[k].target + alignNgram;
+      if (_includeAlignNgrams) {
         addFeatureId(prefix.str() + alignNgram, featureIds);
         if (_regexEnabled) {
           const string temp = regex_replace(alignNgram, _regConsonant, C);
           const string alignNgramVC = regex_replace(temp, _regVowel, V);
           addFeatureId(prefix.str() + alignNgramVC, featureIds);
         }
-        if (k > left)
-          alignNgram = FeatureGenConstants::PART_SEP + alignNgram;
       }
-    }
-    
-    // Collapsed n-gram features discard epsilons, so that strings aligned as
-    // (i,-)(e,e) and (-,i)(e,e) both produce the collapsed feature (ie,e).
-    // Note that in the case of a zero order model, the collapsed features are
-    // always redundant, so we omit them in this case.
-    if (_includeCollapsedAlignNgrams && _order > 0) {
-      string s, t;
-      const string sep = FeatureGenConstants::PHRASE_SEP;
-      for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
-        if (history[k].source != FeatureGenConstants::EPSILON)
-          s = history[k].source + sep + s;
-        if (history[k].target != FeatureGenConstants::EPSILON)
-          t = history[k].target + sep + t;
-          
-        if (l == 1)
-          continue; // Omit zero order feature
-
-        // Replace two or more consecutive seps with a single sep, then remove
-        // any leading or trailing sep(s).
-        string sStrip = regex_replace(s, _regPhraseSepMulti, sep);
-        sStrip = regex_replace(sStrip, _regPhraseSepLeadTrail, "");
-        string tStrip = regex_replace(t, _regPhraseSepMulti, sep);
-        tStrip = regex_replace(tStrip, _regPhraseSepLeadTrail, "");
-        string collapsed = sStrip + FeatureGenConstants::OP_SEP + tStrip;
-        
-        addFeatureId(prefix.str() + collapsed, featureIds);
-        if (_regexEnabled) {
-          const string temp = regex_replace(collapsed, _regConsonant, C);
-          const string collapsedVC = regex_replace(temp, _regVowel, V);
-          addFeatureId(prefix.str() + collapsedVC, featureIds);
-        }
-      }
+      if (k > left)
+        alignNgram = FeatureGenConstants::PART_SEP + alignNgram;
     }
   }
   
-  if (_includeOpFeature) {
-    stringstream ss;
-    ss << label << sep << "E:" << op.getName();
-    addFeatureId(ss.str(), featureIds);
+  // Collapsed n-gram features discard epsilons, so that strings aligned as
+  // (i,-)(e,e) and (-,i)(e,e) both produce the collapsed feature (ie,e).
+  // Note that in the case of a zero order model, the collapsed features are
+  // always redundant, so we omit them in this case.
+  if (_includeCollapsedAlignNgrams && _order > 0) {
+    stringstream prefix;
+    prefix << label << sep << "C:";
+    string s, t;
+    const string sep = FeatureGenConstants::PHRASE_SEP;
+    for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
+      if (history[k].source != FeatureGenConstants::EPSILON)
+        s = history[k].source + sep + s;
+      if (history[k].target != FeatureGenConstants::EPSILON)
+        t = history[k].target + sep + t;
+        
+      if (l == 1)
+        continue; // Omit zero order feature
+
+      // Replace two or more consecutive seps with a single sep, then remove
+      // any leading or trailing sep(s).
+      string sStrip = regex_replace(s, _regPhraseSepMulti, sep);
+      sStrip = regex_replace(sStrip, _regPhraseSepLeadTrail, "");
+      string tStrip = regex_replace(t, _regPhraseSepMulti, sep);
+      tStrip = regex_replace(tStrip, _regPhraseSepLeadTrail, "");
+      string collapsed = sStrip + FeatureGenConstants::OP_SEP + tStrip;
+      
+      addFeatureId(prefix.str() + collapsed, featureIds);
+      if (_regexEnabled) {
+        const string temp = regex_replace(collapsed, _regConsonant, C);
+        const string collapsedVC = regex_replace(temp, _regVowel, V);
+        addFeatureId(prefix.str() + collapsedVC, featureIds);
+      }
+    }
   }
   
   FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);

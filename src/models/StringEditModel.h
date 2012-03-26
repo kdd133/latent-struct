@@ -143,6 +143,8 @@ class StringEditModel : public Model {
     
     void addFirstOrderStates();
     
+    void addSecondOrderStates();
+    
     StringEditModel(const StringEditModel& x);
     StringEditModel& operator=(const StringEditModel& x);
 };
@@ -161,14 +163,14 @@ void StringEditModel<Arc>::addZeroOrderStates() {
   StateType& start = _states.front();
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-    string opName = "DEL" + lexical_cast<string>(s);
+    string opName = "Del" + lexical_cast<string>(s);
     EditOperation* op = new OpDelete(_ops.size(), &start, opName, s);
     _ops.push_back(op);
     start.addValidOperation(op);
   }
   
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
-    string opName = "INS" + lexical_cast<string>(t);
+    string opName = "Ins" + lexical_cast<string>(t);
     EditOperation* op = new OpInsert(_ops.size(), &start, opName, t);
     _ops.push_back(op);
     start.addValidOperation(op);
@@ -179,20 +181,20 @@ void StringEditModel<Arc>::addZeroOrderStates() {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
-        string opName = "SUB" + sStr + tStr;
+        string opName = "Sub" + sStr + tStr;
         EditOperation* op = new OpSubstitute(_ops.size(), &start, opName, s, t);
         _ops.push_back(op);
         start.addValidOperation(op);
             
         if (s == t) { // can't possibly match phrases of different lengths
-          opName =  "MAT" + sStr + tStr;
+          opName =  "Mat" + sStr + tStr;
           EditOperation* op = new OpMatch(_ops.size(), &start, opName, s);
           _ops.push_back(op);
           start.addValidOperation(op);
         }
       }
       else { // !_useMatch: Use Replace only, instead of Substitute and Match.
-        string opName = "REP" + sStr + tStr;
+        string opName = "Rep" + sStr + tStr;
         EditOperation* op = new OpReplace(_ops.size(), &start, opName, s, t);
         _ops.push_back(op);
         start.addValidOperation(op);
@@ -203,12 +205,94 @@ void StringEditModel<Arc>::addZeroOrderStates() {
 
 template <typename Arc>
 void StringEditModel<Arc>::addFirstOrderStates() {
+  // FIXME: Longer phrase lengths are not actually supported here yet, since we
+  // have more operations than states; this means the history can be ambiguous.
+  assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
+  
+  StateType* start = new StateType(_states.size(), "sta");
+  _states.push_back(start);
+  StateType* ins = new StateType(_states.size(), "ins");
+  _states.push_back(ins);
+  StateType* del = new StateType(_states.size(), "del");
+  _states.push_back(del);
+  StateType* mat = 0;
+  StateType* sub = 0;
+  StateType* rep = 0;
+  if (_useMatch) {
+    mat = new StateType(_states.size(), "mat");
+    _states.push_back(mat);
+    sub = new StateType(_states.size(), "sub");
+    _states.push_back(sub);
+  }
+  else {
+    rep = new StateType(_states.size(), "rep");
+    _states.push_back(rep);
+  }
+  
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    string opName = "Del" + lexical_cast<string>(s);
+    EditOperation* op = new OpDelete(_ops.size(), del, opName, s);
+    _ops.push_back(op);
+    BOOST_FOREACH(StateType& source, _states) {
+      // Disallow ins->del if the --allow-redundant flag is absent.
+      if (!_allowRedundant && source.getName() == "ins")
+        continue;
+      source.addValidOperation(op);
+    }
+  }
+  
+  for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+    string opName = "Ins" + lexical_cast<string>(t);
+    EditOperation* op = new OpInsert(_ops.size(), ins, opName, t);
+    _ops.push_back(op);
+    BOOST_FOREACH(StateType& source, _states) {
+      source.addValidOperation(op);
+    }
+  }
+  
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    const string sStr = lexical_cast<string>(s);
+    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+      const string tStr = lexical_cast<string>(t);
+      if (_useMatch) { // Distinguish between Substitutes and Matches.
+        string opName = "Sub" + sStr + tStr;
+        EditOperation* op = new OpSubstitute(_ops.size(), sub, opName, s, t);
+        _ops.push_back(op);
+        BOOST_FOREACH(StateType& source, _states) {
+          source.addValidOperation(op);
+        }
+            
+        if (s == t) { // can't possibly match phrases of different lengths
+          opName =  "Mat" + sStr + tStr;
+          EditOperation* op = new OpMatch(_ops.size(), mat, opName, s);
+          _ops.push_back(op);
+          BOOST_FOREACH(StateType& source, _states) {
+            source.addValidOperation(op);
+          }
+        }
+      }
+      else { // !_useMatch: Use Replace only, instead of Substitute and Match.
+        string opName = "Rep" + sStr + tStr;
+        EditOperation* op = new OpReplace(_ops.size(), rep, opName, s, t);
+        _ops.push_back(op);
+        BOOST_FOREACH(StateType& source, _states) {
+          source.addValidOperation(op);
+        }
+      }
+    }
+  }
+}
+
+template <typename Arc>
+void StringEditModel<Arc>::addSecondOrderStates() {
+  // FIXME: Longer phrase lengths are not actually supported here yet, since we
+  // have more operations than states; this means the history can be ambiguous.
+  assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
+  
   // Note: Chosen so as not to overlap with anything in FeatureGenConstants.
-  const string trans = "2";
+  const string trans = "^";
   
   const string start = "sta";
-  const string ins = "ins";
-  const string del = "del";
   const string transToStart = trans + start;
 
   vector<string> baseEditNames;
@@ -221,14 +305,14 @@ void StringEditModel<Arc>::addFirstOrderStates() {
   else
     baseEditNames.push_back("rep");
   
-  _states.push_back(new StateType(0, start)); // start state
+  _states.push_back(new StateType(_states.size(), start)); // start state
 
   // Create all state bigrams, except *->sta.
   BOOST_FOREACH(const string& dest, baseEditNames) {
     _states.push_back(new StateType(_states.size(), start + trans + dest));
     BOOST_FOREACH(const string& source, baseEditNames) {
       // Disallow ins->del if the --allow-redundant flag is absent.
-      if (!_allowRedundant && source == ins && dest == del)
+      if (!_allowRedundant && source == "ins" && dest == "del")
         continue;
       _states.push_back(new StateType(_states.size(), source + trans + dest));
     }
@@ -373,16 +457,18 @@ to the final state")
     return 0;
   }
   
-  if (_order < 0 || _order > 1) {
-    cout << "Invalid arguments: --order can only be 0 or 1 in this version\n";
+  if (_order < 0 || _order > 2) {
+    cout << "Invalid arguments: --order can be 0, 1, or 2 in this version\n";
     return 1;
   }
   
   if (_order == 0)
     addZeroOrderStates();
-  else {
-    assert(_order == 1);
+  else if (_order == 1)
     addFirstOrderStates();
+  else {
+    assert(_order == 2);
+    addSecondOrderStates();
   }
 
 #if 0

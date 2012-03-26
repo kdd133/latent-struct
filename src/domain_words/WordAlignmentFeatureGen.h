@@ -66,8 +66,6 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _includeCollapsedAlignNgrams;
     
-    bool _includeOpFeature;
-    
     bool _normalize;
     
     bool _regexEnabled;

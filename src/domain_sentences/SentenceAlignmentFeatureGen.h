@@ -59,8 +59,6 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _includeAlignNgrams;
     
-    bool _includeOpFeature;
-    
     bool _normalize;
     
     // private copy constructor and assignment operator (passing by value is

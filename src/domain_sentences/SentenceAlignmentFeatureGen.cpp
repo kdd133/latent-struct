@@ -36,7 +36,6 @@ SentenceAlignmentFeatureGen::SentenceAlignmentFeatureGen(
     AlignmentFeatureGen(alphabet), _order(order),
         _includeStateNgrams(includeStateNgrams),
         _includeAlignNgrams(includeAlignNgrams),
-        _includeOpFeature(includeOpFeature),
         _normalize(normalize) {
 }
 
@@ -44,7 +43,6 @@ int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   bool noAlign = false;
   bool noNormalize = false;
-  bool noOpFeature = false;
   bool noState = false;
   opt::options_description options(name() + " options");
   options.add_options()
@@ -52,8 +50,6 @@ int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
 features of the aligned strings")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
 length of the longer word")
-    ("no-op-feature", opt::bool_switch(&noOpFeature), "do not include a \
-feature that indicates the edit operation that was used")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
@@ -73,8 +69,6 @@ features of the state sequence")
     _includeAlignNgrams = false;
   if (noNormalize)
     _normalize = false;
-  if (noOpFeature)
-    _includeOpFeature = false;
   if (noState)
     _includeStateNgrams = false;
   
@@ -218,12 +212,6 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
         }
       }
     }
-  }
-  
-  if (_includeOpFeature) {
-    stringstream ss;
-    ss << label << sep << "E:" << op.getName();
-    addFeatureId(ss.str(), featureIds);
   }
   
   FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
