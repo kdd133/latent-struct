@@ -732,7 +732,8 @@ criterion used by the optimizer")
         alignOut.close();
       }
     }
-    Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames);
+    Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames,
+        cachingEnabled);
   }
   else if (weightVectors.size() == 0) {
     cout << "Warning: No classifiers were successfully trained; therefore, "

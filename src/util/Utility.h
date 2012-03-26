@@ -38,7 +38,8 @@ class Utility {
       
     static void evaluate(const vector<WeightVector>& weightVectors,
       TrainingObjective& obj, const Dataset& evalData,
-      const vector<string>& ids, const vector<string>& fnames);
+      const vector<string>& ids, const vector<string>& fnames,
+      bool enableCache);
         
     static double sigmoid(double a);
     

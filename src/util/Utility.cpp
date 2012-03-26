@@ -59,7 +59,8 @@ void Utility::addRegularizationL2(const WeightVector& W, const double beta,
 
 void Utility::evaluate(const vector<WeightVector>& weightVectors,
     TrainingObjective& obj, const Dataset& evalData,
-    const vector<string>& identifiers, const vector<string>& fnames) {
+    const vector<string>& identifiers, const vector<string>& fnames,
+    bool caching) {
     
   assert(obj.getModel(0).getFgenLatent()->getAlphabet()->isLocked());
   assert(obj.getModel(0).getFgenObserved()->getAlphabet()->isLocked());
@@ -88,9 +89,9 @@ void Utility::evaluate(const vector<WeightVector>& weightVectors,
         evalData.getLabelSet().size()));
   }
   
-  // Ensure that caching is enabled, and that the cache is empty.
+  // Ensure that caching is enabled (if requested), and that the cache is empty.
   for (size_t mi = 0; mi < obj.getNumModels(); mi++) {
-    obj.getModel(mi).setCacheEnabled(true);
+    obj.getModel(mi).setCacheEnabled(caching);
     obj.getModel(mi).emptyCache();
   }
   
@@ -117,8 +118,10 @@ void Utility::evaluate(const vector<WeightVector>& weightVectors,
       obj.predict(weightVectors[wvIndex], partData, labelScores[wvIndex]);
     
     // Clear the cache (we don't need the fsts for this partition any more).
-    for (size_t mi = 0; mi < obj.getNumModels(); mi++)
-      obj.getModel(mi).emptyCache();
+    if (caching) {
+      for (size_t mi = 0; mi < obj.getNumModels(); mi++)
+        obj.getModel(mi).emptyCache();
+    }
   }
 
   // Either we're not writing files, or we're writing all of them.
