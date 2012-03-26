@@ -44,17 +44,21 @@ void WordPairReader::readExample(const string& line, Pattern*& pattern,
   
   Tokenizer sourceTokens(sourceStr, spaceSep);
   vector<string> source;
-  source.push_back(FeatureGenConstants::BEGIN_CHAR);
+  if (_addBeginEndMarkers)
+    source.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (it = sourceTokens.begin(); it != sourceTokens.end(); ++it)
     source.push_back(*it);
-  source.push_back(FeatureGenConstants::END_CHAR);
+  if (_addBeginEndMarkers)
+    source.push_back(FeatureGenConstants::END_CHAR);
     
   Tokenizer targetTokens(targetStr, spaceSep);
   vector<string> target;
-  target.push_back(FeatureGenConstants::BEGIN_CHAR);
+  if (_addBeginEndMarkers)
+    target.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (it = targetTokens.begin(); it != targetTokens.end(); ++it)
     target.push_back(*it);
-  target.push_back(FeatureGenConstants::END_CHAR);
+  if (_addBeginEndMarkers)
+    target.push_back(FeatureGenConstants::END_CHAR);
 
   pattern = new StringPair(source, target);
 }

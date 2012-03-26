@@ -43,22 +43,26 @@ void CognatePairReader::readExample(const string& line, Pattern*& pattern,
   assert(it == fields.end());
   
   vector<string> source;
-  source.push_back(FeatureGenConstants::BEGIN_CHAR);
+  if (_addBeginEndMarkers)
+    source.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (size_t i = 0; i < sourceStr.size(); ++i) {
     string s;
     s.append(1, sourceStr[i]);
     source.push_back(s);
   }
-  source.push_back(FeatureGenConstants::END_CHAR);
+  if (_addBeginEndMarkers)
+    source.push_back(FeatureGenConstants::END_CHAR);
 
   vector<string> target;
-  target.push_back(FeatureGenConstants::BEGIN_CHAR);
+  if (_addBeginEndMarkers)
+    target.push_back(FeatureGenConstants::BEGIN_CHAR);
   for (size_t i = 0; i < targetStr.size(); ++i) {
     string t;
     t.append(1, targetStr[i]);
     target.push_back(t);
   }
-  target.push_back(FeatureGenConstants::END_CHAR);
+  if (_addBeginEndMarkers)
+    target.push_back(FeatureGenConstants::END_CHAR);
     
   pattern = new StringPair(source, target);
 }

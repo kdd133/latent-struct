@@ -118,6 +118,10 @@ class StringEditModel : public Model {
     
     // If true, do not fire any features for arc connecting to the final state.
     bool _noFinalArcFeats;
+    
+    // If true, the fst will include an arc that fires a feature for the start
+    // state; this arc is included in all paths through the fst.
+    bool _includeStartArc;
 
     // A cache for Fsts that include an arc for the observed features. 
     ptr_map<ExampleId, Fst> _fstCache;
@@ -154,7 +158,7 @@ StringEditModel<Arc>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
     shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
-    _noFinalArcFeats(false) {
+    _noFinalArcFeats(false), _includeStartArc(false) {
 }
 
 template <typename Arc>
@@ -446,6 +450,8 @@ to the final state")
         "maximum length of phrases on the source side")
     ("phrase-target", opt::value<int>(&_maxTargetPhraseLength),
         "maximum length of phrases on the target side")
+    ("start-arc", opt::bool_switch(&_includeStartArc),
+        "if true, include a start arc in the FST")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -550,7 +556,7 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   AlignmentTransducer<StdFeatArc>* fst = new AlignmentTransducer<StdFeatArc>(
       _states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
   assert(fst);
-  fst->build(w, (const StringPair&)x, y, true);
+  fst->build(w, (const StringPair&)x, y, _includeStartArc, true);
   fst->clearBuildVariables();
   
   list<int> alignmentOps;
@@ -645,7 +651,7 @@ AlignmentTransducer<Arc>* StringEditModel<Arc>::getFst(
     if (it == cache.end()) {
       fst = new Fst(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
       assert(fst);
-      fst->build(w, (const StringPair&)x, y, includeObs);
+      fst->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
       fst->clearBuildVariables();
       cache.insert(id, fst);
     }
@@ -665,7 +671,7 @@ AlignmentTransducer<Arc>* StringEditModel<Arc>::getFst(
     assert(cache.size() == 1);
     fst = cache.begin()->second;
     assert(fst);
-    fst->build(w, (const StringPair&)x, y, includeObs);
+    fst->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
   }
   assert(fst);
   return fst;

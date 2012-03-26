@@ -40,7 +40,8 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(
         _includeStateNgrams(includeStateNgrams),
         _includeAlignNgrams(includeAlignNgrams),
         _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
-        _normalize(normalize), _regexEnabled(false) {
+        _normalize(normalize), _regexEnabled(false),
+        _alignUnigramsOnly(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -58,6 +59,8 @@ int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   string vowelsFname;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("align-unigrams-only", opt::bool_switch(&_alignUnigramsOnly), "exclude \
+higher order alignment n-grams, even if --order > 0")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
@@ -133,13 +136,13 @@ Gen need to be updated!\n";
 }
 
 FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
-    const Pattern& x, Label label, int iNew, int jNew,
+    const Pattern& x, Label label, int sourcePos, int targetPos,
     const EditOperation& op, const vector<AlignmentPart>& history) {
   //const vector<string>& source = ((const StringPair&)x).getSource();
   //const vector<string>& target = ((const StringPair&)x).getTarget();
     
   const int histLen = history.size();
-  assert(iNew >= 0 && jNew >= 0);
+  assert(sourcePos >= 0 && targetPos >= 0);
   assert(histLen >= 1);
   assert(_order >= 0);
   
@@ -164,7 +167,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     stringstream prefix;
     prefix << label << sep << "S:";
     string s;
-    for (int k = histLen - 1; k >= left; k--) {
+    for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       s = history[k].opName + s;
       addFeatureId(prefix.str() + s, featureIds);
       s = FeatureGenConstants::OP_SEP + s;
@@ -179,14 +182,21 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   cout << endl;
 #endif
     
-  if (_includeAlignNgrams || _includeCollapsedAlignNgrams) {
+  // Note: We require histLen > 1 because histLen == 1 will only be true at the
+  // start state, in which case no edit operation has yet been performed (i.e.,
+  // the alignment feature would just be ->-; but, the state n-gram feature
+  // above already implies this).
+  if ((_includeAlignNgrams || _includeCollapsedAlignNgrams) && histLen > 1) {
     stringstream prefix;
     prefix << label << sep << "A:";
     string alignNgram;
-    for (int k = histLen - 1; k >= left; k--) {
+    for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       alignNgram = history[k].source + FeatureGenConstants::OP_SEP +
           history[k].target + alignNgram;
-      if (_includeAlignNgrams) {
+      // The last condition in the if statements implies that we don't fire an
+      // alignment unigram feature if the operation was a noop.
+      if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
+          (op.getId() != OpNone::ID || n > 1)) {
         addFeatureId(prefix.str() + alignNgram, featureIds);
         if (_regexEnabled) {
           const string temp = regex_replace(alignNgram, _regConsonant, C);
@@ -203,21 +213,22 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   // (i,-)(e,e) and (-,i)(e,e) both produce the collapsed feature (ie,e).
   // Note that in the case of a zero order model, the collapsed features are
   // always redundant, so we omit them in this case.
-  if (_includeCollapsedAlignNgrams && _order > 0) {
+  if (_includeCollapsedAlignNgrams && !_alignUnigramsOnly && _order > 0 &&
+      histLen > 1) {
     stringstream prefix;
     prefix << label << sep << "C:";
     string s, t;
     const string sep = FeatureGenConstants::PHRASE_SEP;
-    for (int k = histLen - 1, l = 1; k >= left; k--, l++) {
+    for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       if (history[k].source != FeatureGenConstants::EPSILON)
         s = history[k].source + sep + s;
       if (history[k].target != FeatureGenConstants::EPSILON)
         t = history[k].target + sep + t;
         
       // Omit zero order feature (effectively a duplicate of the A: feature).
-      if (_includeAlignNgrams && l == 1)
+      if (_includeAlignNgrams && n == 1)
         continue;
-
+        
       // Replace two or more consecutive seps with a single sep, then remove
       // any leading or trailing sep(s).
       string sStrip = regex_replace(s, _regPhraseSepMulti, sep);

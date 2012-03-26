@@ -28,6 +28,7 @@ using namespace std;
 void SentencePairReader::readExample(const string& line, Pattern*& pattern,
     Label& label) const {
   assert(line.size() > 0);
+  assert(!_addBeginEndMarkers); // Not supported by sentence-based feature gens.
   
   typedef tokenizer<char_separator<char> > Tokenizer;
   char_separator<char> tabSep("\t");

@@ -11,16 +11,26 @@
 #define _INPUTREADER_H
 
 #include <string>
-using std::string;
 
 class InputReader {
 
   public:
   
+    InputReader(bool addBeginEndMarkers = false) :
+      _addBeginEndMarkers(addBeginEndMarkers) {}
+  
     virtual ~InputReader() {}
   
-    virtual void readExample(const string& line, Pattern*& pattern,
+    virtual void readExample(const std::string& line, Pattern*& pattern,
         Label& label) const = 0;
+        
+    void setAddBeginEndMarkers(bool status) {
+      _addBeginEndMarkers = status;
+    }
+        
+  protected:
+  
+    bool _addBeginEndMarkers;
 };
 
 #endif

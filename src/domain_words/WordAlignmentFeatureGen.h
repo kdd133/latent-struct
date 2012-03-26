@@ -70,6 +70,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _regexEnabled;
     
+    bool _alignUnigramsOnly;
+    
     regex _regVowel;
   
     regex _regConsonant;

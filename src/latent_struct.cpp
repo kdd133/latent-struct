@@ -71,6 +71,7 @@ int main(int argc, char** argv) {
 
   // Parse the options.
   namespace opt = boost::program_options;
+  bool addBeginEndMarkers = false;
   bool keepAllPositives = false;
   bool noEarlyGridStop = false;
   bool optEM = false;
@@ -124,6 +125,8 @@ int main(int argc, char** argv) {
   
   opt::options_description options("Main options");
   options.add_options()
+    ("add-begin-end", opt::bool_switch(&addBeginEndMarkers), "add begin-/end-\
+of-sequence markers to the examples")
     ("beta,b", opt::value<vector<double> >(&betas)->default_value(
         vector<double>(1, 1.0), "1.0"), "the L2 regularization constant used \
 in the training objective, i.e., (beta/2)*||w||^2")
@@ -318,7 +321,7 @@ criterion used by the optimizer")
   else if (readerName == SentencePairReader::name())
     reader.reset(new SentencePairReader());
   else if (readerName == WordPairReader::name())
-    reader.reset(new WordPairReader()); 
+    reader.reset(new WordPairReader());
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized reader name was given: "
@@ -326,6 +329,8 @@ criterion used by the optimizer")
       return 1;
     }
   }
+  if (reader)
+    reader->setAddBeginEndMarkers(addBeginEndMarkers);
   
   if (!help && vm.count("train")) {
     {

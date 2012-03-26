@@ -69,7 +69,7 @@ class AlignmentTransducer {
     ~AlignmentTransducer();
                         
     void build(const WeightVector& w, const StringPair& pair, Label label,
-      bool includeObservedFeaturesArc = true);
+      bool includeStartArc, bool includeObservedFeaturesArc);
       
     void rescore(const WeightVector& w);
 
@@ -221,21 +221,20 @@ void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::build(const WeightVector& w,
-    const StringPair& pair, Label label, bool includeObsArc) {
+    const StringPair& pair, Label label, bool startArc, bool obsArc) {
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
   
   clear();
   _fst = new fst::VectorFst<Arc>();
   
-  const StateId startStateId = _fst->AddState();
+  StateId startStateId = _fst->AddState();
   _finishStateId = _fst->AddState();
   _fst->SetFinal(_finishStateId, 0); // 2nd parameter is the final weight
   
   // The type of the first state in the list defines the type of the start
   // state and the finish state.
   const StateType& startFinishStateType = _stateTypes.front();
-  const int startFinishStateTypeId = startFinishStateType.getId();
   
   // See if s.size() or t.size() greater than current table dimensions,
   // and if so, reallocate/resize it. Otherwise, we only need to zero out the
@@ -250,24 +249,40 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
       for (size_t k = 0; k < _stateTypes.size(); k++)
         _stateIdTable[i][j][k] = fst::kNoStateId;
   
-  _stateIdTable[0][0][startFinishStateTypeId] = startStateId;
+  _stateIdTable[0][0][startFinishStateType.getId()] = startStateId;
   
+  OpNone noOp; // Note: The default id and name suffice for our purposes.
   vector<AlignmentPart> history;
-  AlignmentPart part = {OpNone().getName(), FeatureGenConstants::EPSILON,
+  AlignmentPart part = {noOp.getName(), FeatureGenConstants::EPSILON,
       FeatureGenConstants::EPSILON};
   history.push_back(part);
 
   // If we have both latent and observed features, we put the observed ones
   // on a "pre-start" arc that every path through the fst must include.
-  if (includeObsArc) {
+  if (obsArc) {
     FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
-    const StateId preStartStateId = _fst->AddState();
-    addArc(OpNone().getId(), startFinishStateTypeId, preStartStateId,
-        startStateId, fv, w);
-    _fst->SetStart(preStartStateId);
+    assert(fv);
+    // Note: Even if includeObsArc=true, we omit the observed feature vector in
+    // the event that no observed features actually fire.
+    if (fv->getLength() > 0) {
+      const StateId preStartStateId = _fst->AddState();
+      addArc(noOp.getId(), startFinishStateType.getId(), preStartStateId,
+          startStateId, fv, w);
+      startStateId = preStartStateId;
+    }
+    else
+      delete fv;
   }
-  else
-    _fst->SetStart(startStateId);
+  _fst->SetStart(startStateId);
+  
+  if (startArc) {
+    FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, 0, 0, noOp,
+        history);
+    const StateId preStartStateId = _fst->AddState();
+    addArc(noOp.getId(), startFinishStateType.getId(), preStartStateId,
+        startStateId, fv, w);
+    startStateId = preStartStateId; // Not used below (yet), but just in case.
+  }
 
   applyOperations(w, pair, label, history, &startFinishStateType, 0, 0);
   
