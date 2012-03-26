@@ -214,8 +214,9 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
       if (history[k].target != FeatureGenConstants::EPSILON)
         t = history[k].target + sep + t;
         
-      if (l == 1)
-        continue; // Omit zero order feature
+      // Omit zero order feature (effectively a duplicate of the A: feature).
+      if (_includeAlignNgrams && l == 1)
+        continue;
 
       // Replace two or more consecutive seps with a single sep, then remove
       // any leading or trailing sep(s).
