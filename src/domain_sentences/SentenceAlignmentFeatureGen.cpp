@@ -31,12 +31,9 @@ using namespace boost;
 using namespace std;
 
 SentenceAlignmentFeatureGen::SentenceAlignmentFeatureGen(
-    shared_ptr<Alphabet> alphabet, int order, bool includeStateNgrams,
-      bool includeAlignNgrams, bool includeOpFeature, bool normalize) :
-    AlignmentFeatureGen(alphabet), _order(order),
-        _includeStateNgrams(includeStateNgrams),
-        _includeAlignNgrams(includeAlignNgrams),
-        _normalize(normalize) {
+    shared_ptr<Alphabet> alphabet) : AlignmentFeatureGen(alphabet), _order(1),
+    _includeStateNgrams(true), _includeAlignNgrams(true),
+    _alignUnigramsOnly(false), _normalize(true) {
 }
 
 int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -46,6 +43,8 @@ int SentenceAlignmentFeatureGen::processOptions(int argc, char** argv) {
   bool noState = false;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("align-unigrams-only", opt::bool_switch(&_alignUnigramsOnly), "exclude \
+higher order alignment n-grams, even if --order > 0")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-normalize", opt::bool_switch(&noNormalize), "do not normalize by the \
@@ -137,13 +136,13 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
       // could be used in the future to, e.g., lookup the word in some sort of
       // table to get a quantity that's of interest.
       int numFeats = 0;
-      int k = histLen - 1;
-      bool gotSource = history[k].source != FeatureGenConstants::EPSILON;
-      bool gotTarget = history[k].target != FeatureGenConstants::EPSILON;
+      const AlignmentPart& edit = history.back();
+      bool gotSource = edit.source != FeatureGenConstants::EPSILON;
+      bool gotTarget = edit.target != FeatureGenConstants::EPSILON;
       // We assume the source and target have the same number of features, so
       // we only need to count the features in one or the other.
       if (gotSource) {
-        Tokenizer phrases(history[k].source, phraseSep);
+        Tokenizer phrases(edit.source, phraseSep);
         const string phrase0 = *phrases.begin();
         Tokenizer tokens(phrase0, featSep);
         Tokenizer::const_iterator it = tokens.begin();
@@ -153,7 +152,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
       }
       else {
         assert(gotTarget);
-        Tokenizer phrases(history[k].target, phraseSep);
+        Tokenizer phrases(edit.target, phraseSep);
         const string phrase0 = *phrases.begin();
         Tokenizer tokens(phrase0, featSep);
         Tokenizer::const_iterator it = tokens.begin();
@@ -168,7 +167,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
       vector<string> targetFeats(numFeats);
       vector<string> ngramFeats(numFeats);
       
-      for (k = histLen - 1; k >= left; k--) {
+      for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
         gotSource = history[k].source != FeatureGenConstants::EPSILON;
         gotTarget = history[k].target != FeatureGenConstants::EPSILON;
           
@@ -207,7 +206,12 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
         for (int fi = 0; fi < numFeats; fi++) {
           ngramFeats[fi] = sourceFeats[fi] + FeatureGenConstants::OP_SEP +
               targetFeats[fi] +ngramFeats[fi]; 
-          addFeatureId(prefix.str() + ngramFeats[fi], featureIds);
+          // The last condition in the if statements implies that we don't fire an
+          // alignment unigram feature if the operation was a noop.
+          if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
+              (op.getId() != OpNone::ID || n > 1)) {
+            addFeatureId(prefix.str() + ngramFeats[fi], featureIds);
+          }
           ngramFeats[fi] = FeatureGenConstants::PART_SEP + ngramFeats[fi];
         }
       }

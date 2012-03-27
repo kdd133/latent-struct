@@ -27,10 +27,7 @@ class StringPair;
 class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
 
-    SentenceAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet,
-      int order = 1, bool includeStateNgrams = true,
-      bool includeAlignNgrams = true, bool includeOpFeature = true,
-      bool normalize = true);
+    SentenceAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet);
       
     virtual ~SentenceAlignmentFeatureGen() {}
     
@@ -58,6 +55,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
     bool _includeStateNgrams;
     
     bool _includeAlignNgrams;
+    
+    bool _alignUnigramsOnly;
     
     bool _normalize;
     
