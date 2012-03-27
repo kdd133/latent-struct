@@ -34,6 +34,7 @@
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/multi_array.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -209,37 +210,71 @@ void StringEditModel<Arc>::addZeroOrderStates() {
 
 template <typename Arc>
 void StringEditModel<Arc>::addFirstOrderStates() {
-  // FIXME: Longer phrase lengths are not actually supported here yet, since we
-  // have more operations than states; this means the history can be ambiguous.
-  assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
+  //// Add states ////
   
   StateType* start = new StateType(_states.size(), "sta");
   _states.push_back(start);
-  StateType* ins = new StateType(_states.size(), "ins");
-  _states.push_back(ins);
-  StateType* del = new StateType(_states.size(), "del");
-  _states.push_back(del);
-  StateType* mat = 0;
-  StateType* sub = 0;
-  StateType* rep = 0;
+  
+  vector<StateType*> ins(_maxTargetPhraseLength + 1); // We'll skip entry 0
+  for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+    StateType* state = new StateType(_states.size(), "ins" +
+        lexical_cast<string>(t));
+    ins[t] = state;
+    _states.push_back(state);
+  }
+  
+  vector<StateType*> del(_maxSourcePhraseLength + 1); // We'll skip entry 0
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    StateType* state = new StateType(_states.size(), "del" +
+        lexical_cast<string>(s));
+    del[s] = state;
+    _states.push_back(state);
+  }
+  
+  vector<StateType*> mat;
   if (_useMatch) {
-    mat = new StateType(_states.size(), "mat");
-    _states.push_back(mat);
-    sub = new StateType(_states.size(), "sub");
-    _states.push_back(sub);
+    // We can't possibly match phrases of different lengths, so the smaller of
+    // the two maximum phrase lengths equals the longest possible match length.
+    const int maxMatchLength = min(_maxSourcePhraseLength,
+        _maxTargetPhraseLength);
+    mat.resize(maxMatchLength + 1); // We'll skip entry 0
+    for (int s = 1; s <= maxMatchLength; s++) {
+      StateType* state = new StateType(_states.size(), "mat" +
+          lexical_cast<string>(s));
+      mat[s] = state;
+      _states.push_back(state);
+    }
   }
-  else {
-    rep = new StateType(_states.size(), "rep");
-    _states.push_back(rep);
+  
+  typedef multi_array<StateType*, 2> array2d;
+  array2d sub(extents[_maxSourcePhraseLength + 1][_maxTargetPhraseLength + 1]);
+  array2d rep(extents[_maxSourcePhraseLength + 1][_maxTargetPhraseLength + 1]);
+  for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    const string sStr = lexical_cast<string>(s);
+    for (int t = 1; t <= _maxTargetPhraseLength; t++) {
+      const string tStr = lexical_cast<string>(t);
+      if (_useMatch) {
+        StateType* state = new StateType(_states.size(), "sub" + sStr + tStr);
+        sub[s][t] = state;
+        _states.push_back(state);
+      }
+      else {
+        StateType* state = new StateType(_states.size(), "rep" + sStr + tStr);
+        rep[s][t] = state;
+        _states.push_back(state);
+      }
+    }
   }
+  
+  //// Add edit operations ////
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
     string opName = "Del" + lexical_cast<string>(s);
-    EditOperation* op = new OpDelete(_ops.size(), del, opName, s);
+    EditOperation* op = new OpDelete(_ops.size(), del[s], opName, s);
     _ops.push_back(op);
     BOOST_FOREACH(StateType& source, _states) {
       // Disallow ins->del if the --allow-redundant flag is absent.
-      if (!_allowRedundant && source.getName() == "ins")
+      if (!_allowRedundant && starts_with(source.getName(), "ins"))
         continue;
       source.addValidOperation(op);
     }
@@ -247,7 +282,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
   
   for (int t = 1; t <= _maxTargetPhraseLength; t++) {
     string opName = "Ins" + lexical_cast<string>(t);
-    EditOperation* op = new OpInsert(_ops.size(), ins, opName, t);
+    EditOperation* op = new OpInsert(_ops.size(), ins[t], opName, t);
     _ops.push_back(op);
     BOOST_FOREACH(StateType& source, _states) {
       source.addValidOperation(op);
@@ -260,7 +295,8 @@ void StringEditModel<Arc>::addFirstOrderStates() {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
         string opName = "Sub" + sStr + tStr;
-        EditOperation* op = new OpSubstitute(_ops.size(), sub, opName, s, t);
+        EditOperation* op = new OpSubstitute(_ops.size(), sub[s][t], opName,
+            s, t);
         _ops.push_back(op);
         BOOST_FOREACH(StateType& source, _states) {
           source.addValidOperation(op);
@@ -268,7 +304,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
             
         if (s == t) { // can't possibly match phrases of different lengths
           opName =  "Mat" + sStr + tStr;
-          EditOperation* op = new OpMatch(_ops.size(), mat, opName, s);
+          EditOperation* op = new OpMatch(_ops.size(), mat[s], opName, s);
           _ops.push_back(op);
           BOOST_FOREACH(StateType& source, _states) {
             source.addValidOperation(op);
@@ -277,7 +313,7 @@ void StringEditModel<Arc>::addFirstOrderStates() {
       }
       else { // !_useMatch: Use Replace only, instead of Substitute and Match.
         string opName = "Rep" + sStr + tStr;
-        EditOperation* op = new OpReplace(_ops.size(), rep, opName, s, t);
+        EditOperation* op = new OpReplace(_ops.size(), rep[s][t], opName, s, t);
         _ops.push_back(op);
         BOOST_FOREACH(StateType& source, _states) {
           source.addValidOperation(op);
