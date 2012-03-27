@@ -29,10 +29,7 @@ class Pattern;
 class WordAlignmentFeatureGen : public AlignmentFeatureGen {
   public:
 
-    WordAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet, int order = 1,
-      bool includeStateNgrams = true, bool includeAlignNgrams = true,
-      bool includeCollapsedAlignNgrams = true, bool includeOpFeature = true,
-      bool normalize = true);
+    WordAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet);
       
     virtual ~WordAlignmentFeatureGen() {}
     
@@ -65,6 +62,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     bool _includeAlignNgrams;
     
     bool _includeCollapsedAlignNgrams;
+    
+    bool _includeBigramFeatures;
     
     bool _normalize;
     

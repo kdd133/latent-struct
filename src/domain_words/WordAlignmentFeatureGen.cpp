@@ -32,16 +32,11 @@
 using namespace boost;
 using namespace std;
 
-WordAlignmentFeatureGen::WordAlignmentFeatureGen(
-    shared_ptr<Alphabet> alphabet, int order, bool includeStateNgrams,
-      bool includeAlignNgrams, bool includeCollapsedAlignNgrams,
-      bool includeOpFeature, bool normalize) :
-    AlignmentFeatureGen(alphabet), _order(order),
-        _includeStateNgrams(includeStateNgrams),
-        _includeAlignNgrams(includeAlignNgrams),
-        _includeCollapsedAlignNgrams(includeCollapsedAlignNgrams),
-        _normalize(normalize), _regexEnabled(false),
-        _alignUnigramsOnly(false) {
+WordAlignmentFeatureGen::WordAlignmentFeatureGen(shared_ptr<Alphabet> alphabet)
+    : AlignmentFeatureGen(alphabet), _order(1), _includeStateNgrams(true),
+    _includeAlignNgrams(true), _includeCollapsedAlignNgrams(true),
+    _includeBigramFeatures(false), _normalize(true), _regexEnabled(false),
+    _alignUnigramsOnly(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -61,6 +56,9 @@ int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
   options.add_options()
     ("align-unigrams-only", opt::bool_switch(&_alignUnigramsOnly), "exclude \
 higher order alignment n-grams, even if --order > 0")
+    ("bigram-features", opt::bool_switch(&_includeBigramFeatures), "include a \
+source-unigram to target-bigram feature (and vice versa), where each n-gram \
+is extracted from the phrase pairs involved in the current edit operation")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
@@ -138,8 +136,6 @@ Gen need to be updated!\n";
 FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     const Pattern& x, Label label, int sourcePos, int targetPos,
     const EditOperation& op, const vector<AlignmentPart>& history) {
-  //const vector<string>& source = ((const StringPair&)x).getSource();
-  //const vector<string>& target = ((const StringPair&)x).getTarget();
     
   const int histLen = history.size();
   assert(sourcePos >= 0 && targetPos >= 0);
@@ -147,7 +143,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
   assert(_order >= 0);
   
   set<int> featureIds;
-  const char* sep = FeatureGenConstants::PART_SEP;
+  const string sep = FeatureGenConstants::PART_SEP;
   const string V = "[V]";
   const string C = "[C]";
   
@@ -218,7 +214,6 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     stringstream prefix;
     prefix << label << sep << "C:";
     string s, t;
-    const string sep = FeatureGenConstants::PHRASE_SEP;
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       if (history[k].source != FeatureGenConstants::EPSILON)
         s = history[k].source + sep + s;
@@ -243,6 +238,44 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
         const string collapsedVC = regex_replace(temp, _regVowel, V);
         addFeatureId(prefix.str() + collapsedVC, featureIds);
       }
+    }
+  }
+  
+  if (_includeBigramFeatures) {
+    // We may need to look at the source and/or target strings.
+    const vector<string>& sourceSeq = ((const StringPair&)x).getSource();
+    const vector<string>& targetSeq = ((const StringPair&)x).getTarget();
+    
+    const AlignmentPart& edit = history.back();
+    string sourceBi;
+    string targetBi;
+    
+    if (edit.source != FeatureGenConstants::EPSILON) {
+      sourceBi = edit.source + FeatureGenConstants::PHRASE_SEP;
+      if (sourcePos + 1 < sourceSeq.size())
+        sourceBi += sourceSeq[sourcePos + 1];
+      else
+        sourceBi += FeatureGenConstants::END_CHAR;
+    }      
+    if (edit.target != FeatureGenConstants::EPSILON) {
+      targetBi = edit.target + FeatureGenConstants::PHRASE_SEP;
+      if (targetPos + 1 < targetSeq.size())
+        targetBi += targetSeq[targetPos + 1];
+      else
+        targetBi += FeatureGenConstants::END_CHAR;
+    }
+    
+    if (edit.source != FeatureGenConstants::EPSILON) {
+      stringstream f;
+      f << label << sep << "Bi:" << sourceBi << FeatureGenConstants::OP_SEP
+          << edit.target;
+      addFeatureId(f.str(), featureIds);
+    }    
+    if (edit.target != FeatureGenConstants::EPSILON) {
+      stringstream f;
+      f << label << sep << "Bi:" << edit.source << FeatureGenConstants::OP_SEP
+          << targetBi;
+      addFeatureId(f.str(), featureIds);
     }
   }
   
