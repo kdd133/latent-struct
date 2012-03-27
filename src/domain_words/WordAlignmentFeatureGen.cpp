@@ -252,15 +252,15 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     
     if (edit.source != FeatureGenConstants::EPSILON) {
       sourceBi = edit.source + FeatureGenConstants::PHRASE_SEP;
-      if (sourcePos + 1 < sourceSeq.size())
-        sourceBi += sourceSeq[sourcePos + 1];
+      if (sourcePos < sourceSeq.size())
+        sourceBi += sourceSeq[sourcePos];
       else
         sourceBi += FeatureGenConstants::END_CHAR;
-    }      
+    }
     if (edit.target != FeatureGenConstants::EPSILON) {
       targetBi = edit.target + FeatureGenConstants::PHRASE_SEP;
-      if (targetPos + 1 < targetSeq.size())
-        targetBi += targetSeq[targetPos + 1];
+      if (targetPos < targetSeq.size())
+        targetBi += targetSeq[targetPos];
       else
         targetBi += FeatureGenConstants::END_CHAR;
     }
