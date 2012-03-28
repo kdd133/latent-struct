@@ -44,6 +44,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -89,7 +90,6 @@ int main(int argc, char** argv) {
   string dirPath("./");
   string fgenNameLat(blank);
   string fgenNameObs(blank);
-  string loadDir(blank);
   string modelName(blank);
   string objName(blank);
   string optName(blank);
@@ -145,8 +145,6 @@ in the training objective, i.e., (beta/2)*||w||^2")
     ("keep-all-positives", opt::bool_switch(&keepAllPositives),
         "if --sample-train is enabled, this option ensures that all the \
 positive examples present in the data are retained")
-//  ("load-dir", opt::value<string>(&loadDir),
-//      "load weights and features from directory and predict on eval data")
     ("model", opt::value<string>(&modelName)->default_value(
         StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
     ("no-early-grid-stop", opt::bool_switch(&noEarlyGridStop),
@@ -188,7 +186,6 @@ criterion used by the optimizer")
       .allow_unregistered().run(), vm);
   opt::notify(vm);
   const bool help = vm.count("help");
-  const bool load = vm.count("load-dir");
   const bool writeFiles = vm.count("directory");
   
   if (split && trainFraction == 1.0) {
@@ -196,43 +193,31 @@ criterion used by the optimizer")
         << options << endl;
     return 1;
   }
-  if (load && !vm.count("eval")) {
-    cout << "Invalid arguments: Can't have --load-dir without --eval\n"
-        << options << endl;
-    return 1;
-  }
-  if (load && !vm.count("directory")) {
-    cout << "Invalid arguments: Can't have --load-dir without --dir\n"
-        << options << endl;
-    return 1;
-  }
   
   if (!boost::iends_with(dirPath, "/"))
     dirPath += "/";
-  if (load && !boost::iends_with(loadDir, "/"))
-    loadDir += "/";
     
-  if (load) {
-    if (dirPath == loadDir) {
-      cout << "Invalid arguments: --load-dir and --dir cannot give same paths\n"
-          << options << endl;
-      return 1;
-    }
-  }
-  
+  const string alphabetFname = dirPath + "alphabet.txt";
   bool cachingEnabled = false;
+  bool resumed = false; // Are we resuming an incomplete run?
   vector<Model*> models;
+  
   shared_ptr<Alphabet> loadedAlphabet(new Alphabet(false, false));
-  if (load) {
-    if (!loadedAlphabet->read(loadDir + "alphabet.txt")) {
-      cout << "Error: Unable to read " << loadDir << "alphabet.txt" << endl;
+  if (boost::filesystem::exists(alphabetFname)) {
+    if (!loadedAlphabet->read(alphabetFname)) {
+      cout << "Error: Unable to read " << alphabetFname << endl;
       return 1;
     }
     loadedAlphabet->lock();
+    resumed = true;
+    cout << "Warning: Found existing output files in " << dirPath <<
+        ", so treating this as a resumed run. Any evaluation output files " <<
+        "will be overwritten\n";
   }
+
   for (size_t th = 0; th < threads; th++) {
     shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
-    if (load)
+    if (resumed)
       alphabet = loadedAlphabet;
     else
       alphabet->unlock(); // in preparation for feature gathering
@@ -449,47 +434,6 @@ criterion used by the optimizer")
   // Note: If --help is enabled, the data will not have been loaded
   assert(help || threads == objective->getNumModels());
 
-#if 0
-  // TODO: Needs to be updated to load multiple weight vectors, and/or to
-  // selectively load one or more weight vectors from a given training run.
-  if (!help && load) {
-    assert(writeFiles);
-    assert(loadedAlphabet->size() > 0);
-    WeightVector w;
-    if (!w.read(loadDir + "weights.txt", loadedAlphabet->size())) {
-      cout << "Error: Unable to read " << loadDir << "weights.txt" << endl;
-      return 1;
-    }
-    assert(w.getDim() == (int)loadedAlphabet->size());
-    {
-      cout << "Loading " << evalFilename << " ...\n";
-      boost::timer::auto_cpu_timer loadEvalTimer;
-      if (Utility::loadDataset(*reader, evalFilename, evalData)) {
-        cout << "Error: Unable to load eval file " << evalFilename << endl;
-        return 1;
-      }
-      cout << "Read " << evalData.numExamples() << " eval examples, " <<
-          evalData.getLabelSet().size() << " classes\n";
-    }
-    {
-      cout << "Classifying eval examples ...\n";
-      boost::timer::auto_cpu_timer classifyEvalTimer;
-      string fname = dirPath + "eval_predictions.txt";
-      Utility::evaluate(w, *objective, evalData, "Eval", fname);
-    }
-    // Write the command line options to a file.
-    const string optsFname = dirPath + "options.txt";
-    ofstream optsOut(optsFname.c_str());
-    if (optsOut.good()) {
-      optsOut << optsStream.str();
-      optsOut.close();
-    }
-    else
-      cout << "Warning: Unable to write " << optsFname << endl;
-    return 0;
-  }
-#endif
-
   // Initialize the optimizer.
   shared_ptr<Optimizer> optimizer_;
   if (optName == optAuto) {
@@ -536,13 +480,15 @@ criterion used by the optimizer")
     return 1;
   }
   
-  cout << "Gathering features ...\n";
-  size_t maxNumFvs = 0, totalNumFvs = 0;
-  {
-    boost::timer::auto_cpu_timer gatherTimer;
-    objective->gatherFeatures(maxNumFvs, totalNumFvs);
-    assert(maxNumFvs > 0 && totalNumFvs > 0);
-    objective->combineAndLockAlphabets();
+  if (!resumed) {
+    cout << "Gathering features ...\n";
+    size_t maxNumFvs = 0, totalNumFvs = 0;
+    {
+      boost::timer::auto_cpu_timer gatherTimer;
+      objective->gatherFeatures(maxNumFvs, totalNumFvs);
+      assert(maxNumFvs > 0 && totalNumFvs > 0);
+      objective->combineAndLockAlphabets();
+    }
   }
   
   shared_ptr<const AlignmentFeatureGen> fgenLat =
@@ -560,9 +506,9 @@ criterion used by the optimizer")
   cout << "Extracted " << d << " features\n";  
 
   // If an output directory was specfied, save the alphabet and options.
-  if (writeFiles) {
-    if (!alphabet->write(dirPath + "alphabet.txt"))
-      cout << "Warning: Unable to write " << dirPath << "alphabet.txt" << endl;  
+  if (writeFiles && !resumed) {
+    if (!alphabet->write(alphabetFname))
+      cout << "Warning: Unable to write " << alphabetFname << endl;  
     const string optsFname = dirPath + "options.txt";
     ofstream optsOut(optsFname.c_str());
     if (optsOut.good()) {
@@ -625,50 +571,64 @@ criterion used by the optimizer")
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       
-      // Train the model.
-      Optimizer::status status = Optimizer::FAILURE;
-      cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
-          "tolerance=" << tol << endl;
+      stringstream weightsFname;
+      weightsFname << dirPath << wvIndex << "-weights.txt";
+      bool weightsFileIsGood = false;
+      
+      if (boost::filesystem::exists(weightsFname.str()))
       {
-        boost::timer::auto_cpu_timer trainTimer;
-        double fval = 0.0; // (not used)
-        optimizer->setBeta(beta);
-        status = optimizer->train(w, fval, tol);
+        assert(resumed);
+        if (!w.read(weightsFname.str(), alphabet->size()))
+          cout << "Warning: Unable to read " << weightsFname.str() << endl;
+        else
+          weightsFileIsGood = true;
       }
       
-      if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
-          Optimizer::MAX_ITERS_CONVEX)) {
-        cout << "Warning: Optimizer returned status " << status << ". " <<
-            "Discarding classifier and skipping to next tolerance value.\n";
-        weightVectors.pop_back();
-        break;
+      if (!weightsFileIsGood) {
+        // Train the model.
+        Optimizer::status status = Optimizer::FAILURE;
+        cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
+            "tolerance=" << tol << endl;
+        {
+          boost::timer::auto_cpu_timer trainTimer;
+          double fval = 0.0; // (not used)
+          optimizer->setBeta(beta);
+          status = optimizer->train(w, fval, tol);
+        }        
+        if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
+            Optimizer::MAX_ITERS_CONVEX)) {
+          cout << "Warning: Optimizer returned status " << status << ". " <<
+              "Discarding classifier and skipping to next tolerance value.\n";
+          weightVectors.pop_back();
+          break;
+        }
+        cout << wvIndex << "-status: " << status << endl;
       }
       
       cout << wvIndex << "-beta: " << beta << endl;
       cout << wvIndex << "-tolerance: " << tol << endl;
-      cout << wvIndex << "-status: " << status << endl;
 
       // If an output directory was specfied, save the weight vector.
-      if (writeFiles) {
-        stringstream fname;
-        fname << dirPath << wvIndex << "-weights.txt";
-        if (!w.write(fname.str()))
-          cout << "Warning: Unable to write " << fname.str() << endl;
+      if (writeFiles && !weightsFileIsGood) {
+        if (!w.write(weightsFname.str()))
+          cout << "Warning: Unable to write " << weightsFname.str() << endl;
       }
       
       // Classify train examples and optionally write the predictions to a file.
       // Note: The model's transducer cache can still be used at this point, so
       // we defer purging it until after classifying the train examples.
-      cout << "Classifying train examples ...\n";
-      {
-        stringstream fname;
-        if (writeFiles)
-          fname << dirPath << wvIndex << "-train_predictions.txt";
-        stringstream identifier;
-        identifier << wvIndex << "-Train";
-        boost::timer::auto_cpu_timer classifyTrainTimer;
-        Utility::evaluate(w, *objective, trainData, identifier.str(),
-            fname.str());
+      stringstream predictFname; // Defaults to empty string (for evaluate()).
+      if (writeFiles)
+        predictFname << dirPath << wvIndex << "-train_predictions.txt";
+      if (!boost::filesystem::exists(predictFname.str())) {
+        cout << "Classifying train examples ...\n";
+        {
+          stringstream identifier;
+          identifier << wvIndex << "-Train";
+          boost::timer::auto_cpu_timer classifyTrainTimer;
+          Utility::evaluate(w, *objective, trainData, identifier.str(),
+              predictFname.str());
+        }
       }
     }
   }
