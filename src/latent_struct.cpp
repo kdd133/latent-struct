@@ -628,7 +628,8 @@ criterion used by the optimizer")
         status = optimizer->train(w, fval, tol);
       }
       
-      if (!noEarlyGridStop && status == Optimizer::FAILURE) {
+      if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
+          Optimizer::MAX_ITERS)) {
         cout << "Warning: Optimizer returned status " << status << ". " <<
             "Discarding classifier and skipping to next tolerance value.\n";
         weightVectors.pop_back();
