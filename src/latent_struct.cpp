@@ -61,7 +61,7 @@ using namespace boost;
 using namespace std;
 
 void evaluateMultipleWeightVectors(const vector<WeightVector>&, const Dataset&,
-    TrainingObjective&, const string&, bool, bool, bool);
+    TrainingObjective&, const string&, int, bool, bool, bool);
 
 int main(int argc, char** argv) {
   // Store the options in string format for later writing to an output file.
@@ -87,7 +87,6 @@ int main(int argc, char** argv) {
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
-  string evalFilename(blank);
   string fgenNameLat(blank);
   string fgenNameObs(blank);
   string loadDir(blank);
@@ -99,6 +98,7 @@ int main(int argc, char** argv) {
   string weightsInit(blank);
   vector<double> betas;
   vector<double> tolerances;
+  vector<string> evalFilenames;
   
   // Enumerate the choices for each option that involves a class name.
   const string CMA = ", ";
@@ -136,7 +136,8 @@ in the training objective, i.e., (beta/2)*||w||^2")
     ("directory", opt::value<string>(&dirPath),
         "directory in which to store results (must already exist)")
 //  ("em", opt::bool_switch(&optEM), "employ the optimizer inside an EM loop")
-    ("eval", opt::value<string>(&evalFilename), "evaluation data file")
+    ("eval", opt::value<vector<string> >(&evalFilenames),
+        "evaluation data file")
     ("fgen-latent", opt::value<string>(&fgenNameLat)->default_value(
         EmptyAlignmentFeatureGen::name()), fgenMsgLat.str().c_str())
     ("fgen-observed", opt::value<string>(&fgenNameObs)->default_value(
@@ -144,8 +145,8 @@ in the training objective, i.e., (beta/2)*||w||^2")
     ("keep-all-positives", opt::bool_switch(&keepAllPositives),
         "if --sample-train is enabled, this option ensures that all the \
 positive examples present in the data are retained")
-    ("load-dir", opt::value<string>(&loadDir),
-        "load weights and features from directory and predict on eval data")
+//  ("load-dir", opt::value<string>(&loadDir),
+//      "load weights and features from directory and predict on eval data")
     ("model", opt::value<string>(&modelName)->default_value(
         StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
     ("no-early-grid-stop", opt::bool_switch(&noEarlyGridStop),
@@ -448,6 +449,9 @@ criterion used by the optimizer")
   // Note: If --help is enabled, the data will not have been loaded
   assert(help || threads == objective->getNumModels());
 
+#if 0
+  // TODO: Needs to be updated to load multiple weight vectors, and/or to
+  // selectively load one or more weight vectors from a given training run.
   if (!help && load) {
     assert(writeFiles);
     assert(loadedAlphabet->size() > 0);
@@ -484,6 +488,7 @@ criterion used by the optimizer")
       cout << "Warning: Unable to write " << optsFname << endl;
     return 0;
   }
+#endif
 
   // Initialize the optimizer.
   shared_ptr<Optimizer> optimizer_;
@@ -681,28 +686,32 @@ criterion used by the optimizer")
   
   // Load the eval examples from the specified file.
   if (!split && vm.count("eval") && weightVectors.size() > 0) {
-    cout << "Loading " << evalFilename << " ...\n";
-    boost::timer::auto_cpu_timer loadEvalTimer;
-    if (Utility::loadDataset(*reader, evalFilename, evalData)) {
-      cout << "Error: Unable to load eval file " << evalFilename << endl;
-      return 1;
+    int evalId = 0;
+    BOOST_FOREACH(const string& evalFilename, evalFilenames) {
+      cout << "Loading " << evalFilename << " ...\n";
+      boost::timer::auto_cpu_timer loadEvalTimer;
+      Dataset evalData(threads); // Intentionally shadowing previous variable.
+      if (Utility::loadDataset(*reader, evalFilename, evalData)) {
+        cout << "Error: Unable to load eval file " << evalFilename << endl;
+        return 1;
+      }
+      cout << "Read " << evalData.numExamples() << " eval examples, " <<
+          evalData.getLabelSet().size() << " classes\n";
+          
+      // This situation can arise if, e.g., the eval set only contains examples
+      // from one class.
+      if (evalData.getLabelSet().size() < trainData.getLabelSet().size()) {
+        evalData.addLabels(trainData.getLabelSet());
+        cout << "The eval set has fewer classes than train. Adding labels from "
+            << "train set to eval set. Number of classes is now "
+            << evalData.getLabelSet().size() << ".\n";
+      }
+      assert(evalData.numExamples() > 0);
+      assert(evalData.getLabelSet().size() > 1);
+      
+      evaluateMultipleWeightVectors(weightVectors, evalData, *objective,
+          dirPath, evalId++, writeFiles, printAlignments, cachingEnabled);
     }
-    cout << "Read " << evalData.numExamples() << " eval examples, " <<
-        evalData.getLabelSet().size() << " classes\n";
-        
-    // This situation can arise if, e.g., the eval set only contains examples
-    // from one class.
-    if (evalData.getLabelSet().size() < trainData.getLabelSet().size()) {
-      evalData.addLabels(trainData.getLabelSet());
-      cout << "The eval set has fewer classes than train. Adding labels from "
-          << "train set to eval set. Number of classes is now "
-          << evalData.getLabelSet().size() << ".\n";
-    }
-    assert(evalData.numExamples() > 0);
-    assert(evalData.getLabelSet().size() > 1);
-    
-    evaluateMultipleWeightVectors(weightVectors, evalData, *objective, dirPath,
-        writeFiles, printAlignments, cachingEnabled);
   }
   else if (weightVectors.size() == 0) {
     cout << "Warning: No classifiers were successfully trained; therefore, "
@@ -718,13 +727,13 @@ criterion used by the optimizer")
 // Can also write the alignments to files upon request.
 void evaluateMultipleWeightVectors(const vector<WeightVector>& weightVectors,
     const Dataset& evalData, TrainingObjective& objective, const string& path,
-    bool writeFiles, bool writeAlignments, bool cachingEnabled) {
+    int id, bool writeFiles, bool writeAlignments, bool cachingEnabled) {
   vector<string> identifiers;
   vector<string> fnames;
   for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
     stringstream fname;
     if (writeFiles) {
-      fname << path << wvIndex << "-eval_predictions.txt";
+      fname << path << wvIndex << "-eval" << id << "_predictions.txt";
       fnames.push_back(fname.str());
     }
     stringstream identifier;
@@ -735,7 +744,7 @@ void evaluateMultipleWeightVectors(const vector<WeightVector>& weightVectors,
       // FIXME: This does not make use of multiple threads or of caching. It
       // should probably be performed alongside the eval predictions. 
       stringstream alignFname;
-      alignFname << path << wvIndex << "-eval_alignments_yi.txt";
+      alignFname << path << wvIndex << "-eval" << id << "_alignments_yi.txt";
       ofstream alignOut(alignFname.str().c_str());
       if (!alignOut.good()) {
         cout << "Warning: Unable to write " << alignFname.str() << endl;
