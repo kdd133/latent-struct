@@ -187,6 +187,14 @@ criterion used by the optimizer")
   opt::notify(vm);
   const bool help = vm.count("help");
   const bool writeFiles = vm.count("directory");
+  const bool trainFileSpecified = vm.count("train");
+  const bool evalFileSpecified = vm.count("eval");
+  
+  if (!trainFileSpecified && !evalFileSpecified) {
+      cout << "Invalid arguments: Either --train or --eval is required\n"
+        << options << endl;
+    return 1;
+  }
   
   if (split && trainFraction == 1.0) {
     cout << "Invalid arguments: Can't have --split with --sample-train=1.0\n"
@@ -321,7 +329,7 @@ criterion used by the optimizer")
   if (reader)
     reader->setAddBeginEndMarkers(addBeginEndMarkers);
   
-  if (!help && vm.count("train")) {
+  if (!help && trainFileSpecified) {
     {
       cout << "Loading " << trainFilename << " ...\n";
       boost::timer::auto_cpu_timer loadTrainTimer;
@@ -585,24 +593,35 @@ criterion used by the optimizer")
       }
       
       if (!weightsFileIsGood) {
-        // Train the model.
-        Optimizer::status status = Optimizer::FAILURE;
-        cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
-            "tolerance=" << tol << endl;
-        {
-          boost::timer::auto_cpu_timer trainTimer;
-          double fval = 0.0; // (not used)
-          optimizer->setBeta(beta);
-          status = optimizer->train(w, fval, tol);
-        }        
-        if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
-            Optimizer::MAX_ITERS_CONVEX)) {
-          cout << "Warning: Optimizer returned status " << status << ". " <<
-              "Discarding classifier and skipping to next tolerance value.\n";
+        if (trainFileSpecified) {
+          // Train the model.
+          Optimizer::status status = Optimizer::FAILURE;
+          cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
+              "tolerance=" << tol << endl;
+          {
+            boost::timer::auto_cpu_timer trainTimer;
+            double fval = 0.0; // (not used)
+            optimizer->setBeta(beta);
+            status = optimizer->train(w, fval, tol);
+          }        
+          if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
+              Optimizer::MAX_ITERS_CONVEX)) {
+            cout << "Warning: Optimizer returned status " << status << ". " <<
+                "Discarding classifier and skipping to next tolerance value.\n";
+            weightVectors.pop_back();
+            break;
+          }
+          cout << wvIndex << "-status: " << status << endl;
+        }
+        else {
+          // If no train file was specified, we interpret this to mean that the
+          // user wishes to evaluate only the existing weight vectors in the
+          // given directory.
+          cout << "Warning: There will be no results for beta=" << beta <<
+              " and tolerance=" << tol << endl;
           weightVectors.pop_back();
           break;
         }
-        cout << wvIndex << "-status: " << status << endl;
       }
       
       cout << wvIndex << "-beta: " << beta << endl;
@@ -645,7 +664,7 @@ criterion used by the optimizer")
   }
   
   // Load the eval examples from the specified file.
-  if (!split && vm.count("eval") && weightVectors.size() > 0) {
+  if (!split && evalFileSpecified && weightVectors.size() > 0) {
     int evalId = 0;
     BOOST_FOREACH(const string& evalFilename, evalFilenames) {
       cout << "Loading " << evalFilename << " ...\n";
