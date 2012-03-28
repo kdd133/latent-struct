@@ -23,9 +23,16 @@ class Optimizer {
     virtual ~Optimizer() {}
     
     enum status {
+      // The optimizer converged.
       CONVERGED,
-      MAX_ITERS,
+      // The max number of iterations was reached while directly optimizing an
+      // objective (usually convex) function.
+      MAX_ITERS_CONVEX,
+      // The alternating optimizer reached its maximum number of iterations.
+      MAX_ITERS_ALTERNATING,
+      // The optimizer made negative progress from some previous iterate.
       BACKWARD_PROGRESS,
+      // A general failure occurred.
       FAILURE
     };
 

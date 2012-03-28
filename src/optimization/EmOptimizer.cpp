@@ -78,11 +78,11 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
       return status;
     }
     
-    if (status == Optimizer::MAX_ITERS) {
+    if (status == Optimizer::MAX_ITERS_CONVEX) {
       if (innerMaxItersPrev) {
         cout << name() << ": Inner solver reached max iterations on two " <<
             "consecutive EM iterations. Terminating\n";
-        return Optimizer::FAILURE;
+        return Optimizer::MAX_ITERS_CONVEX;
       }
       innerMaxItersPrev = true;
     }
@@ -109,7 +109,7 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
   if (!converged) {
     cout << name() << ": Max iterations reached; objective value " << valCur
         << endl;
-    return Optimizer::MAX_ITERS;
+    return Optimizer::MAX_ITERS_ALTERNATING;
   }
   return Optimizer::CONVERGED;
 }

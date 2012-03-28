@@ -144,7 +144,7 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
       case LBFGSERR_MAXIMUMITERATION:
         cout << "Reached maximum number of iterations. Terminating.\n";
         terminate = true;
-        status = Optimizer::MAX_ITERS;
+        status = Optimizer::MAX_ITERS_CONVEX;
         break;
       case LBFGS_ALREADY_MINIMIZED:
         cout << "Function appears to be already minimized. Terminating.\n";

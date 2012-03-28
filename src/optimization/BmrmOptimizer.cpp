@@ -236,7 +236,7 @@ JwCP = %0.4e  epsilon_t = %0.4e\n", name().c_str(), (int)t, (int)bs, Jw,
   if (!converged) {
     cout << name() << ": Max iterations reached; objective value " << Jw
       << endl;
-    return Optimizer::MAX_ITERS;
+    return Optimizer::MAX_ITERS_CONVEX;
   }  
   return Optimizer::CONVERGED;
 }

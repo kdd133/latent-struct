@@ -60,6 +60,9 @@
 using namespace boost;
 using namespace std;
 
+void evaluateMultipleWeightVectors(const vector<WeightVector>&, const Dataset&,
+    TrainingObjective&, const string&, bool, bool, bool);
+
 int main(int argc, char** argv) {
   // Store the options in string format for later writing to an output file.
   stringstream optsStream;
@@ -629,7 +632,7 @@ criterion used by the optimizer")
       }
       
       if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
-          Optimizer::MAX_ITERS)) {
+          Optimizer::MAX_ITERS_CONVEX)) {
         cout << "Warning: Optimizer returned status " << status << ". " <<
             "Discarding classifier and skipping to next tolerance value.\n";
         weightVectors.pop_back();
@@ -698,48 +701,8 @@ criterion used by the optimizer")
     assert(evalData.numExamples() > 0);
     assert(evalData.getLabelSet().size() > 1);
     
-    // Classify eval examples and optionally write the predictions to files.
-    vector<string> identifiers;
-    vector<string> fnames;
-    for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
-      stringstream fname;
-      if (writeFiles) {
-        fname << dirPath << wvIndex << "-eval_predictions.txt";
-        fnames.push_back(fname.str());
-      }
-      stringstream identifier;
-      identifier << wvIndex << "-Eval";
-      identifiers.push_back(identifier.str());
-      
-      if (printAlignments) {
-        // FIXME: This does not make use of multiple threads or of caching. It
-        // should probably be performed alongside the eval predictions. 
-        stringstream alignFname;
-        alignFname << dirPath << wvIndex << "-eval_alignments_yi.txt";
-        ofstream alignOut(alignFname.str().c_str());
-        if (!alignOut.good()) {
-          cout << "Warning: Unable to write " << alignFname.str() << endl;
-          continue;
-        }
-        Model& model = objective->getModel(0);
-        assert(!model.getCacheEnabled()); // this would waste memory
-        const WeightVector& w = weightVectors[wvIndex];
-        cout << "Printing alignments to " << alignFname.str() << ".\n";
-        BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
-          BOOST_FOREACH(const Label y, evalData.getLabelSet()) {
-            if (objective->isBinary() && y != 1)
-              continue;
-            alignOut << ex.x()->getId() << " (yi = " << ex.y() << ")  y = "
-                << y << endl;
-            model.printAlignment(alignOut, w, *ex.x(), y);
-            alignOut << endl;
-          }
-        }
-        alignOut.close();
-      }
-    }
-    Utility::evaluate(weightVectors, *objective, evalData, identifiers, fnames,
-        cachingEnabled);
+    evaluateMultipleWeightVectors(weightVectors, evalData, *objective, dirPath,
+        writeFiles, printAlignments, cachingEnabled);
   }
   else if (weightVectors.size() == 0) {
     cout << "Warning: No classifiers were successfully trained; therefore, "
@@ -749,4 +712,52 @@ criterion used by the optimizer")
   }
 
   return 0;
+}
+
+// Classify eval examples and optionally write the predictions to files.
+// Can also write the alignments to files upon request.
+void evaluateMultipleWeightVectors(const vector<WeightVector>& weightVectors,
+    const Dataset& evalData, TrainingObjective& objective, const string& path,
+    bool writeFiles, bool writeAlignments, bool cachingEnabled) {
+  vector<string> identifiers;
+  vector<string> fnames;
+  for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
+    stringstream fname;
+    if (writeFiles) {
+      fname << path << wvIndex << "-eval_predictions.txt";
+      fnames.push_back(fname.str());
+    }
+    stringstream identifier;
+    identifier << wvIndex << "-Eval";
+    identifiers.push_back(identifier.str());
+    
+    if (writeAlignments) {
+      // FIXME: This does not make use of multiple threads or of caching. It
+      // should probably be performed alongside the eval predictions. 
+      stringstream alignFname;
+      alignFname << path << wvIndex << "-eval_alignments_yi.txt";
+      ofstream alignOut(alignFname.str().c_str());
+      if (!alignOut.good()) {
+        cout << "Warning: Unable to write " << alignFname.str() << endl;
+        continue;
+      }
+      Model& model = objective.getModel(0);
+      assert(!model.getCacheEnabled()); // this would waste memory
+      const WeightVector& w = weightVectors[wvIndex];
+      cout << "Printing alignments to " << alignFname.str() << ".\n";
+      BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
+        BOOST_FOREACH(const Label y, evalData.getLabelSet()) {
+          if (objective.isBinary() && y != 1)
+            continue;
+          alignOut << ex.x()->getId() << " (yi = " << ex.y() << ")  y = "
+              << y << endl;
+          model.printAlignment(alignOut, w, *ex.x(), y);
+          alignOut << endl;
+        }
+      }
+      alignOut.close();
+    }
+  }
+  Utility::evaluate(weightVectors, objective, evalData, identifiers, fnames,
+      cachingEnabled);
 }
