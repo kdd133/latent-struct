@@ -95,10 +95,16 @@ def results_txt(fout, results):
   for subfolder in results:
     fout.write('%s\t' % subfolder.split('/')[-1])
     for statname in sorted(stat_names):
-      fout.write('%.3f\t' % results[subfolder][statname])
+      try:
+        fout.write('%.3f\t' % results[subfolder][statname])
+      except KeyError:
+        fout.write('N/A\t')
     for name in sorted(results[subfolder]):
       if name not in stat_names and name not in option_names_to_skip:
-        fout.write('%s\t' % results[subfolder][name])
+        try:
+          fout.write('%s\t' % results[subfolder][name])
+        except KeyError:
+          fout.write('N/A\t')
     fout.write('\n')
 
 def results_html(fout, results):  
@@ -118,10 +124,16 @@ def results_html(fout, results):
     fout.write('  <tr>\n')
     fout.write('    <td>%s</td>\n' % subfolder.split('/')[-1])
     for statname in sorted(stat_names):
-      fout.write('    <td>%.3f</td>\n' % results[subfolder][statname])
+      try:
+        fout.write('    <td>%.3f</td>\n' % results[subfolder][statname])
+      except KeyError:
+        fout.write('    <td>N/A</td>\n')
     for name in sorted(results[subfolder]):
       if name not in stat_names and name not in option_names_to_skip:
-        fout.write('    <td>%s</td>\n' % results[subfolder][name])
+        try:
+          fout.write('    <td>%s</td>\n' % results[subfolder][name])
+        except KeyError:
+          fout.write('    <td>N/A</td>\n')
     fout.write('  </tr>\n\n')
   fout.write('</tbody>\n\n')
   
