@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
   bool noEarlyGridStop = false;
   bool optEM = false;
   bool printAlignments = false;
+  bool skipTraining = false;
   bool split = false;
   const string blank("<NONE>");
   const string optAuto("Auto");
@@ -151,6 +152,8 @@ positive examples present in the data are retained")
         "by default, we break from the grid search loop (over the tolerance \
 and beta values) if the optimizer failed to converge; however, if this flag is \
 present, all points on the grid will be visited")
+    ("no-training", opt::bool_switch(&skipTraining), "load and evaluate \
+any existing weight vectors, but don't train at any new points in the grid")
     ("objective", opt::value<string>(&objName)->default_value(
         LogLinearMulti::name()), objMsgObs.str().c_str())
     ("optimizer", opt::value<string>(&optName)->default_value(optAuto),
@@ -593,7 +596,7 @@ criterion used by the optimizer")
       }
       
       if (!weightsFileIsGood) {
-        if (trainFileSpecified) {
+        if (trainFileSpecified && !skipTraining) {
           // Train the model.
           Optimizer::status status = Optimizer::FAILURE;
           cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
@@ -614,9 +617,10 @@ criterion used by the optimizer")
           cout << wvIndex << "-status: " << status << endl;
         }
         else {
-          // If no train file was specified, we interpret this to mean that the
-          // user wishes to evaluate only the existing weight vectors in the
-          // given directory.
+          // If no train file was specified or the user requested that training
+          // be skipped, we evaluate only the existing weight vectors in the
+          // given directory (but do not train any new ones, even if there are
+          // points on the grid that have not been successfully tried).
           cout << "Warning: There will be no results for beta=" << beta <<
               " and tolerance=" << tol << endl;
           weightVectors.pop_back();
