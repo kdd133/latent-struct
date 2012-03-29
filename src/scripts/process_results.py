@@ -107,7 +107,25 @@ def results_txt(fout, results):
           fout.write('N/A\t')
     fout.write('\n')
 
-def results_html(fout, results):  
+def results_html(fout, results, experiment_name = "latent_struct experiment",):
+  fout.write('<html>\n')
+  fout.write('<head>\n')
+  fout.write('<title>%s results</title>\n' % experiment_name)
+  fout.write('<link rel="stylesheet" href="themes/blue/style.css" \
+type="text/css" id="" media="print, projection, screen" />\n')
+  fout.write('<script type="text/javascript" src="jquery.min.js"></script>\n')
+  fout.write('<script type="text/javascript" src="jquery.tablesorter.min.js">\
+</script>\n')
+  fout.write('<script type="text/javascript" id="js">$(document).ready(\
+function() {\n')
+  fout.write('    $("table").tablesorter({sortList: [[0,0]]});\n')
+  fout.write('  }\n')
+  fout.write(');\n')
+  fout.write('</script>\n')
+  fout.write('</head>\n')
+  
+  fout.write('<body style="font-family:sans-serif;">\n')    
+  fout.write('<h1>Results: %s</h1>\n' % experiment_name)
   fout.write('<table id="table" class="tablesorter">\n')
   fout.write('<thead align="center">\n  <tr>\n')
   fout.write('    <th>ID</th>\n')
@@ -136,6 +154,9 @@ def results_html(fout, results):
           fout.write('    <td>N/A</td>\n')
     fout.write('  </tr>\n\n')
   fout.write('</tbody>\n\n')
+  
+  fout.write('</body>\n')
+  fout.write('</html>\n')
   
 ###################
 
@@ -211,29 +232,7 @@ if __name__ == '__main__':
 
   # output a table of results to a html file
   html_name = '%s.html' % experiment_name
-  fout = open(html_name, 'w')
-  fout.write('<html>\n')
-  fout.write('<head>\n')
-  fout.write('<title>%s results</title>\n' % experiment_name)
-  fout.write('<link rel="stylesheet" href="themes/blue/style.css" type="text/css" id="" media="print, projection, screen" />\n')
-  fout.write('<script type="text/javascript" src="jquery.min.js"></script>\n')
-  fout.write('<script type="text/javascript" src="jquery.tablesorter.min.js"></script>\n')
-  fout.write('<script type="text/javascript" id="js">$(document).ready(function() {\n')
-  fout.write('    $("table").tablesorter({sortList: [[0,0]]});\n')
-  fout.write('  }\n')
-  fout.write(');\n')
-  fout.write('</script>\n')
-  fout.write('</head>\n')
-  fout.write('<body style="font-family:sans-serif;">\n')
-  
-  fout.write('<h1>Results: %s</h1>\n' % experiment_name)
-  fout.write('<p>\nYou can click on a column header in the table to sort by that field. ' \
-             'Moreover, you can hold the shift key (at least in firefox) and then click ' \
-             'on additional columns in order to sort according to several fields. ' \
-             '\n</p>\n')
-  results_html(fout, results) # writes the tabular data to fout
-  
-  fout.write('</body>\n')
-  fout.write('</html>\n')
+  fout = open(html_name, 'w')  
+  results_html(fout, results, experiment_name)
   fout.close()
   print 'Wrote ' + html_name
