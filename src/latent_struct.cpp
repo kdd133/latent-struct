@@ -719,6 +719,8 @@ void evaluateMultipleWeightVectors(const vector<WeightVector>& weightVectors,
       fname << path << wvIndex << "-eval" << id << "_predictions.txt";
       fnames.push_back(fname.str());
     }
+    else
+      fnames.push_back("");
     stringstream identifier;
     identifier << wvIndex << "-Eval";
     identifiers.push_back(identifier.str());
