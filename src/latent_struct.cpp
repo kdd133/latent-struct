@@ -606,9 +606,13 @@ criterion used by the optimizer")
             double fval = 0.0; // (not used)
             optimizer->setBeta(beta);
             status = optimizer->train(w, fval, tol);
-          }        
-          if (!noEarlyGridStop && (status == Optimizer::FAILURE || status ==
-              Optimizer::MAX_ITERS_CONVEX)) {
+          }
+          if (status == Optimizer::FAILURE) {
+            cout << "Warning: Optimizer returned status " << status << ". " <<
+                "Discarding classifier.\n";
+            continue;
+          }
+          if (!noEarlyGridStop && status == Optimizer::MAX_ITERS_CONVEX) {
             cout << "Warning: Optimizer returned status " << status << ". " <<
                 "Discarding classifier and skipping to next tolerance value.\n";
             weightVectors.pop_back();
