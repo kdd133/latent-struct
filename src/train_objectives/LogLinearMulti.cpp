@@ -7,13 +7,6 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include <boost/foreach.hpp>
-#include <boost/shared_array.hpp>
-using boost::shared_array;
-#include <cmath>
-#include <iostream>
-#include <vector>
-using namespace std;
 #include "Dataset.h"
 #include "Example.h"
 #include "FeatureVector.h"
@@ -23,6 +16,8 @@ using namespace std;
 #include "Model.h"
 #include "RealWeight.h"
 #include "WeightVector.h"
+#include <boost/shared_array.hpp>
+#include <vector>
 
 void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -31,10 +26,13 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   
   const int d = w.getDim();
   
-  vector<LogWeight> mass(k, LogWeight());
-  vector<FeatureVector<LogWeight> > feats(k, FeatureVector<LogWeight>(d, true));  
+  std::vector<LogWeight> mass(k, LogWeight());
+  std::vector<FeatureVector<LogWeight> > feats(k, FeatureVector<LogWeight>(d,
+      true));  
   FeatureVector<LogWeight> featsTotal(d);
-  shared_array<RealWeight> tempVals(new RealWeight[d]); // passed to convert()
+  
+  // This will be passed to convert().
+  boost::shared_array<RealWeight> tempVals(new RealWeight[d]);
   
   funcVal = 0;
   gradFv.zero();

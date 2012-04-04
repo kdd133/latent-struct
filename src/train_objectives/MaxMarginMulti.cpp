@@ -20,9 +20,7 @@
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
-#include <iostream>
 #include <vector>
-using namespace std;
 
 void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -31,8 +29,8 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   
   const int d = w.getDim();
   
-  vector<RealWeight> score(k, RealWeight());
-  vector<FeatureVector<RealWeight> > feats(k, FeatureVector<RealWeight>(
+  std::vector<RealWeight> score(k, RealWeight());
+  std::vector<FeatureVector<RealWeight> > feats(k, FeatureVector<RealWeight>(
       d, true));  
   
   funcVal = 0;

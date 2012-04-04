@@ -17,11 +17,6 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
-#include <cmath>
-#include <iostream>
-#include <limits>
-#include <vector>
-using namespace std;
 
 void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,

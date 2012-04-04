@@ -17,11 +17,6 @@
 #include "ObservedFeatureGen.h"
 #include "Utility.h"
 #include "WeightVector.h"
-#include <boost/foreach.hpp>
-#include <cmath>
-#include <iostream>
-#include <vector>
-using namespace std;
 
 void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -48,6 +43,9 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
     
     // Compute the number of paths through the fst using the zero weight vector.
+    // TODO: Cache this value in a lookup table. Implement it as a map, so that
+    // each thread will only have entries for the patter ids it is handling.
+    // Then, no syncronization is necessary.
     const LogWeight logSizeZx = model.totalMass(W0, xi, ypos);
 
     const LogWeight z = logMass.times(-logSizeZx);
