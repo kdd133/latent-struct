@@ -160,6 +160,11 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
     if (terminate)
       break;
   }
+
+  // If we've exceeded the maximum number of restarts, we'll say converged.
+  if (ret == LBFGSERR_INVALIDPARAMETERS)
+    status = Optimizer::CONVERGED;
+  
   cout << name() << ": Optimization terminated with objective value " << objVal
       << endl; 
   w.setWeights(x, d); // copy the final point into w

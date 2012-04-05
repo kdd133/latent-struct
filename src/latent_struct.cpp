@@ -610,6 +610,7 @@ criterion used by the optimizer")
           if (status == Optimizer::FAILURE) {
             cout << "Warning: Optimizer returned status " << status << ". " <<
                 "Discarding classifier.\n";
+            weightVectors.pop_back();
             continue;
           }
           if (!noEarlyGridStop && status == Optimizer::MAX_ITERS_CONVEX) {
