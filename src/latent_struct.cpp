@@ -24,6 +24,7 @@
 #include "LbfgsOptimizer.h"
 #include "LogFeatArc.h"
 #include "LogLinearBinary.h"
+#include "LogLinearBinaryUnscaled.h"
 #include "LogLinearBinaryObs.h"
 #include "LogLinearMulti.h"
 #include "MaxMarginBinary.h"
@@ -116,6 +117,7 @@ int main(int argc, char** argv) {
   modelMsgObs << "model {" << StringEditModel<LogFeatArc>::name() << "}";
   stringstream objMsgObs;
   objMsgObs << "obj {" << LogLinearBinary::name() << CMA <<
+      LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
       MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
@@ -423,6 +425,8 @@ criterion used by the optimizer")
     objective.reset(new LogLinearMulti(trainData, models));
   else if (objName == LogLinearBinary::name())
     objective.reset(new LogLinearBinary(trainData, models));
+  else if (objName == LogLinearBinaryUnscaled::name())
+    objective.reset(new LogLinearBinaryUnscaled(trainData, models));
   else if (objName == LogLinearBinaryObs::name())
     objective.reset(new LogLinearBinaryObs(trainData, models));
   else if (objName == MaxMarginBinary::name()) {
