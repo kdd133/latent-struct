@@ -12,14 +12,19 @@
 
 #include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include <tr1/unordered_map>
 
 class Dataset;
+class LogWeight;
 class Model;
 class RealWeight;
 
 class LogLinearBinary : public TrainingObjective {
 
   public:
+  
+    typedef tr1::unordered_map<int,LogWeight> DictType;
+    typedef DictType::value_type PairType;
   
     LogLinearBinary(const Dataset& dataset, const vector<Model*>& models) :
       TrainingObjective(dataset, models) {}
@@ -34,6 +39,8 @@ class LogLinearBinary : public TrainingObjective {
     }
     
   private:
+    
+    DictType _logSizeZxMap;
     
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

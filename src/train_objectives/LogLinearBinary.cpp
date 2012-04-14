@@ -43,10 +43,21 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
     
     // Compute the number of paths through the fst using the zero weight vector.
-    // TODO: Cache this value in a lookup table. Implement it as a map, so that
-    // each thread will only have entries for the patter ids it is handling.
-    // Then, no syncronization is necessary.
-    const LogWeight logSizeZx = model.totalMass(W0, xi, ypos);
+    // We cache this value in a lookup table (implemented as a map). This is
+    // possible because the value does not depend on the current weight vector.
+    // Note that, since the map for each thread will only have entries for the
+    // patter ids in its particular partition of the Dataset, no explicit
+    // syncronization is needed.
+    LogWeight logSizeZx;
+    const DictType::const_iterator item = _logSizeZxMap.find(xi.getId());
+    if (item == _logSizeZxMap.end()) {
+      logSizeZx = model.totalMass(W0, xi, ypos);
+      pair<DictType::iterator, bool> ret = _logSizeZxMap.insert(
+          PairType(xi.getId(), logSizeZx));
+      assert(ret.second); // will be false if entry already present in map
+    }
+    else
+      logSizeZx = item->second;
 
     const LogWeight z = logMass.times(-logSizeZx);
     const LogWeight fW = (yi == 1) ? -z : z;
