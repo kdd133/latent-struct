@@ -7,3 +7,5 @@ gdb: src/Makefile
 clean: src/Makefile
 	make -C src/ clean
 
+check: tests/Makefile
+	make -C tests/ all
