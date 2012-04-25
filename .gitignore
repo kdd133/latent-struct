@@ -3,6 +3,7 @@
 *.swp
 latent_struct
 latent_struct-gdb
+tests/run_tests
 .project
 .cproject
 .pydevproject
