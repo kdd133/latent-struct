@@ -90,7 +90,6 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     cout << name() << ": Starting objective value is " << min_Jw << endl;
   
   bool converged = false;
-  bool dropped = false; // Did we discard any gradient vectors during prev t?
   for (size_t t = 1; t <= _maxIters; t++) {
     boost::timer::auto_cpu_timer timer;
     
@@ -107,42 +106,19 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     // Note: We could rebuild G from scratch each time (and then add tiny
     // values to the diagonal), but that's much slower, e.g.:
     // ublas::matrix<double> G = ublas::prod(ublas::trans(A), A) / _beta;
-    G = copyG;
-    if (!dropped) {
-      G.resize(bs, bs, true); // Note: true --> preserve existing entries
-      const size_t j = bs -1;
-      for (size_t i = 0; i < bs; i++) {
-        const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
-        if (i == j)
-          G(i, j) = temp + TINY; // Add a small value to diag to ensure pos-def.
-        else {
-          G(i, j) = temp;
-          G(j, i) = temp;
-        }
+    G.resize(bs, bs, true); // Note: true --> preserve existing entries
+    const size_t j = bs -1;
+    for (size_t i = 0; i < bs; i++) {
+      const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
+      if (i == j)
+        G(i, j) = temp + TINY; // Add a small value to diag to ensure pos-def.
+      else {
+        G(i, j) = temp;
+        G(j, i) = temp;
       }
     }
-    else {
-      // TODO: Drop entries one-by-one from G and avoid these redundant
-      // computations, as we do with b below: see if (!_noShrinking)
-      assert(!_noShrinking);
-      G.resize(bs, bs, false);
-      for (size_t i = 0; i < bs; i++) {
-        for (size_t j = 0; j <= i; j++) {
-          const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
-          if (i == j)
-            G(i, j) = temp + TINY;
-          else {
-            G(i, j) = temp;
-            G(j, i) = temp;
-          }
-        }
-      }
-    }
-    copyG = G;
     
-    // If dropped=true, we already shifted the entries in b during the previous
-    // iteration. Therefore, regardless of the value of dropped, we simply have
-    // to append the entry corresponding to the current gradient.
+    // Append an entry to b.
     const double b_t = Remp - w.innerProd(grad_t);
     b.resize(bs, true);
     b(bs - 1) = -b_t;
@@ -163,7 +139,8 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     // Allocate a vector to hold the solution.
     ublas::vector<double> alpha(bs);
     
-    // Note: solve_quadprog may modify G, which is why we make a copy above.
+    // Note: The call to solve_quadprog may modify G, so we preserve a copy.
+    copyG = G;
     double JwCP;
     try {
       JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
@@ -174,6 +151,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     }
     if (JwCP == numeric_limits<double>::infinity())
       return Optimizer::FAILURE;
+    G = copyG; // Restore the correct version of G.
       
     // Negate the optimal value returned, since BMRM thinks we're maximizing.
     JwCP = -JwCP;
@@ -209,25 +187,35 @@ JwCP = %0.4e  epsilon_t = %0.4e\n", name().c_str(), (int)t, (int)bs, Jw,
     }
     
     // Shrinking heuristic: Discard (grad,b) pairs for which alpha == 0.
+    // Note: The vector b and matrix G will be appropriately resized the next
+    // time through the loop.
     if (!_noShrinking) {
-      dropped = false;
-      for (int i = bs-2; i >= 0; i--) { // bs-2 b/c we must keep the most recent
-        if (alpha(i) <= ALPHA_TOL) {
-          // Discard the gradient vector
-          grads.erase(grads.begin() + i);
-          // Shift the entries in b
-          for (int j = i; j < bs - 1; j++)
-            b(j) = b(j + 1);
-          if (!dropped)
-            dropped = true;
+      // Note: We start at bs-2 so as to never discard the most recent cutting
+      // plane.
+      for (int col = bs - 2; col >= 0; col--) {
+        if (alpha(col) <= ALPHA_TOL) {
+          // Discard the gradient vector.
+          grads.erase(grads.begin() + col);
+          // Shift the rightmost entries in b to the left.
+          for (int i = col; i < bs - 1; i++)
+            b(i) = b(i + 1);
+          // Shift the rightmost columns of G to the left.
+          for (int j = col; j < bs - 1; j++)
+            for (int i = 0; i < bs; i++)
+              G(i, j) = G(i, j + 1);
+          // Shift the bottom rows of G upward.
+          for (int i = col; i < bs - 1; i++)
+            for (int j = 0; j < bs; j++)
+              G(i, j) = G(i + 1, j);
         }
       }
     }
     
     if (epsilon_t <= tol) {
-      if (!_quiet)
+      if (!_quiet) {
         cout << name() << ": Convergence detected; objective value " << min_Jw
           << endl;
+      }
       converged = true;
       break;
     }
