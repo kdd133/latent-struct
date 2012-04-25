@@ -60,8 +60,8 @@ class LbfgsOptimizer : public Optimizer {
       TrainingObjective* obj;
       WeightVector* w;
       double beta;
+      bool quiet;
     } LbfgsInstance;
-    
 };
 
 #endif

@@ -61,7 +61,7 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   assert(g != 0);
   assert(x != 0);
   
-  boost::timer::auto_cpu_timer timer;
+  boost::timer::cpu_timer timer;
   
   const LbfgsInstance* inst = (LbfgsInstance*)instance;
   TrainingObjective& obj = *inst->obj;
@@ -82,6 +82,9 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   for (int i = 0; i < d; i++)
     g[i] = gradFv.getValueAtLocation(i);
   
+  if (!inst->quiet)
+    cout << timer.format();
+
   return fval;
 }
 
@@ -103,11 +106,11 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
 
 Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
     double tol) const {
-  boost::timer::auto_cpu_timer timer;
+  boost::timer::cpu_timer timer;
   const int d = w.getDim();
   assert(d > 0);
   
-  LbfgsInstance inst = { &_objective, &w, _beta };
+  LbfgsInstance inst = { &_objective, &w, _beta, _quiet };
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
     x[i] = w.getWeight(i); // set the starting point to be w
@@ -121,38 +124,45 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
     params.epsilon = tol; // use the tolerance passed to train()
     ret = lbfgs(d, x, &objVal, evaluate, _quiet ? 0 : progress, &inst, &params);
     bool terminate = false;
-    cout << name() << ": ";
+    if (!_quiet)
+      cout << name() << ": ";
     switch (ret) {
       case LBFGSERR_ROUNDING_ERROR:
       case LBFGSERR_MINIMUMSTEP:
       case LBFGSERR_MAXIMUMSTEP:
       case LBFGSERR_INCREASEGRADIENT:
       case LBFGSERR_INVALIDPARAMETERS:
-        cout << "Caught non-convex related error (code " << ret <<
-          "). Performing restart.\n";
+        if (!_quiet)
+          cout << "Caught non-convex related error (code " << ret <<
+              "). Performing restart.\n";
         status = Optimizer::FAILURE;
         break;
       case LBFGS_CONVERGENCE:
-        cout << "Convergence detected. Performing restart.\n";
+        if (!_quiet)
+          cout << "Convergence detected. Performing restart.\n";
         status = Optimizer::CONVERGED;
         break;
       case LBFGSERR_MAXIMUMLINESEARCH:
-        cout << "Reached max number of line search iterations. Terminating\n";
+        if (!_quiet)
+          cout << "Reached max number of line search iterations. Terminating\n";
         terminate = true;
         status = Optimizer::FAILURE;
         break;
       case LBFGSERR_MAXIMUMITERATION:
-        cout << "Reached maximum number of iterations. Terminating.\n";
+        if (!_quiet)
+          cout << "Reached maximum number of iterations. Terminating.\n";
         terminate = true;
         status = Optimizer::MAX_ITERS_CONVEX;
         break;
       case LBFGS_ALREADY_MINIMIZED:
-        cout << "Function appears to be already minimized. Terminating.\n";
+        if (!_quiet)
+          cout << "Function appears to be already minimized. Terminating.\n";
         terminate = true;
         status = Optimizer::CONVERGED;
         break;
       default:
-        cout << "lbfgs() returned code " << ret << ". Terminating.\n";
+        if (!_quiet)
+          cout << "lbfgs() returned code " << ret << ". Terminating.\n";
         terminate = true;
         status = Optimizer::FAILURE;
         break;
@@ -165,8 +175,11 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
   if (ret == LBFGSERR_INVALIDPARAMETERS)
     status = Optimizer::CONVERGED;
   
-  cout << name() << ": Optimization terminated with objective value " << objVal
-      << endl; 
+  if (!_quiet) {
+    cout << name() << ": Optimization terminated with objective value " <<
+        objVal << endl;
+    cout << timer.format();
+  }
   w.setWeights(x, d); // copy the final point into w
   
   lbfgs_free(x);
