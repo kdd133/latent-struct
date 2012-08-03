@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
   const string optAuto("Auto");
   double negativeRatio = 0.0;
   double trainFraction = 1.0;
+  double weightsNoise;
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
@@ -184,6 +185,9 @@ criterion used by the optimizer")
     ("train", opt::value<string>(&trainFilename), "training data file")
     ("weights-init", opt::value<string>(&weightsInit)->default_value("noise"),
         "initialize weights {heuristic, heuristic+noise, noise, zero}")
+    ("weights-noise-level", opt::value<double>(&weightsNoise)->default_value(
+        0.01), "Gaussian variance parameter used when applying noise to \
+initial weights")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -560,7 +564,7 @@ criterion used by the optimizer")
     }
     if (iends_with(weightsInit, "noise")) {
       mt19937 mt(seed);
-      normal_distribution<> gaussian(0, 0.01);
+      normal_distribution<> gaussian(0, weightsNoise);
       variate_generator<mt19937, normal_distribution<> > rgen(mt, gaussian);
       for (int i = 0; i < d; i++)
         v[i] += rgen();
