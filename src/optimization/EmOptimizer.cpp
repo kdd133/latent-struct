@@ -25,13 +25,17 @@ using namespace std;
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,
     shared_ptr<Optimizer> opt) :
-    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20) {
+    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20),
+      _abortOnConsecMaxIters(false), _quiet(false) {
 }
 
 int EmOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("em-abort-on-consec-max-iters", opt::bool_switch(&_abortOnConsecMaxIters),
+        "abort if the inner solver exceeds its maximum number of iterations \
+on two consecutive EM iterations")
     ("em-max-iters", opt::value<int>(&_maxIters)->default_value(20),
         "maximum number of iterations")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
@@ -78,16 +82,18 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
       return status;
     }
     
-    if (status == Optimizer::MAX_ITERS_CONVEX) {
-      if (innerMaxItersPrev) {
-        cout << name() << ": Inner solver reached max iterations on two " <<
-            "consecutive EM iterations. Terminating\n";
-        return Optimizer::MAX_ITERS_CONVEX;
+    if (_abortOnConsecMaxIters) {
+      if (status == Optimizer::MAX_ITERS_CONVEX) {
+        if (innerMaxItersPrev) {
+          cout << name() << ": Inner solver reached max iterations on two " <<
+              "consecutive EM iterations. Terminating\n";
+          return Optimizer::MAX_ITERS_CONVEX;
+        }
+        innerMaxItersPrev = true;
       }
-      innerMaxItersPrev = true;
-    }
-    else {
-      innerMaxItersPrev = false;
+      else {
+        innerMaxItersPrev = false;
+      }
     }
     
     if (valCur - valPrev > 0) {
