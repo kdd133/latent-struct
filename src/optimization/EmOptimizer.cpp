@@ -69,23 +69,26 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
     const Optimizer::status status = _convexOpt->train(w, valCur, tol);
     
     if (status == Optimizer::FAILURE) {
-      cout << name() << ": Inner solver reported a failure. Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Inner solver reported a failure. Terminating.\n";
       return Optimizer::FAILURE;
     }
     
     if (!_quiet)
-      cout << name() << ": prev=" << valPrev << " current=" << valCur << endl;
+      cout << name() << " iter = " << iter << ": prev=" << valPrev <<
+          " current=" << valCur << endl;
       
     if (status == Optimizer::BACKWARD_PROGRESS) {
-      cout << name() << ": Inner solver reported backward progress. " <<
-          "Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Inner solver reported backward progress. Terminating.\n";
       return status;
     }
     
     if (_abortOnConsecMaxIters) {
       if (status == Optimizer::MAX_ITERS_CONVEX) {
         if (innerMaxItersPrev) {
-          cout << name() << ": Inner solver reached max iterations on two " <<
+          cout << name() << " iter = " << iter <<
+              ": Inner solver reached max iterations on two " <<
               "consecutive EM iterations. Terminating\n";
           return Optimizer::MAX_ITERS_CONVEX;
         }
@@ -97,14 +100,15 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
     }
     
     if (valCur - valPrev > 0) {
-      cout << name() << ": Objective value increased?! Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Objective value increased?! Terminating.\n";
       return Optimizer::BACKWARD_PROGRESS;
     }
     
     if (valPrev - valCur < tol) {
       if (!_quiet)
-        cout << name() << ": Convergence detected; objective value " << valCur
-          << endl;
+        cout << name() << " iter = " << iter <<
+            ": Convergence detected; objective value " << valCur << endl;
       converged = true;
       break;
     }

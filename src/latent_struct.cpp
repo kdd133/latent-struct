@@ -168,7 +168,7 @@ threading or fst caching")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
-negative examples (implies --sample-all-positives)")
+negative examples (implies --keep-all-positives)")
     ("sample-train", opt::value<double>(&trainFraction),
         "learn on this fraction of the train data (uniformly sampled, \
 without replacement); if greater than 1, the value is interpreted as the \
