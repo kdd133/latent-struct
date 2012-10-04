@@ -106,25 +106,26 @@ int main(int argc, char** argv) {
   // Enumerate the choices for each option that involves a class name.
   const string CMA = ", ";
   stringstream fgenMsgLat;
-  fgenMsgLat << "feature gen latent {" << EmptyAlignmentFeatureGen::name() <<
+  fgenMsgLat << "latent feature generator {"
+      << EmptyAlignmentFeatureGen::name() <<
       CMA << SentenceAlignmentFeatureGen::name() <<
       CMA << WordAlignmentFeatureGen::name() << "}";  
   stringstream fgenMsgObs;
-  fgenMsgObs << "feature gen observed {" << BiasFeatureGen::name() << CMA
+  fgenMsgObs << "observed feature generator {" << BiasFeatureGen::name() << CMA
       << EmptyObservedFeatureGen::name() << CMA
       << KlementievRothWordFeatureGen::name() << CMA
       << KlementievRothSentenceFeatureGen::name() << "}";      
   stringstream modelMsgObs;
   modelMsgObs << "model {" << StringEditModel<LogFeatArc>::name() << "}";
   stringstream objMsgObs;
-  objMsgObs << "obj {" << LogLinearBinary::name() << CMA <<
+  objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
       MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
-  optMsgObs << "opt {" << optAuto << CMA << BmrmOptimizer::name() << CMA <<
-      LbfgsOptimizer::name() << "}";
+  optMsgObs << "optimization algorithm {" << optAuto << CMA <<
+      BmrmOptimizer::name() << CMA << LbfgsOptimizer::name() << "}";
   stringstream readerMsg;
   readerMsg << "reader that parses lines from input file {" <<
       CognatePairReader::name() << CMA << SentencePairReader::name() << CMA <<
