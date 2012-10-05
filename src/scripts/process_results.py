@@ -72,7 +72,10 @@ def read_options(s, results, id):
       option = option[2:] # remove the -- that's prepended to the option name    
       opts[option] = value
     except ValueError:
-      opts['flags'] += o[2:] + ' '
+      opts['flags'] += o[2:] + '+'
+
+  if len(opts['flags']) > 0:
+    opts['flags'] = opts['flags'][:-1] # drop trailing '+' sign
 
   # the options are the same for a given id/subfolder (e.g., results/001), so
   # we copy them to the sub id's (e.g., results/001-0, results/001-1) that

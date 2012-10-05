@@ -44,6 +44,10 @@ class EmOptimizer : public Optimizer {
   
     int _maxIters; // maximum number of iterations
     
+    // If true, we abort if the inner solver exceeds its maximum number of
+    // iterations on two consecutive EM iterations.
+    bool _abortOnConsecMaxIters;
+    
     bool _quiet; // suppress optimization output
 };
 

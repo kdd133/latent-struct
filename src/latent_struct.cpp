@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
   const string optAuto("Auto");
   double negativeRatio = 0.0;
   double trainFraction = 1.0;
+  double weightsNoise;
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
@@ -105,25 +106,26 @@ int main(int argc, char** argv) {
   // Enumerate the choices for each option that involves a class name.
   const string CMA = ", ";
   stringstream fgenMsgLat;
-  fgenMsgLat << "feature gen latent {" << EmptyAlignmentFeatureGen::name() <<
+  fgenMsgLat << "latent feature generator {"
+      << EmptyAlignmentFeatureGen::name() <<
       CMA << SentenceAlignmentFeatureGen::name() <<
       CMA << WordAlignmentFeatureGen::name() << "}";  
   stringstream fgenMsgObs;
-  fgenMsgObs << "feature gen observed {" << BiasFeatureGen::name() << CMA
+  fgenMsgObs << "observed feature generator {" << BiasFeatureGen::name() << CMA
       << EmptyObservedFeatureGen::name() << CMA
       << KlementievRothWordFeatureGen::name() << CMA
       << KlementievRothSentenceFeatureGen::name() << "}";      
   stringstream modelMsgObs;
   modelMsgObs << "model {" << StringEditModel<LogFeatArc>::name() << "}";
   stringstream objMsgObs;
-  objMsgObs << "obj {" << LogLinearBinary::name() << CMA <<
+  objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
       MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
-  optMsgObs << "opt {" << optAuto << CMA << BmrmOptimizer::name() << CMA <<
-      LbfgsOptimizer::name() << "}";
+  optMsgObs << "optimization algorithm {" << optAuto << CMA <<
+      BmrmOptimizer::name() << CMA << LbfgsOptimizer::name() << "}";
   stringstream readerMsg;
   readerMsg << "reader that parses lines from input file {" <<
       CognatePairReader::name() << CMA << SentencePairReader::name() << CMA <<
@@ -167,7 +169,7 @@ threading or fst caching")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
-negative examples (implies --sample-all-positives)")
+negative examples (implies --keep-all-positives)")
     ("sample-train", opt::value<double>(&trainFraction),
         "learn on this fraction of the train data (uniformly sampled, \
 without replacement); if greater than 1, the value is interpreted as the \
@@ -184,6 +186,9 @@ criterion used by the optimizer")
     ("train", opt::value<string>(&trainFilename), "training data file")
     ("weights-init", opt::value<string>(&weightsInit)->default_value("noise"),
         "initialize weights {heuristic, heuristic+noise, noise, zero}")
+    ("weights-noise-level", opt::value<double>(&weightsNoise)->default_value(
+        0.01), "Gaussian variance parameter used when applying noise to \
+initial weights")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -560,7 +565,7 @@ criterion used by the optimizer")
     }
     if (iends_with(weightsInit, "noise")) {
       mt19937 mt(seed);
-      normal_distribution<> gaussian(0, 0.01);
+      normal_distribution<> gaussian(0, weightsNoise);
       variate_generator<mt19937, normal_distribution<> > rgen(mt, gaussian);
       for (int i = 0; i < d; i++)
         v[i] += rgen();

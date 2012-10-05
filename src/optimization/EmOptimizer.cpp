@@ -25,13 +25,17 @@ using namespace std;
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,
     shared_ptr<Optimizer> opt) :
-    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20) {
+    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20),
+      _abortOnConsecMaxIters(false), _quiet(false) {
 }
 
 int EmOptimizer::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("em-abort-on-consec-max-iters", opt::bool_switch(&_abortOnConsecMaxIters),
+        "abort if the inner solver exceeds its maximum number of iterations \
+on two consecutive EM iterations")
     ("em-max-iters", opt::value<int>(&_maxIters)->default_value(20),
         "maximum number of iterations")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
@@ -65,40 +69,46 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
     const Optimizer::status status = _convexOpt->train(w, valCur, tol);
     
     if (status == Optimizer::FAILURE) {
-      cout << name() << ": Inner solver reported a failure. Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Inner solver reported a failure. Terminating.\n";
       return Optimizer::FAILURE;
     }
     
     if (!_quiet)
-      cout << name() << ": prev=" << valPrev << " current=" << valCur << endl;
+      cout << name() << " iter = " << iter << ": prev=" << valPrev <<
+          " current=" << valCur << endl;
       
     if (status == Optimizer::BACKWARD_PROGRESS) {
-      cout << name() << ": Inner solver reported backward progress. " <<
-          "Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Inner solver reported backward progress. Terminating.\n";
       return status;
     }
     
-    if (status == Optimizer::MAX_ITERS_CONVEX) {
-      if (innerMaxItersPrev) {
-        cout << name() << ": Inner solver reached max iterations on two " <<
-            "consecutive EM iterations. Terminating\n";
-        return Optimizer::MAX_ITERS_CONVEX;
+    if (_abortOnConsecMaxIters) {
+      if (status == Optimizer::MAX_ITERS_CONVEX) {
+        if (innerMaxItersPrev) {
+          cout << name() << " iter = " << iter <<
+              ": Inner solver reached max iterations on two " <<
+              "consecutive EM iterations. Terminating\n";
+          return Optimizer::MAX_ITERS_CONVEX;
+        }
+        innerMaxItersPrev = true;
       }
-      innerMaxItersPrev = true;
-    }
-    else {
-      innerMaxItersPrev = false;
+      else {
+        innerMaxItersPrev = false;
+      }
     }
     
     if (valCur - valPrev > 0) {
-      cout << name() << ": Objective value increased?! Terminating.\n";
+      cout << name() << " iter = " << iter <<
+          ": Objective value increased?! Terminating.\n";
       return Optimizer::BACKWARD_PROGRESS;
     }
     
     if (valPrev - valCur < tol) {
       if (!_quiet)
-        cout << name() << ": Convergence detected; objective value " << valCur
-          << endl;
+        cout << name() << " iter = " << iter <<
+            ": Convergence detected; objective value " << valCur << endl;
       converged = true;
       break;
     }
