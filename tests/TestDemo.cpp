@@ -49,16 +49,14 @@
 
 BOOST_AUTO_TEST_CASE(testStringEdit)
 {
-  // TODO: Figure out which set of options replicate Colin's implmentation.
-  const int argc = 6;
+  const int argc = 5;
   char* argv[argc];
-  argv[0] = (char*) "latent_struct";
-  argv[1] = (char*) "--order=1";
-  argv[2] = (char*) "--no-align-ngrams";
-  argv[3] = (char*) "--no-collapsed-align-ngrams";
-  argv[4] = (char*) "--bias-no-normalize";
-  argv[5] = (char*) "--no-final-arc-feats";
-  argv[6] = (char*) "--exact-match-state";
+  size_t i = 0;
+  argv[i++] = (char*) "latent_struct";
+  argv[i++] = (char*) "--order=0";
+  argv[i++] = (char*) "--no-align-ngrams";
+  argv[i++] = (char*) "--bias-no-normalize";
+  argv[i++] = (char*) "--no-final-arc-feats";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -89,7 +87,7 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_CHECK(!alphabet->isLocked());
   alphabet->lock();
   const int d = alphabet->size();
-  BOOST_REQUIRE_EQUAL(d, 8);
+  BOOST_REQUIRE_EQUAL(d, 4);
   
   WeightVector W(d);
   
