@@ -135,6 +135,9 @@ void TrainingObjective::gatherFeatures(size_t& maxFvs, size_t& totalFvs) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
+  // If there's only one unique label, it has to be 0 in order for the loop
+  // over labels in gatherFeaturesPart() to make sense.
+  assert(k > 1 || _dataset.getExamples().at(0).y() == 0);
   vector<size_t> maxFvsPart(numParts);
   vector<size_t> totalFvsPart(numParts);
   ptr_vector<thread> threads;
