@@ -49,33 +49,38 @@
 
 BOOST_AUTO_TEST_CASE(testStringEdit)
 {
-  const int argc = 5;
+  const int argc = 6;
   char* argv[argc];
   size_t i = 0;
   argv[i++] = (char*) "latent_struct";
   argv[i++] = (char*) "--order=0";
   argv[i++] = (char*) "--no-align-ngrams";
+  argv[i++] = (char*) "--no-normalize";
   argv[i++] = (char*) "--bias-no-normalize";
   argv[i++] = (char*) "--no-final-arc-feats";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
   int ret = fgenObs->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
+  BOOST_REQUIRE_EQUAL(ret, 0);
   shared_ptr<WordAlignmentFeatureGen> fgenLat(new WordAlignmentFeatureGen(
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
+  BOOST_REQUIRE_EQUAL(ret, 0);
   Model* model = new StringEditModel<LogFeatArc>(fgenLat, fgenObs);
   ret = model->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
+  BOOST_REQUIRE_EQUAL(ret, 0);
   
   vector<Model*> models;
   models.push_back(model);
   
   StringPair* pair = new StringPair("stress", "sutoressu");
   pair->setId(0);
-  Example example(pair, 1);
+  // Since our "dataset" will have only one example (and therefore only one
+  // unique label), TrainingObjective.gatherFeatures() requires the label to
+  // be zero, even though this would actually be a positive example.
+  Label label = 0;
+  Example example(pair, label);
   Dataset data;
   data.addExample(example);
   
@@ -90,6 +95,19 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_REQUIRE_EQUAL(d, 4);
   
   WeightVector W(d);
+  
+  int fid = alphabet->lookup("0_S:Del1");
+  BOOST_REQUIRE(fid >= 0);
+  W.add(fid, -100);  
+  fid = alphabet->lookup("0_S:Ins1");
+  BOOST_REQUIRE(fid >= 0);
+  W.add(fid, -100);
+  fid = alphabet->lookup("0_S:Rep11");
+  BOOST_REQUIRE(fid >= 0);
+  W.add(fid, -100);
+  
+  LogWeight totalMass = model->totalMass(W, *pair, label);
+  BOOST_CHECK_CLOSE(totalMass.value(), -295.5691832011567, 1e-8);
   
 //  shared_ptr<Alphabet> alphabet(new Alphabet());
 //  shared_ptr<EmptyObservedFeatureGen> empty(new EmptyObservedFeatureGen(
