@@ -28,7 +28,7 @@ CCGDB = g++ -O0 $(CCFLAGS)
 CCGDBOBJ = $(CCGDB) $(INCLUDES) -ggdb -c
 CCGDBLINK = $(CCGDB) $(LIBS) -ggdb
 
-SRCS = $(shell find ../src -mindepth 2 -name "*.cpp") TestDemo.cpp
+SRCS = $(shell find ../src -mindepth 2 -name "*.cpp") $(shell ls *.cpp)
 OBJS = $(patsubst %.cpp,%.o,$(SRCS))
 DEPS = $(patsubst %.cpp,%.dep,$(SRCS))
 GDBOBJS = $(patsubst %.cpp,%-gdb.o,$(SRCS))
