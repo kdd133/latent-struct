@@ -36,7 +36,7 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(shared_ptr<Alphabet> alphabet)
     : AlignmentFeatureGen(alphabet), _order(1), _includeStateNgrams(true),
     _includeAlignNgrams(true), _includeCollapsedAlignNgrams(true),
     _includeBigramFeatures(false), _normalize(true), _regexEnabled(false),
-    _alignUnigramsOnly(false) {
+    _alignUnigramsOnly(false), _stateUnigramsOnly(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -68,6 +68,8 @@ length of the longer word")
     ("no-state-ngrams", opt::bool_switch(&noState), "do not include n-gram \
 features of the state sequence")
     ("order", opt::value<int>(&_order), "the Markov order")
+    ("state-unigrams-only", opt::bool_switch(&_stateUnigramsOnly), "exclude \
+higher order state sequence n-grams, even if --order > 0")
     ("vowels-file", opt::value<string>(&vowelsFname), vowelsHelp.str().c_str())
     ("help", "display a help message")
   ;
@@ -163,10 +165,13 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     stringstream prefix;
     prefix << label << sep << "S:";
     string s;
+    // Here, n=1 represents unigrams, n=2 bigrams, etc.
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
-      s = history[k].opName + s;
-      addFeatureId(prefix.str() + s, featureIds);
-      s = FeatureGenConstants::OP_SEP + s;
+      if (!_stateUnigramsOnly || n == 1) {
+        s = history[k].opName + s;
+        addFeatureId(prefix.str() + s, featureIds);
+        s = FeatureGenConstants::OP_SEP + s;
+      }
     }
   }
 
@@ -186,6 +191,7 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     stringstream prefix;
     prefix << label << sep << "A:";
     string alignNgram;
+    // Here, n=1 represents unigrams, n=2 bigrams, etc.
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       alignNgram = history[k].source + FeatureGenConstants::OP_SEP +
           history[k].target + alignNgram;

@@ -71,6 +71,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _alignUnigramsOnly;
     
+    bool _stateUnigramsOnly;
+    
     regex _regVowel;
   
     regex _regConsonant;
