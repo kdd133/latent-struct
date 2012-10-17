@@ -49,12 +49,14 @@
 
 BOOST_AUTO_TEST_CASE(testStringEdit)
 {
-  const int argc = 6;
+  const int argc = 8;
   char* argv[argc];
   size_t i = 0;
   argv[i++] = (char*) "latent_struct";
-  argv[i++] = (char*) "--order=0";
+  argv[i++] = (char*) "--order=1";
   argv[i++] = (char*) "--no-align-ngrams";
+  argv[i++] = (char*) "--no-collapsed-align-ngrams";
+  argv[i++] = (char*) "--state-unigrams-only";
   argv[i++] = (char*) "--no-normalize";
   argv[i++] = (char*) "--bias-no-normalize";
   argv[i++] = (char*) "--no-final-arc-feats";
