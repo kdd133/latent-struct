@@ -11,10 +11,19 @@
 #include "WordAlignmentFeatureGen.h"
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
+#include <math.h>
 #include <vector>
 using namespace boost;
 
-
+/*
+ * Build a first-order edit distance transducer, but only fire zero-order
+ * features. Run the forward-backward algorithm to compute the total weight of
+ * all paths through the graph, as well as the expectation over features.
+ * The reason we build the graph in this manner is to duplicate the behaviour
+ * of an existing implementation whose dynamic programming routines have
+ * been verified to be correct. Note that we can change --order=1 to --order=0
+ * below and still get the same result.
+ */
 BOOST_AUTO_TEST_CASE(testStringEdit)
 {
   const int argc = 8;
@@ -66,13 +75,37 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   
   // Set the weights of Del and Ins to -100; implicitly leave Rep to be zero.
   WeightVector W(d);  
-  int fid = alphabet->lookup("0_S:Del1");
-  BOOST_REQUIRE(fid >= 0);
-  W.add(fid, -100);  
-  fid = alphabet->lookup("0_S:Ins1");
-  BOOST_REQUIRE(fid >= 0);
-  W.add(fid, -100);
+  const int iDel = alphabet->lookup("0_S:Del1");
+  BOOST_REQUIRE(iDel >= 0);
+  W.add(iDel, -100);  
+  const int iIns = alphabet->lookup("0_S:Ins1");
+  BOOST_REQUIRE(iIns >= 0);
+  W.add(iIns, -100);
   
+  // Check that the total mass is correct.
   LogWeight totalMass = model->totalMass(W, *pair, label);
   BOOST_CHECK_CLOSE(totalMass.value(), -295.5691832011567, 1e-8);
+  
+  FeatureVector<LogWeight> fv(d, true);
+  BOOST_REQUIRE(!fv.isDense());
+  LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
+  BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
+  
+  const int iRep = alphabet->lookup("0_S:Rep11");
+  BOOST_REQUIRE(iRep >= 0);
+  const int iBias = alphabet->lookup("0_Bias");
+  BOOST_REQUIRE(iBias >= 0);
+  
+  // Check that the (unnormalized) expected value of each feature is correct.  
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iIns).value(), -294.4706, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iDel).value(), -493.3720, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iRep).value(), -293.7774, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iBias).value(), -295.5692, 1e-4);
+
+  // Check that the (normalized) expected value of each feature is correct.
+  fv.timesEquals(-totalMass);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iIns).value()), 3, 1e-4);
+  BOOST_CHECK_SMALL(exp(fv.getValueAtLocation(iDel).value()), 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iRep).value()), 6, 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iBias).value()), 1, 1e-4);
 }
