@@ -96,15 +96,12 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 4);
   
-  WeightVector W(d);
-  
+  // Set the weights of Del and Ins to -100; implicitly leave Rep to be zero.
+  WeightVector W(d);  
   int fid = alphabet->lookup("0_S:Del1");
   BOOST_REQUIRE(fid >= 0);
   W.add(fid, -100);  
   fid = alphabet->lookup("0_S:Ins1");
-  BOOST_REQUIRE(fid >= 0);
-  W.add(fid, -100);
-  fid = alphabet->lookup("0_S:Rep11");
   BOOST_REQUIRE(fid >= 0);
   W.add(fid, -100);
   
