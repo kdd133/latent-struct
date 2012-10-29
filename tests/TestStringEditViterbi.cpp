@@ -1,31 +1,28 @@
 #define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE UnitTests
 
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
 #include "LogLinearMulti.h"
-#include "LogWeight.h"
 #include "Model.h"
+#include "RealWeight.h"
 #include "StringEditModel.h"
 #include "WordAlignmentFeatureGen.h"
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
-#include <math.h>
-#include <string>
 #include <vector>
 using namespace boost;
 
 /*
  * Build a first-order edit distance transducer, but only fire zero-order
- * features. Run the forward-backward algorithm to compute the total weight of
- * all paths through the graph, as well as the expectation over features.
+ * features. Run the Viterbi algorithm to compute the weight of the max-scoring
+ * path through the graph, as well as the feature counts from this path.
  * The reason we build the graph in this manner is to duplicate the behaviour
  * of an existing implementation whose dynamic programming routines have
  * been verified to be correct. Note that we can change --order=1 to --order=0
  * below and still get the same result.
  */
-BOOST_AUTO_TEST_CASE(testStringEdit)
+BOOST_AUTO_TEST_CASE(testStringEditViterbi)
 {
   const int argc = 9;
   char* argv[argc];
@@ -48,7 +45,7 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
-  Model* model = new StringEditModel<LogFeatArc>(fgenLat, fgenObs);
+  Model* model = new StringEditModel<StdFeatArc>(fgenLat, fgenObs);
   ret = model->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
   
@@ -87,41 +84,24 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_REQUIRE(iSub >= 0);
   W.add(iSub, -100);
   
-  // Check that the total mass is correct.
-  LogWeight totalMass = model->totalMass(W, *pair, label);
-  BOOST_CHECK_CLOSE(totalMass.value(), -300, 1e-8);
+  // Check that the Viterbi score is correct.
+  RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
+  BOOST_CHECK_CLOSE(viterbiScore.value(), -300, 1e-8);
   
-  FeatureVector<LogWeight> fv(d, true);
+  FeatureVector<RealWeight> fv(d, true);
   BOOST_REQUIRE(!fv.isDense());
-  LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
-  BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
+  RealWeight maxScore = model->maxFeatures(W, fv, *pair, label, true);
+  BOOST_CHECK_CLOSE(maxScore.value(), viterbiScore.value(), 1e-8);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
   
-  // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iIns).value(), -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iDel).value(), -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iSub).value(), -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iMat).value(), -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iBias).value(), -300.0000, 1e-4);
-
-  // Check that the (normalized) expected value of each feature is correct.
-  fv.timesEquals(-totalMass);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iIns).value()), 3, 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iDel).value()), 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub).value()), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat).value()), 6, 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias).value()), 1, 1e-4);
-
-  // Check that the max-scoring alignment is correct.
-  stringstream alignmentStr;
-  model->printAlignment(alignmentStr, W, *pair, label);
-  const string alignment = alignmentStr.str();
-  string correctAlignment =
-      "Mat11 Ins1 Mat11 Ins1 Mat11 Mat11 Mat11 Mat11 Ins1 \n";
-  correctAlignment += "|s| |t| |r|e|s|s| \n|s|u|t|o|r|e|s|s|u\n";
-  BOOST_CHECK(alignment == correctAlignment);
+  // Check that values in the max-scoring feature vector are correct.  
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iIns).value(), 3, 1e-4);
+  BOOST_CHECK_SMALL(fv.getValueAtIndex(iDel).value(), 1e-4);
+  BOOST_CHECK_SMALL(fv.getValueAtIndex(iSub).value(), 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iMat).value(), 6, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iBias).value(), 1, 1e-4);
 }
