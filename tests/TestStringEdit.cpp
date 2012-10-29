@@ -26,7 +26,7 @@ using namespace boost;
  */
 BOOST_AUTO_TEST_CASE(testStringEdit)
 {
-  const int argc = 8;
+  const int argc = 9;
   char* argv[argc];
   size_t i = 0;
   argv[i++] = (char*) "latent_struct";
@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   argv[i++] = (char*) "--no-normalize";
   argv[i++] = (char*) "--bias-no-normalize";
   argv[i++] = (char*) "--no-final-arc-feats";
+  argv[i++] = (char*) "--exact-match-state";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -71,9 +72,9 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_CHECK(!alphabet->isLocked());
   alphabet->lock();
   const int d = alphabet->size();
-  BOOST_REQUIRE_EQUAL(d, 4);
+  BOOST_REQUIRE_EQUAL(d, 5);
   
-  // Set the weights of Del and Ins to -100; implicitly leave Rep to be zero.
+  // Set the weights of Del, Ins, and Sub to -100; implicitly leave Mat to be 0.
   WeightVector W(d);  
   const int iDel = alphabet->lookup("0_S:Del1");
   BOOST_REQUIRE(iDel >= 0);
@@ -81,31 +82,36 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   const int iIns = alphabet->lookup("0_S:Ins1");
   BOOST_REQUIRE(iIns >= 0);
   W.add(iIns, -100);
+  const int iSub = alphabet->lookup("0_S:Sub11");
+  BOOST_REQUIRE(iSub >= 0);
+  W.add(iSub, -100);
   
   // Check that the total mass is correct.
   LogWeight totalMass = model->totalMass(W, *pair, label);
-  BOOST_CHECK_CLOSE(totalMass.value(), -295.5691832011567, 1e-8);
+  BOOST_CHECK_CLOSE(totalMass.value(), -300, 1e-8);
   
   FeatureVector<LogWeight> fv(d, true);
   BOOST_REQUIRE(!fv.isDense());
   LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
   BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
   
-  const int iRep = alphabet->lookup("0_S:Rep11");
-  BOOST_REQUIRE(iRep >= 0);
+  const int iMat = alphabet->lookup("0_S:Mat11");
+  BOOST_REQUIRE(iMat >= 0);
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iIns).value(), -294.4706, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iDel).value(), -493.3720, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iRep).value(), -293.7774, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iBias).value(), -295.5692, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iIns).value(), -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iDel).value(), -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iSub).value(), -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iMat).value(), -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtLocation(iBias).value(), -300.0000, 1e-4);
 
   // Check that the (normalized) expected value of each feature is correct.
   fv.timesEquals(-totalMass);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iIns).value()), 3, 1e-4);
   BOOST_CHECK_SMALL(exp(fv.getValueAtLocation(iDel).value()), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iRep).value()), 6, 1e-4);
+  BOOST_CHECK_SMALL(exp(fv.getValueAtLocation(iSub).value()), 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iMat).value()), 6, 1e-4);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtLocation(iBias).value()), 1, 1e-4);
 }
