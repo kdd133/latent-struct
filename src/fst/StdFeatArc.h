@@ -13,6 +13,8 @@
 #include <fst/float-weight.h>
 #include "FeatureVector.h"
 
+class RealWeight;
+
 // Based on ArcTpl in "fst/arc.h".
 class StdFeatArc {
   public:
