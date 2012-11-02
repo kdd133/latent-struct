@@ -23,10 +23,8 @@ CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 CC = g++ -O3 $(CCFLAGS)
 CCDEP = $(CC) $(INCLUDES) -MM
 CCOBJ = $(CC) $(INCLUDES) -c
-CCLINK = $(CC) $(LIBS)
 CCGDB = g++ -O0 $(CCFLAGS)
 CCGDBOBJ = $(CCGDB) $(INCLUDES) -ggdb -c
-CCGDBLINK = $(CCGDB) $(LIBS) -ggdb
 
 SRCS = $(shell find . -name "*.cpp")
 OBJS = $(patsubst %.cpp,%.o,$(SRCS))
@@ -40,10 +38,10 @@ all : ../latent_struct
 gdb : ../latent_struct-gdb
 
 ../latent_struct : obj
-	$(CCLINK) $(OBJS) -o $@
+	$(CC) $(OBJS) $(LIBS) -o $@
 
 ../latent_struct-gdb : obj-gdb
-	$(CCGDBLINK) $(GDBOBJS) -o $@
+	$(CCGDB) $(GDBOBJS) $(LIBS) -o $@
 
 dep : $(DEPS)
 

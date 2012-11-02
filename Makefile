@@ -6,6 +6,7 @@ gdb: src/Makefile
 
 clean: src/Makefile
 	make -C src/ clean
+	make -C tests/ clean
 
 check: tests/Makefile gdb
 	+make -C tests/ all

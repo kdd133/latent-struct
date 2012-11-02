@@ -9,6 +9,7 @@
 #include "Model.h"
 #include "StringEditModel.h"
 #include "WordAlignmentFeatureGen.h"
+#include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
 #include <math.h>

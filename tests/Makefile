@@ -20,13 +20,9 @@
 INCLUDES = -I. -I../src/base -I../src/domain_common -I../src/domain_sentences -I../src/domain_words -I../src/edit_operations -I../src/fst -I../src/models -I../src/optimization -I../src/train_objectives -I../src/util -I/usr/local/include
 LIBS = -L/usr/local/lib -lfst -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem -lboost_unit_test_framework
 CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
-CC = g++ -O3 $(CCFLAGS)
 CCDEP = $(CC) $(INCLUDES) -MM
-CCOBJ = $(CC) $(INCLUDES) -c
-CCLINK = $(CC) $(LIBS)
 CCGDB = g++ -O0 $(CCFLAGS)
 CCGDBOBJ = $(CCGDB) $(INCLUDES) -ggdb -c
-CCGDBLINK = $(CCGDB) $(LIBS) -ggdb
 
 SRCS = $(shell find ../src -mindepth 2 -name "*.cpp") $(shell ls *.cpp)
 OBJS = $(patsubst %.cpp,%.o,$(SRCS))
@@ -40,7 +36,7 @@ tests : run_tests
 all : run_tests
 
 run_tests : obj-gdb
-	$(CCGDBLINK) $(GDBOBJS) -o $@
+	$(CCGDB) $(GDBOBJS) $(LIBS) -o $@
 
 dep : $(DEPS)
 
