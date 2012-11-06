@@ -539,7 +539,7 @@ size_t StringEditModel<Graph>::gatherFeatures(const Pattern& x,
 template <typename Graph>
 LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
     const Pattern& x, const Label y) {
-  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logPartition();
   graph->clearDynProgVariables();
   return logZ;
@@ -561,9 +561,9 @@ RealWeight StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     bool includeObsFeats) {
   Graph* graph = 0;
   if (includeObsFeats)
-    graph = getGraph(_fstCache, w, (StringPair&)x, y, includeObsFeats);
+    graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
-    graph = getGraph(_fstCacheNoObs, w, (StringPair&)x, y, includeObsFeats);
+    graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
   const RealWeight maxScore = graph->maxFeatureVector(fv);
   graph->clearDynProgVariables();
   return maxScore;
@@ -573,7 +573,7 @@ template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
     FeatureVector<LogWeight>& fv, const Pattern& x, const Label y,
     bool normalize) {
-  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv, _buffer);
   graph->clearDynProgVariables();
   if (normalize)
@@ -584,7 +584,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 template <typename Graph>
 void StringEditModel<Graph>::printAlignment(ostream& out, const WeightVector& w,
     const Pattern& x, const Label y) {
-  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  Graph* graph = getGraph(_fstCache, w, x, y);
   assert(graph);
   
   list<int> alignmentOps;
@@ -677,7 +677,7 @@ Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
     if (it == cache.end()) {
       graph = new Graph(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
       assert(graph);
-      graph->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
+      graph->build(w, x, y, _includeStartArc, includeObs);
       graph->clearBuildVariables();
       cache.insert(id, graph);
     }
@@ -697,7 +697,7 @@ Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
     assert(cache.size() == 1);
     graph = cache.begin()->second;
     assert(graph);
-    graph->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
+    graph->build(w, x, y, _includeStartArc, includeObs);
   }
   assert(graph);
   return graph;
