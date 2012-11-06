@@ -8,6 +8,7 @@
  */
 
 #include "AlignmentFeatureGen.h"
+#include "AlignmentTransducer.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
@@ -116,7 +117,8 @@ int main(int argc, char** argv) {
       << KlementievRothWordFeatureGen::name() << CMA
       << KlementievRothSentenceFeatureGen::name() << "}";      
   stringstream modelMsgObs;
-  modelMsgObs << "model {" << StringEditModel<LogFeatArc>::name() << "}";
+  modelMsgObs << "model {" <<
+      StringEditModel<AlignmentTransducer<StdFeatArc> >::name() << "}";
   stringstream objMsgObs;
   objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
@@ -284,11 +286,15 @@ initial weights")
     
     // initialize a model
     Model* model = 0;
-    if (modelName == StringEditModel<StdFeatArc>::name()) {
-      if (istarts_with(objName, "LogLinear"))
-        model = new StringEditModel<LogFeatArc>(fgenLat, fgenObs);
-      else if (istarts_with(objName, "MaxMargin"))
-        model = new StringEditModel<StdFeatArc>(fgenLat, fgenObs);
+    if (modelName == StringEditModel<AlignmentTransducer<StdFeatArc> >::name()) {
+      if (istarts_with(objName, "LogLinear")) {
+        model = new StringEditModel<AlignmentTransducer<LogFeatArc> >(fgenLat,
+            fgenObs);
+      }
+      else if (istarts_with(objName, "MaxMargin")) {
+        model = new StringEditModel<AlignmentTransducer<StdFeatArc> >(fgenLat,
+            fgenObs);
+      }
       else if (!help) {
         cout << "Invalid arguments: Objective name does not begin with LogLinear "
             << "or MaxMargin: " << objName << endl << options << endl;

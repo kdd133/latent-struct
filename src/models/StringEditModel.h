@@ -11,7 +11,6 @@
 #define _STRINGEDITMODEL_H
 
 #include "AlignmentFeatureGen.h"
-#include "AlignmentTransducer.h"
 #include "FeatureVector.h"
 #include "InputReader.h"
 #include "Label.h"
@@ -46,7 +45,7 @@
 using namespace boost;
 using namespace std;
 
-template <typename Arc>
+template <typename Graph>
 class StringEditModel : public Model {
 
   public:
@@ -89,16 +88,15 @@ class StringEditModel : public Model {
     virtual void emptyCache();
     
     typedef pair<size_t, Label> ExampleId;
-    typedef AlignmentTransducer<Arc> Fst;
 
 
   private:
   
-    // If true, the fst we build will consider exact matches, in addition to
+    // If true, the graph we build will consider exact matches, in addition to
     // generic substitutions.
     bool _useMatch;
     
-    // If true, the fst we build will allow a deletion to follow an insertion.
+    // If true, the graph we build will allow a deletion to follow an insertion.
     bool _allowRedundant;
     
     // Maximum phrase length on the source side.
@@ -111,7 +109,7 @@ class StringEditModel : public Model {
     // depend on.
     int _order;
     
-    // A list of state types that comprise the nodes in an fst.
+    // A list of state types that comprise the nodes in a graph.
     ptr_vector<StateType> _states;
     
     // A list of the edit operations that are in use.
@@ -120,27 +118,27 @@ class StringEditModel : public Model {
     // If true, do not fire any features for arc connecting to the final state.
     bool _noFinalArcFeats;
     
-    // If true, the fst will include an arc that fires a feature for the start
-    // state; this arc is included in all paths through the fst.
+    // If true, the graph will include an arc that fires a feature for the start
+    // state; this arc is included in all paths through the graph.
     bool _includeStartArc;
 
     // A cache for Fsts that include an arc for the observed features. 
-    ptr_map<ExampleId, Fst> _fstCache;
+    ptr_map<ExampleId, Graph> _fstCache;
     
     // A cache for Fsts that omit the arc for the observed features.
-    ptr_map<ExampleId, Fst> _fstCacheNoObs;
+    ptr_map<ExampleId, Graph> _fstCacheNoObs;
     
     // A cache for observed feature vectors.
     ptr_map<ExampleId, FeatureVector<RealWeight> > _fvCacheObs;
     
-    // For the sake of efficiency, we pass a buffer to AlignmentTransducer that
-    // is used for temporary storage when computing logExpectedFeaturesUnnorm().
+    // For the sake of efficiency, we pass a buffer to the Graph that is used
+    // for temporary storage when computing logExpectedFeaturesUnnorm().
     // The callee allocates and otherwise manages the buffer; the reason it is
     // a member variable here is that we only require one buffer per thread --
     // not one per Transducer -- and we currently use one thread per Model.
     shared_array<LogWeight> _buffer;
     
-    Fst* getFst(ptr_map<ExampleId, Fst>& cache, const WeightVector& w,
+    Graph* getGraph(ptr_map<ExampleId, Graph>& cache, const WeightVector& w,
         const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
         
@@ -154,16 +152,16 @@ class StringEditModel : public Model {
     StringEditModel& operator=(const StringEditModel& x);
 };
 
-template <typename Arc>
-StringEditModel<Arc>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
+template <typename Graph>
+StringEditModel<Graph>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
     shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
     _noFinalArcFeats(false), _includeStartArc(false) {
 }
 
-template <typename Arc>
-void StringEditModel<Arc>::addZeroOrderStates() {
+template <typename Graph>
+void StringEditModel<Graph>::addZeroOrderStates() {
   _states.push_back(new StateType(0, "sta"));
   StateType& start = _states.front();
   
@@ -208,8 +206,8 @@ void StringEditModel<Arc>::addZeroOrderStates() {
   }
 }
 
-template <typename Arc>
-void StringEditModel<Arc>::addFirstOrderStates() {
+template <typename Graph>
+void StringEditModel<Graph>::addFirstOrderStates() {
   //// Add states ////
   
   StateType* start = new StateType(_states.size(), "sta");
@@ -323,8 +321,8 @@ void StringEditModel<Arc>::addFirstOrderStates() {
   }
 }
 
-template <typename Arc>
-void StringEditModel<Arc>::addSecondOrderStates() {
+template <typename Graph>
+void StringEditModel<Graph>::addSecondOrderStates() {
   // FIXME: Longer phrase lengths are not actually supported here yet, since we
   // have more operations than states; this means the history can be ambiguous.
   assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
@@ -465,8 +463,8 @@ void StringEditModel<Arc>::addSecondOrderStates() {
   }
 }
 
-template <typename Arc>
-int StringEditModel<Arc>::processOptions(int argc, char** argv) {
+template <typename Graph>
+int StringEditModel<Graph>::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
@@ -528,77 +526,70 @@ to the final state")
   return 0;
 }
 
-template <typename Arc>
-size_t StringEditModel<Arc>::gatherFeatures(const Pattern& x,
+template <typename Graph>
+size_t StringEditModel<Graph>::gatherFeatures(const Pattern& x,
     const Label y) {
   WeightVector wNull;
-  Fst* fst = getFst(_fstCache, wNull, x, y);
-  const int numArcs = fst->numArcs();
-  fst->clearDynProgVariables();
+  Graph* graph = getGraph(_fstCache, wNull, x, y);
+  const int numArcs = graph->numArcs();
+  graph->clearDynProgVariables();
   return numArcs;
 }
 
-template <typename Arc>
-LogWeight StringEditModel<Arc>::totalMass(const WeightVector& w,
+template <typename Graph>
+LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
     const Pattern& x, const Label y) {
-  Fst* fst = getFst(_fstCache, w, (StringPair&)x, y);
-  const LogWeight logZ = fst->logPartition();
-  fst->clearDynProgVariables();
+  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  const LogWeight logZ = graph->logPartition();
+  graph->clearDynProgVariables();
   return logZ;
 }
 
-template <typename Arc>
-RealWeight StringEditModel<Arc>::viterbiScore(const WeightVector& w,
+template <typename Graph>
+RealWeight StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
-  Fst* fst = getFst(_fstCache, w, x, y);
+  Graph* graph = getGraph(_fstCache, w, x, y);
   FeatureVector<RealWeight> fv;
-  const RealWeight maxScore = fst->maxFeatureVector(fv, true);
-  fst->clearDynProgVariables();
+  const RealWeight maxScore = graph->maxFeatureVector(fv, true);
+  graph->clearDynProgVariables();
   return maxScore;
 }
 
-template <typename Arc>
-RealWeight StringEditModel<Arc>::maxFeatures(const WeightVector& w,
+template <typename Graph>
+RealWeight StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     FeatureVector<RealWeight>& fv, const Pattern& x, const Label y,
     bool includeObsFeats) {
-  Fst* fst = 0;
+  Graph* graph = 0;
   if (includeObsFeats)
-    fst = getFst(_fstCache, w, (StringPair&)x, y, includeObsFeats);
+    graph = getGraph(_fstCache, w, (StringPair&)x, y, includeObsFeats);
   else
-    fst = getFst(_fstCacheNoObs, w, (StringPair&)x, y, includeObsFeats);
-  const RealWeight maxScore = fst->maxFeatureVector(fv);
-  fst->clearDynProgVariables();
+    graph = getGraph(_fstCacheNoObs, w, (StringPair&)x, y, includeObsFeats);
+  const RealWeight maxScore = graph->maxFeatureVector(fv);
+  graph->clearDynProgVariables();
   return maxScore;
 }
 
-template <typename Arc>
-LogWeight StringEditModel<Arc>::expectedFeatures(const WeightVector& w,
+template <typename Graph>
+LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
     FeatureVector<LogWeight>& fv, const Pattern& x, const Label y,
     bool normalize) {
-  Fst* fst = getFst(_fstCache, w, (StringPair&)x, y);
-  const LogWeight logZ = fst->logExpectedFeaturesUnnorm(fv, _buffer);
-  fst->clearDynProgVariables();
+  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv, _buffer);
+  graph->clearDynProgVariables();
   if (normalize)
     fv.timesEquals(-logZ);
   return logZ;
 }
 
-template <typename Arc>
-void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
+template <typename Graph>
+void StringEditModel<Graph>::printAlignment(ostream& out, const WeightVector& w,
     const Pattern& x, const Label y) {
-  // We do not call getFst here because we need a StdFeatArc transducer,
-  // whether we are using a MaxMargin or LogLinear objective. Therefore, we
-  // own the fst and must delete it when we are done with it.
-  AlignmentTransducer<StdFeatArc>* fst = new AlignmentTransducer<StdFeatArc>(
-      _states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
-  assert(fst);
-  fst->build(w, (const StringPair&)x, y, _includeStartArc, true);
-  fst->clearBuildVariables();
+  Graph* graph = getGraph(_fstCache, w, (StringPair&)x, y);
+  assert(graph);
   
   list<int> alignmentOps;
-  fst->maxAlignment(alignmentOps);
-  fst->clearDynProgVariables();
-  delete fst;
+  graph->maxAlignment(alignmentOps);
+  graph->clearDynProgVariables();
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();
@@ -611,8 +602,8 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   assert(source->getName() == "sta");
   
   // Recall that AlignmentTransducer places the ops in reverse order.
-  list<int>::const_reverse_iterator it;
-  for (it = alignmentOps.rbegin(); it != alignmentOps.rend(); ++it) {
+  list<int>::const_iterator it;
+  for (it = alignmentOps.begin(); it != alignmentOps.end(); ++it) {
     const int opId = *it;
     if (opId == OpNone::ID)
       continue;
@@ -668,53 +659,52 @@ void StringEditModel<Arc>::printAlignment(ostream& out, const WeightVector& w,
   out << alignedTarget.str() << endl;
 }
 
-template <typename Arc>
-void StringEditModel<Arc>::emptyCache() {
+template <typename Graph>
+void StringEditModel<Graph>::emptyCache() {
   _fstCache.clear();
   _fstCacheNoObs.clear();
   _fvCacheObs.clear();
 }
 
-template <typename Arc>
-AlignmentTransducer<Arc>* StringEditModel<Arc>::getFst(
-    ptr_map<ExampleId, Fst>& cache, const WeightVector& w, const Pattern& x,
-    const Label y, bool includeObs) {
+template <typename Graph>
+Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
+    const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   assert(_states.size() > 0);
-  Fst* fst = 0;
+  Graph* graph = 0;
   if (_cacheFsts) {
     ExampleId id = make_pair(x.getId(), y);
-    typename ptr_map<ExampleId, Fst>::iterator it = cache.find(id);
+    typename ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
     if (it == cache.end()) {
-      fst = new Fst(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
-      assert(fst);
-      fst->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
-      fst->clearBuildVariables();
-      cache.insert(id, fst);
+      graph = new Graph(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
+      assert(graph);
+      graph->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
+      graph->clearBuildVariables();
+      cache.insert(id, graph);
     }
     else {
-      fst = it->second;
-      assert(fst);
-      fst->rescore(w);
+      graph = it->second;
+      assert(graph);
+      graph->rescore(w);
     }
   }
   else {
     if (cache.size() == 0) {
-      // Initialize a "reusable" fst.
+      // Initialize a "reusable" graph.
       ExampleId id = make_pair(0, 0);
-      cache.insert(id, new Fst(_states, _fgenAlign, _fgenObserved,
+      cache.insert(id, new Graph(_states, _fgenAlign, _fgenObserved,
           !_noFinalArcFeats));
     }
     assert(cache.size() == 1);
-    fst = cache.begin()->second;
-    assert(fst);
-    fst->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
+    graph = cache.begin()->second;
+    assert(graph);
+    graph->build(w, (const StringPair&)x, y, _includeStartArc, includeObs);
   }
-  assert(fst);
-  return fst;
+  assert(graph);
+  return graph;
 }
 
-template <typename Arc>
-FeatureVector<RealWeight>* StringEditModel<Arc>::observedFeatures(
+template <typename Graph>
+FeatureVector<RealWeight>* StringEditModel<Graph>::observedFeatures(
     const Pattern& x, const Label y, bool& callerOwns) {
   callerOwns = !_cacheFsts;
   FeatureVector<RealWeight>* fv = 0;

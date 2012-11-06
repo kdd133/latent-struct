@@ -1,6 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE UnitTests
 
+#include "AlignmentTransducer.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
@@ -49,7 +50,8 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
-  Model* model = new StringEditModel<LogFeatArc>(fgenLat, fgenObs);
+  Model* model = new StringEditModel<AlignmentTransducer<LogFeatArc> >(fgenLat,
+      fgenObs);
   ret = model->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
   
@@ -116,13 +118,4 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub).value()), 1e-4);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat).value()), 6, 1e-4);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias).value()), 1, 1e-4);
-
-  // Check that the max-scoring alignment is correct.
-  stringstream alignmentStr;
-  model->printAlignment(alignmentStr, W, *pair, label);
-  const string alignment = alignmentStr.str();
-  string correctAlignment =
-      "Mat11 Ins1 Mat11 Ins1 Mat11 Mat11 Mat11 Mat11 Ins1 \n";
-  correctAlignment += "|s| |t| |r|e|s|s| \n|s|u|t|o|r|e|s|s|u\n";
-  BOOST_CHECK(alignment == correctAlignment);
 }

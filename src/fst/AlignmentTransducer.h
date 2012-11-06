@@ -81,9 +81,9 @@ class AlignmentTransducer : public Graph {
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
         bool getCostOnly = false);
         
-    // Returns the *reverse* sequence of edit operations in to the maximum
+    // Returns the sequence of edit operations that constitute the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
-    // be applied in reverse order to reconstruct the optimal alignment.
+    // be applied in sequential order to reconstruct the optimal alignment.
     void maxAlignment(list<int>& opIds) const;
     
     void toGraphviz(const string& fname) const;
@@ -512,7 +512,7 @@ void AlignmentTransducer<Arc>::maxAlignment(list<int>& opIds) const {
     const StateId stateId = sIt.Value();
     fst::ArcIterator<fst::VectorFst<Arc> > aIt(viterbiFst, stateId);
     if (!aIt.Done()) {
-      opIds.push_back(aIt.Value().ilabel);
+      opIds.push_front(aIt.Value().ilabel);
       // There should be at most one outgoing arc per state in the Viterbi fst.
       aIt.Next();
       assert(aIt.Done());
