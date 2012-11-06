@@ -57,7 +57,7 @@ class AlignmentTransducer : public Graph {
     typedef typename Arc::Weight ArcWeight;
     typedef multi_array<StateId, 3> StateIdTable;
     
-    // The first stateType in the list will be used as the start state and as
+    // The first StateType in the list will be used as the start state and as
     // the finish state.
     AlignmentTransducer(const ptr_vector<StateType>& stateTypes,
         shared_ptr<AlignmentFeatureGen> fgen,

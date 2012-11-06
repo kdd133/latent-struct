@@ -474,7 +474,7 @@ int StringEditModel<Graph>::processOptions(int argc, char** argv) {
     ("cache-fsts", opt::bool_switch(&_cacheFsts),
         "if true, store the FSTs and rescore them instead of rebuilding")
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
-match state when idential source and target phrases are encountered, or a \
+match state when identical source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
     ("no-final-arc-feats", opt::bool_switch(&_noFinalArcFeats),
         "if true, do not fire a feature for each arc in the FST that connects \

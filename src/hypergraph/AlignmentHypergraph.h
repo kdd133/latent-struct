@@ -7,25 +7,39 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#ifndef _HYPERGRAPH_H
-#define _HYPERGRAPH_H
+#ifndef _ALIGNMENTHYPERGRAPH_H
+#define _ALIGNMENTHYPERGRAPH_H
 
 #include "FeatureVector.h"
 #include "Graph.h"
 #include "Label.h"
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <list>
 #include <string>
 using namespace boost;
 using namespace std;
 
+class AlignmentFeatureGen;
 class LogWeight;
+class ObservedFeatureGen;
 class Pattern;
 class RealWeight;
+class StateType;
 class WeightVector;
 
-class Hypergraph : public Graph {
+class AlignmentHypergraph : public Graph {
   public:
+    // The first StateType in the list will be used as the start state and as
+    // the finish state.
+    AlignmentHypergraph(const ptr_vector<StateType>& stateTypes,
+        shared_ptr<AlignmentFeatureGen> fgen,
+        shared_ptr<ObservedFeatureGen> fgenObs,
+        bool includeFinalFeats = true);
+                        
+    ~AlignmentHypergraph();
+    
     void build(const WeightVector& w, const Pattern& x, Label label,
         bool includeStartArc, bool includeObservedFeaturesArc);
       
