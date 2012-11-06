@@ -17,7 +17,7 @@
 # need to add a -I<path to header(s)> entry to INCLUDES, and a -L<path to lib(s)>
 # entry to LIBS below.
 
-INCLUDES = -I. -I../src/base -I../src/domain_common -I../src/domain_sentences -I../src/domain_words -I../src/edit_operations -I../src/fst -I../src/models -I../src/optimization -I../src/train_objectives -I../src/util -I/usr/local/include
+INCLUDES = -I. -I../src/base -I../src/domain_common -I../src/domain_sentences -I../src/domain_words -I../src/edit_operations -I../src/fst -I../src/graph -I../src/hypergraph -I../src/models -I../src/optimization -I../src/train_objectives -I../src/util -I/usr/local/include
 LIBS = -L/usr/local/lib -lfst -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem -lboost_unit_test_framework
 CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 CCDEP = $(CC) $(INCLUDES) -MM

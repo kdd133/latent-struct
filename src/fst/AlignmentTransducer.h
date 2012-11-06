@@ -15,6 +15,7 @@
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
+#include "Graph.h"
 #include "Label.h"
 #include "LogFeatArc.h"
 #include "LogWeight.h"
@@ -40,6 +41,7 @@
 #include <list>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <tr1/unordered_map>
 #include <vector>
 using namespace boost;
@@ -47,13 +49,9 @@ using namespace std;
 
 
 //A transducer that takes two strings as input, and outputs an alignment of the
-//two strings. The logSemiring argument indicates whether the Viterbi semiring
-//(default) or the Log semiring will be used when building the transducer. This
-//in turn determines which inference operations are valid for the transducer;
-//i.e., maxFeatureVector() is valid only for the Viterbi semiring, while the
-//logPartition() and other "log" operations are only valid for the Log semiring.
+//two strings.
 template<typename Arc>
-class AlignmentTransducer {
+class AlignmentTransducer : public Graph {
   public:
     typedef typename Arc::StateId StateId;
     typedef typename Arc::Weight ArcWeight;
@@ -68,7 +66,7 @@ class AlignmentTransducer {
                         
     ~AlignmentTransducer();
                         
-    void build(const WeightVector& w, const StringPair& pair, Label label,
+    void build(const WeightVector& w, const Pattern& x, Label label,
       bool includeStartArc, bool includeObservedFeaturesArc);
       
     void rescore(const WeightVector& w);
@@ -90,8 +88,6 @@ class AlignmentTransducer {
     
     void toGraphviz(const string& fname) const;
     
-    const fst::VectorFst<Arc>* getFst() { return _fst; }
-    
     int numArcs() { return _numArcs; }
     
     void clearDynProgVariables();
@@ -111,6 +107,8 @@ class AlignmentTransducer {
     void addArc(const int opId, const int destStateTypeId,
         const StateId sourceId, const StateId destId,
         FeatureVector<RealWeight>* fv, const WeightVector& w);
+        
+    const fst::VectorFst<Arc>* getFst() { return _fst; }
         
     void clear();
     
@@ -221,7 +219,8 @@ void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::build(const WeightVector& w,
-    const StringPair& pair, Label label, bool startArc, bool obsArc) {
+    const Pattern& x, Label label, bool startArc, bool obsArc) {
+  const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
   
