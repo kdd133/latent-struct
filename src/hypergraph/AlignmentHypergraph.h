@@ -10,9 +10,15 @@
 #ifndef _ALIGNMENTHYPERGRAPH_H
 #define _ALIGNMENTHYPERGRAPH_H
 
+#include "AlignmentFeatureGen.h"
+#include "AlignmentPart.h"
 #include "FeatureVector.h"
 #include "Graph.h"
+#include "Hyperedge.h"
+#include "Hypernode.h"
 #include "Label.h"
+#include "ObservedFeatureGen.h"
+#include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
@@ -21,24 +27,24 @@
 using namespace boost;
 using namespace std;
 
-class AlignmentFeatureGen;
 class LogWeight;
-class ObservedFeatureGen;
 class Pattern;
 class RealWeight;
 class StateType;
+class StringPair;
 class WeightVector;
 
 class AlignmentHypergraph : public Graph {
   public:
+    typedef int StateId;
+    typedef multi_array<StateId, 3> StateIdTable;
+    
     // The first StateType in the list will be used as the start state and as
     // the finish state.
     AlignmentHypergraph(const ptr_vector<StateType>& stateTypes,
         shared_ptr<AlignmentFeatureGen> fgen,
         shared_ptr<ObservedFeatureGen> fgenObs,
         bool includeFinalFeats = true);
-                        
-    ~AlignmentHypergraph();
     
     void build(const WeightVector& w, const Pattern& x, Label label,
         bool includeStartArc, bool includeObservedFeaturesArc);
@@ -67,6 +73,53 @@ class AlignmentHypergraph : public Graph {
     void clearDynProgVariables();
     
     void clearBuildVariables();
+    
+    static const StateId noId;
+    
+  private:
+    void applyOperations(const WeightVector& w,
+                         const StringPair& pair,
+                         const Label label,
+                         vector<AlignmentPart>& history,
+                         const StateType* sourceStateType,
+                         const int i,
+                         const int j);
+    
+    int addNode();
+    
+    void addEdge(const int opId, const int destStateTypeId,
+        const StateId sourceId, const StateId destId,
+        FeatureVector<RealWeight>* fv, const WeightVector& w);
+        
+    void clear();
+    
+    int numEdges(int nodeId) const;
+    
+    ptr_vector<Hypernode> _nodes;
+    
+    ptr_vector<Hyperedge> _edges;
+    
+    const ptr_vector<StateType>& _stateTypes;
+    
+    shared_ptr<AlignmentFeatureGen> _fgen;
+    
+    shared_ptr<ObservedFeatureGen> _fgenObs;
+
+    vector<double> _alphas;
+    
+    vector<double> _betas;
+    
+    StateIdTable _stateIdTable;
+    
+    StateId _finishStateId;
+    
+    // If true, fire a feature for arcs connecting to the Final state.
+    bool _includeFinalFeats;
+    
+    // private copy constructor and assignment operator (passing by value is
+    // not supported for this class)
+    AlignmentHypergraph(const AlignmentHypergraph& x);
+    AlignmentHypergraph& operator=(const AlignmentHypergraph& x);
 };
 
 #endif

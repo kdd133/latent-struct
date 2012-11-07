@@ -108,8 +108,6 @@ class AlignmentTransducer : public Graph {
         const StateId sourceId, const StateId destId,
         FeatureVector<RealWeight>* fv, const WeightVector& w);
         
-    const fst::VectorFst<Arc>* getFst() { return _fst; }
-        
     void clear();
     
     const ptr_vector<StateType>& _stateTypes;
