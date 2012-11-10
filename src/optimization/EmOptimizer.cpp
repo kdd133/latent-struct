@@ -60,7 +60,7 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
   bool innerMaxItersPrev = false; // True if inner solver reached max iterations
                                   // on the previous EM iteration.
   for (int iter = 0; iter < _maxIters; iter++) {
-    boost::timer::auto_cpu_timer timer;
+//    boost::timer::auto_cpu_timer timer; // Uncomment to print timing info.
     
     // E-step (uses new W)
     _objective.setLatentFeatureVectors(w);

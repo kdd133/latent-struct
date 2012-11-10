@@ -101,7 +101,7 @@ class FeatureVector {
     friend ostream& operator<< <>(ostream& out, const FeatureVector& fv);
     
     template<typename A, typename B>
-    friend FeatureVector<B> convert(const FeatureVector<A>& source,
+    friend FeatureVector<B> fvConvert(const FeatureVector<A>& source,
         shared_array<B> valuesStorage = 0, int valuesLen = 0);
 
   private:
@@ -499,7 +499,7 @@ ostream& operator<<(ostream& out, const FeatureVector<Weight>& fv) {
 }
 
 template<typename A, typename B>
-FeatureVector<B> convert(const FeatureVector<A>& source,
+FeatureVector<B> fvConvert(const FeatureVector<A>& source,
     shared_array<B> valuesStorage, int valuesLen) {
   const bool copy = valuesStorage ? false : true;
   assert(!copy || valuesLen > 0);

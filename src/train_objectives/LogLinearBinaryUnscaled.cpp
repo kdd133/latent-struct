@@ -45,7 +45,7 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     const LogWeight fW = (yi == 1) ? -logMass : logMass;
     funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
     
-    FeatureVector<RealWeight> realFeats = convert(feats, tempVals, d);
+    FeatureVector<RealWeight> realFeats = fvConvert(feats, tempVals, d);
     realFeats.timesEquals(-yi * (1 - Utility::sigmoid(-fW)));
     realFeats.addTo(gradFv);
   }

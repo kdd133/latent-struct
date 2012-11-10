@@ -91,7 +91,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
   
   bool converged = false;
   for (size_t t = 1; t <= _maxIters; t++) {
-    boost::timer::auto_cpu_timer timer;
+//    boost::timer::auto_cpu_timer timer; // Uncomment to print timing info.
     
     // Add the next column to the matrix "A", which we'll actually represent as
     // a ptr_vector of column vectors.

@@ -36,7 +36,12 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   funcVal = 0;
   gradFv.zero();
   
-  assert(_imputedFv);
+  // This if statement should never be executed while the objective is being
+  // optimized, since the (EM) optimizer will perform the initialization.
+  // However, if the gradient is requested outside of the optimization routine,
+  // we need to initialize the latent FVs using the given weight vector.
+  if (!_imputedFv)
+    initLatentFeatureVectors(w);
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();

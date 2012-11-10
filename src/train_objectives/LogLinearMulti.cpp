@@ -58,8 +58,8 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     feats[yi].timesEquals(-mass[yi]);
 
     // Convert features from log- to real-space, then update gradient
-    convert(featsTotal, tempVals, d).addTo(gradFv);
-    convert(feats[yi], tempVals, d).addTo(gradFv, -1.0);
+    fvConvert(featsTotal, tempVals, d).addTo(gradFv);
+    fvConvert(feats[yi], tempVals, d).addTo(gradFv, -1.0);
 
     // Update function value
     // Note: We want the log, which is why we don't convert to RealWeight.

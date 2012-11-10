@@ -453,7 +453,7 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
       LogWeight weight(arc.weight);
       weight.timesEquals(_alphas[prevstate]);
       weight.timesEquals(_betas[arc.nextstate]);  
-      convert(*arc.fv, logArray, d).addTo(sparse, weight);
+      fvConvert(*arc.fv, logArray, d).addTo(sparse, weight);
     }
   }
   fv.reinit(sparse);

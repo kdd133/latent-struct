@@ -13,6 +13,8 @@
 #include "FeatureVector.h"
 #include "Hypernode.h"
 #include "OpNone.h"
+#include "Ring.h"
+#include "RingInfo.h"
 #include "StateType.h"
 #include "StringPair.h"
 #include "WeightVector.h"
@@ -109,7 +111,7 @@ void AlignmentHypergraph::rescore(const WeightVector& w) {
 }
 
 LogWeight AlignmentHypergraph::logPartition() {
-
+  RingInfo ri(_edges[0], RingLog);
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
