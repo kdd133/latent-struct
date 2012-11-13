@@ -102,7 +102,7 @@ class FeatureVector {
     
     template<typename A, typename B>
     friend FeatureVector<B> fvConvert(const FeatureVector<A>& source,
-        shared_array<B> valuesStorage = 0, int valuesLen = 0);
+        shared_array<B> valuesStorage, int valuesLen);
 
   private:
   
