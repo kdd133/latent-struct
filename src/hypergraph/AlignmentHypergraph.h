@@ -30,6 +30,7 @@ using namespace std;
 class LogWeight;
 class Pattern;
 class RealWeight;
+class RingInfo;
 class StateType;
 class StringPair;
 class WeightVector;
@@ -50,6 +51,8 @@ class AlignmentHypergraph : public Graph {
         bool includeStartArc, bool includeObservedFeaturesArc);
       
     void rescore(const WeightVector& w);
+
+    void getNodesTopologicalOrder(list<const Hypernode*>& ordering);
 
     LogWeight logPartition();
 
@@ -105,11 +108,13 @@ class AlignmentHypergraph : public Graph {
     
     shared_ptr<ObservedFeatureGen> _fgenObs;
 
-    vector<double> _alphas;
+    shared_array<RingInfo> _alphas;
     
-    vector<double> _betas;
+    shared_array<RingInfo> _betas;
     
     StateIdTable _stateIdTable;
+    
+    Hypernode* _root;
     
     StateId _finishStateId;
     

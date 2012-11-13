@@ -23,16 +23,18 @@ class RingInfo {
 
 private:
   // Either edge score (on edge), or accumulated mass (on state)
-  LogWeight m_score;
+  LogWeight _score;
   
   // Either edge features (on edge), or accumulated features (on state)
-  shared_ptr<FeatureVector<LogWeight> > m_fv;
+  shared_ptr<FeatureVector<LogWeight> > _fv;
 
 public:
-  RingInfo(double score) : m_score(score) { }
+  RingInfo() : _score(0) { }
   
-  RingInfo(double score, const FeatureVector<LogWeight>* fv) : m_score(score),
-      m_fv(new FeatureVector<LogWeight>(*fv)) { }
+  RingInfo(double score) : _score(score) { }
+  
+  RingInfo(double score, const FeatureVector<LogWeight>* fv) : _score(score),
+      _fv(new FeatureVector<LogWeight>(*fv)) { }
   
   /**
    * Reinterprets an edgeInfo object with appropriate values for use in an edge representation
@@ -40,24 +42,23 @@ public:
    * @param ei  Source edgeInfo
    * @param r   Semiring of interest
    */
-  RingInfo(const Hyperedge& edge, Ring r) {
-    m_score = edge.getWeight();
-    
+  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
     const FeatureVector<RealWeight>* fv = edge.getFeatureVector();
     const int d = fv->getNumEntries();
     shared_array<LogWeight> values(new LogWeight[d]);
-    m_fv.reset(new FeatureVector<LogWeight>(fvConvert(*fv, values, d)));
+    assert(_fv == 0);
+    _fv.reset(new FeatureVector<LogWeight>(fvConvert(*fv, values, d)));
     
     if (r == RingExpectation)
-      m_fv->timesEquals(m_score); // pese 
+      _fv->timesEquals(_score); // pese 
   }
   
   LogWeight score() const {
-    return m_score;
+    return _score;
   }
   
   const shared_ptr<FeatureVector<LogWeight> > fv() const {
-    return m_fv;
+    return _fv;
   }
 
   /**
@@ -67,12 +68,12 @@ public:
    */
   void collectSum(const RingInfo& toAdd, const Ring& ring) {
     if (ring == RingLog)
-      m_score.plusEquals(toAdd.score());
+      _score.plusEquals(toAdd.score());
     else if (ring == RingViterbi)
-      m_score = max(m_score, toAdd.score());
+      _score = max(_score, toAdd.score());
     else if (ring == RingExpectation) {
-      m_score.plusEquals(toAdd.score());
-      toAdd.fv()->addTo(*m_fv);
+      _score.plusEquals(toAdd.score());
+      toAdd.fv()->addTo(*_fv);
     }
     else
       assert(0);
@@ -85,18 +86,18 @@ public:
    */
   void collectProd(const RingInfo& toProd, const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
-      m_score.timesEquals(toProd.score());
+      _score.timesEquals(toProd.score());
     else if (ring == RingExpectation) {
       // <p,r> = <p1p2, p1r2 + p2r1>
       
       // p1r2 + p2r1
-      m_fv->timesEquals(toProd.score()); //p2r1
+      _fv->timesEquals(toProd.score()); //p2r1
       FeatureVector<LogWeight> r2(*toProd.fv());
-      r2.timesEquals(m_score); //p1r2
-      r2.addTo(*m_fv);
+      r2.timesEquals(_score); //p1r2
+      r2.addTo(*_fv);
     
       // p1p2
-      m_score.timesEquals(toProd.score());
+      _score.timesEquals(toProd.score());
     }
     else
       assert(0);
@@ -107,7 +108,7 @@ public:
    * @param ring  Semiring of interest
    * @return    Multiplicative identity (1)
    */
-  static RingInfo one(Ring ring) {
+  static RingInfo one(const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
       return RingInfo(LogWeight::kOne);
     else {
@@ -121,7 +122,7 @@ public:
    * @param ring  Semiring of interest
    * @return    Additive identity (0)
    */
-  static RingInfo zero(Ring ring) {
+  static RingInfo zero(const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
       return RingInfo(LogWeight::kZero);
     else {

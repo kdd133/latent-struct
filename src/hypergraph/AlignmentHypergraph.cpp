@@ -11,6 +11,7 @@
 #include "AlignmentPart.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
+#include "Hyperedge.h"
 #include "Hypernode.h"
 #include "OpNone.h"
 #include "Ring.h"
@@ -19,8 +20,10 @@
 #include "StringPair.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
+#include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <stack>
 #include <vector>
 using namespace boost;
 using namespace std;
@@ -45,6 +48,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
 //  _fst = new fst::VectorFst<Arc>();
   
   StateId startStateId = addNode();
+  _root = &_nodes[0];
   _finishStateId = addNode();
 //  _fst->SetFinal(_finishStateId, 0); // 2nd parameter is the final weight
   
@@ -110,8 +114,92 @@ void AlignmentHypergraph::rescore(const WeightVector& w) {
   }
 }
 
+void AlignmentHypergraph::getNodesTopologicalOrder(
+    list<const Hypernode*>& ordering) {
+  assert(ordering.size() == 0);
+  ordering.clear();
+  
+  // True once this node and all its children have been covered
+  scoped_array<bool> completed(new bool[_nodes.size()]);
+  
+  // True after the first time we hit a node
+  scoped_array<bool> reached(new bool[_nodes.size()]);
+  
+  stack<const Hypernode*> stck;
+
+  stck.push(_root);
+  while (stck.size() > 0)
+  {
+    const Hypernode* cur = stck.top();
+    
+    if (completed[cur->getId()]) {
+      // Only want to emit each node once
+      stck.pop();
+    }
+    else {
+      if (reached[cur->getId()]) {
+        // If this is the second time we've hit this node, it's safe to emit
+        stck.pop();
+        completed[cur->getId()] = true;
+        ordering.push_back(cur);
+      }
+      else {
+        // The first time we hit a node, push all children to make sure they're covered
+        reached[cur->getId()] = true;
+        BOOST_FOREACH(const Hyperedge* edge, cur->getEdges()) {
+          BOOST_FOREACH(const Hypernode* child, edge->getChildren()) {
+            if (!completed[child->getId()]) {
+              assert(!reached[child->getId()]); // Check for cycles
+              stck.push(child);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 LogWeight AlignmentHypergraph::logPartition() {
-  RingInfo ri(_edges[0], RingLog);
+  _alphas.reset(new RingInfo[_nodes.size()]);
+  scoped_array<bool> visited(new bool[_nodes.size()]);
+  
+  list<const Hypernode*> ordering;
+  getNodesTopologicalOrder(ordering);
+  
+  assert(ordering.size() == _nodes.size());
+  
+  const Ring ring = RingLog;
+  
+  // Inside pass
+  BOOST_FOREACH(const Hypernode* hnParent, ordering) {
+    const int parentId = hnParent->getId();
+    if (hnParent->getEdges().size() == 0) {
+      // Update chart
+      if (!visited[parentId]) {
+        _alphas[parentId] = RingInfo::zero(ring);
+        visited[parentId] = true;
+      }
+    }
+    else {
+      BOOST_FOREACH(const Hyperedge* he, hnParent->getEdges()) {
+        // Score path to this point
+        RingInfo* riPath = new RingInfo(*he, ring);
+        BOOST_FOREACH(const Hypernode* hnChild, he->getChildren()) {
+          riPath->collectProd(_alphas[hnChild->getId()], ring);
+        }
+
+        // Update chart
+        if (!visited[parentId]) {
+          _alphas[parentId] = *riPath;
+        }
+        else {
+          _alphas[parentId].collectSum(*riPath, ring);
+        }
+      }
+    }
+  }
+  
+  return _alphas[_finishStateId].score();
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
@@ -137,8 +225,8 @@ int AlignmentHypergraph::numArcs() {
 }
 
 void AlignmentHypergraph::clearDynProgVariables() {
-  _alphas.clear();
-  _betas.clear();
+  _alphas.reset();
+  _betas.reset();
 }
 
 void AlignmentHypergraph::clearBuildVariables() {
