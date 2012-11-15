@@ -25,7 +25,7 @@ public:
       FeatureVector<RealWeight>* fv = 0) :
     _id(id), _parent(parent), _weight(weight), _fv(fv) { }
   
-  Hyperedge(int id, const Hypernode& parent, list<const Hypernode*>& children,
+  Hyperedge(int id, const Hypernode& parent, list<const Hypernode*> children,
       double weight, FeatureVector<RealWeight>* fv = 0) :
     _id(id), _parent(parent), _children(children), _weight(weight), _fv(fv) { }
   

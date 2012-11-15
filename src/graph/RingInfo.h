@@ -44,6 +44,7 @@ public:
    */
   RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
     const FeatureVector<RealWeight>* fv = edge.getFeatureVector();
+    assert(fv);
     const int d = fv->getNumEntries();
     shared_array<LogWeight> values(new LogWeight[d]);
     assert(_fv == 0);

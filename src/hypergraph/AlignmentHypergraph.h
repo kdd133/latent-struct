@@ -52,7 +52,8 @@ class AlignmentHypergraph : public Graph {
       
     void rescore(const WeightVector& w);
 
-    void getNodesTopologicalOrder(list<const Hypernode*>& ordering);
+    void getNodesTopologicalOrder(list<const Hypernode*>& ordering,
+      bool reverse = false);
 
     LogWeight logPartition();
 
@@ -116,7 +117,7 @@ class AlignmentHypergraph : public Graph {
     
     Hypernode* _root;
     
-    StateId _finishStateId;
+    Hypernode* _goal;
     
     // If true, fire a feature for arcs connecting to the Final state.
     bool _includeFinalFeats;

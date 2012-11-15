@@ -35,7 +35,7 @@ AlignmentHypergraph::AlignmentHypergraph(const ptr_vector<StateType>& stateTypes
     shared_ptr<ObservedFeatureGen> fgenObs,
     bool includeFinalFeats) :
     _stateTypes(stateTypes), _fgen(fgen), _fgenObs(fgenObs),
-    _finishStateId(noId), _includeFinalFeats(includeFinalFeats) {
+    _root(0), _goal(0), _includeFinalFeats(includeFinalFeats) {
 }
 
 void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label label,
@@ -48,9 +48,9 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
 //  _fst = new fst::VectorFst<Arc>();
   
   StateId startStateId = addNode();
-  _root = &_nodes[0];
-  _finishStateId = addNode();
-//  _fst->SetFinal(_finishStateId, 0); // 2nd parameter is the final weight
+  _root = &_nodes[_nodes.size()-1];
+  addNode();
+  _goal = &_nodes[_nodes.size()-1];
   
   // The type of the first state in the list defines the type of the start
   // state and the finish state.
@@ -89,6 +89,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
       addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
           startStateId, fv, w);
       startStateId = preStartStateId;
+      _root = &_nodes[_nodes.size()-1];
     }
     else
       delete fv;
@@ -102,7 +103,10 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
     addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
         startStateId, fv, w);
     startStateId = preStartStateId; // Not used below (yet), but just in case.
+    _root = &_nodes[_nodes.size()-1];
   }
+  
+  assert(_root->getId() == startStateId);
 
   applyOperations(w, pair, label, history, &startFinishStateType, 0, 0);
 }
@@ -115,7 +119,7 @@ void AlignmentHypergraph::rescore(const WeightVector& w) {
 }
 
 void AlignmentHypergraph::getNodesTopologicalOrder(
-    list<const Hypernode*>& ordering) {
+    list<const Hypernode*>& ordering, bool reverse) {
   assert(ordering.size() == 0);
   ordering.clear();
   
@@ -125,9 +129,14 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
   // True after the first time we hit a node
   scoped_array<bool> reached(new bool[_nodes.size()]);
   
+  for (size_t i = 0; i < _nodes.size(); i++) {
+    completed[i] = false;
+    reached[i] = false;
+  }
+  
   stack<const Hypernode*> stck;
-
   stck.push(_root);
+  
   while (stck.size() > 0)
   {
     const Hypernode* cur = stck.top();
@@ -141,7 +150,10 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
         // If this is the second time we've hit this node, it's safe to emit
         stck.pop();
         completed[cur->getId()] = true;
-        ordering.push_back(cur);
+        if (reverse)
+          ordering.push_back(cur);
+        else
+          ordering.push_front(cur);
       }
       else {
         // The first time we hit a node, push all children to make sure they're covered
@@ -160,46 +172,37 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
 }
 
 LogWeight AlignmentHypergraph::logPartition() {
-  _alphas.reset(new RingInfo[_nodes.size()]);
-  scoped_array<bool> visited(new bool[_nodes.size()]);
-  
-  list<const Hypernode*> ordering;
-  getNodesTopologicalOrder(ordering);
-  
-  assert(ordering.size() == _nodes.size());
-  
   const Ring ring = RingLog;
   
-  // Inside pass
-  BOOST_FOREACH(const Hypernode* hnParent, ordering) {
-    const int parentId = hnParent->getId();
-    if (hnParent->getEdges().size() == 0) {
-      // Update chart
-      if (!visited[parentId]) {
-        _alphas[parentId] = RingInfo::zero(ring);
-        visited[parentId] = true;
-      }
-    }
-    else {
-      BOOST_FOREACH(const Hyperedge* he, hnParent->getEdges()) {
-        // Score path to this point
-        RingInfo* riPath = new RingInfo(*he, ring);
-        BOOST_FOREACH(const Hypernode* hnChild, he->getChildren()) {
-          riPath->collectProd(_alphas[hnChild->getId()], ring);
-        }
-
-        // Update chart
-        if (!visited[parentId]) {
-          _alphas[parentId] = *riPath;
-        }
-        else {
-          _alphas[parentId].collectSum(*riPath, ring);
-        }
-      }
+  list<const Hypernode*> revTopOrder;
+  getNodesTopologicalOrder(revTopOrder, true);
+  assert(revTopOrder.size() == _nodes.size());
+  
+  _betas.reset(new RingInfo[_nodes.size()]);
+  
+  // The beta value for the "root" node (i.e., the goal node in this case, since
+  // we are working in reverse) is one by construction.
+  _betas[_goal->getId()] = RingInfo::one(ring);
+  
+  // For each node, in reverse topological order...
+  BOOST_FOREACH(const Hypernode* v, revTopOrder) {
+    if (v == _goal)
+      continue; // Skip the goal node, which was handled above.
+      
+    const int parentId = v->getId();      
+    _betas[parentId] = RingInfo::zero(ring);
+    
+    // For each incoming edge...
+    BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      RingInfo* k = new RingInfo(*e, ring);
+      // For each antecedent node...
+      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+        k->collectProd(_betas[u->getId()], ring);
+      _betas[parentId].collectSum(*k, ring);
     }
   }
   
-  return _alphas[_finishStateId].score();
+  return _betas[_root->getId()].score();
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
@@ -217,7 +220,23 @@ void AlignmentHypergraph::maxAlignment(list<int>& opIds) const {
 }
 
 void AlignmentHypergraph::toGraphviz(const string& fname) const {
+  ofstream fout(fname.c_str());
+  assert(fout.good());
+  
+  fout << "digraph G\n{\n";
+  BOOST_FOREACH(const Hypernode& node, _nodes) {
+    const int prev = node.getId();
+    fout << "node" << prev << " [label=" << prev << "];\n";
+    BOOST_FOREACH(const Hyperedge* edge, node.getEdges()) {
+      BOOST_FOREACH(const Hypernode* child, edge->getChildren()) {
+        fout << "node" << prev << " -> node" << child->getId() << " [label=\""
+            << edge->getWeight() << "\"];\n";
+      }
+    }
+  }
+  fout << "}\n";
 
+  fout.close();
 }
 
 int AlignmentHypergraph::numArcs() {
@@ -252,21 +271,21 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
     // state and the finish state.
     const StateType& startFinishStateType = _stateTypes.front();
     assert(startFinishStateType.getName() == "sta");
-    FeatureVector<RealWeight>* fv = 0;
     OpNone noOp;
     if (_includeFinalFeats) {
       // The OpNone doesn't consume any of the strings, hence the epsilons below.
       AlignmentPart part = {noOp.getName(), FeatureGenConstants::EPSILON,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
-      fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
+      FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, i, j,
+          noOp, history);
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          _finishStateId, fv, w);
+          _goal->getId(), fv, w);
       history.pop_back();
     }
     else {
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          _finishStateId, fv, w); // Note: using zero fv
+          _goal->getId(), new FeatureVector<RealWeight>(), w);
     }
     return;
   }
@@ -333,6 +352,7 @@ int AlignmentHypergraph::addNode() {
 void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
     const StateId sourceId, const StateId destId, FeatureVector<RealWeight>* fv,
     const WeightVector& w) {
+  assert(fv);
   assert(sourceId >= 0);
 //  Arc arc(opId, destStateTypeId, (double)-w.innerProd(fv), destId, fv);
   Hypernode& parent = _nodes[sourceId];
@@ -342,7 +362,9 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   const int edgeId = _edges.size();
   const double edgeWeight = w.innerProd(fv);
 //  _fst->AddArc(sourceId, arc);
-  _edges.push_back(new Hyperedge(edgeId, parent, children, edgeWeight, fv));
+  Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, fv);
+  parent.addEdge(edge);
+  _edges.push_back(edge);
 }
 
 void AlignmentHypergraph::clear() {
