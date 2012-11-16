@@ -171,9 +171,7 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
   }
 }
 
-LogWeight AlignmentHypergraph::logPartition() {
-  const Ring ring = RingLog;
-  
+void AlignmentHypergraph::inside(const Ring ring) {
   list<const Hypernode*> revTopOrder;
   getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == _nodes.size());
@@ -201,13 +199,56 @@ LogWeight AlignmentHypergraph::logPartition() {
       _betas[parentId].collectSum(*k, ring);
     }
   }
+}
+
+void AlignmentHypergraph::outside(const Ring ring) {
+  list<const Hypernode*> topOrder;
+  getNodesTopologicalOrder(topOrder, false);
+  assert(topOrder.size() == _nodes.size());
   
+  _alphas.reset(new RingInfo[_nodes.size()]);
+  for (size_t i = 0; i < _nodes.size(); ++i)
+    _alphas[i] = RingInfo::zero(ring);
+  
+  _alphas[_root->getId()] = RingInfo::one(ring);
+  
+  // For each node, in topological order...
+  BOOST_FOREACH(const Hypernode* v, topOrder) {
+    // For each outgoing edge...
+    BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+        RingInfo score(*e, ring); // Initialize to the score of the edge
+        // Incorporate the product of the sibling beta scores
+        BOOST_FOREACH(const Hypernode* w, e->getChildren()) {
+          if (w != u)
+            score.collectProd(_betas[w->getId()], ring);
+        }
+        score.collectProd(_alphas[v->getId()], ring);
+        _alphas[u->getId()].collectSum(score, ring);
+      }
+    }
+  }
+}
+
+LogWeight AlignmentHypergraph::logPartition() {
+  const Ring ring = RingLog;
+  if (!_betas)
+    inside(ring);
   return _betas[_root->getId()].score();
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
     shared_array<LogWeight> buffer) {
-    
+  const Ring ring = RingLog;
+  // Run inside() and/or outside() if necessary.
+  if (!_betas)
+    inside(ring);
+  if (!_alphas)
+    outside(ring);
+
+  // TODO: Need to run the "collect" procedure here and populate fv.
+
+  return _betas[_root->getId()].score();
 }
 
 RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,

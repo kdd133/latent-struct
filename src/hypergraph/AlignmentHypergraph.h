@@ -18,6 +18,7 @@
 #include "Hypernode.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ring.h"
 #include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
@@ -94,6 +95,10 @@ class AlignmentHypergraph : public Graph {
     void addEdge(const int opId, const int destStateTypeId,
         const StateId sourceId, const StateId destId,
         FeatureVector<RealWeight>* fv, const WeightVector& w);
+        
+    void inside(const Ring ring);
+    
+    void outside(const Ring ring);
         
     void clear();
     
