@@ -265,8 +265,11 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
       BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
         ke.collectProd(_betas[u->getId()], ring);
       }
-      assert(e->getFeatureVector());      
+      assert(e->getFeatureVector());
       const FeatureVector<RealWeight>& edgeFv = *e->getFeatureVector();
+      // If a zero vector is encountered, there is no need to accumulate it.
+      if (edgeFv.getLength() == 0)
+        continue;
       FeatureVector<LogWeight> xe = fvConvert(edgeFv, logArray, d);      
       xe.addTo(sparse, ke.score().times(e->getWeight()));
     }
