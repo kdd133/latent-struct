@@ -192,11 +192,11 @@ void AlignmentHypergraph::inside(const Ring ring) {
     
     // For each incoming edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
-      RingInfo* k = new RingInfo(*e, ring);
+      RingInfo k(*e, ring);
       // For each antecedent node...
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        k->collectProd(_betas[u->getId()], ring);
-      _betas[parentId].collectSum(*k, ring);
+        k.collectProd(_betas[u->getId()], ring);
+      _betas[parentId].collectSum(k, ring);
     }
   }
 }
@@ -237,16 +237,41 @@ LogWeight AlignmentHypergraph::logPartition() {
   return _betas[_root->getId()].score();
 }
 
-LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
-    shared_array<LogWeight> buffer) {
+LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
+    FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
   const Ring ring = RingLog;
   // Run inside() and/or outside() if necessary.
   if (!_betas)
     inside(ring);
   if (!_alphas)
     outside(ring);
+  
+  // FIXME: We're assuming d doesn't change between calls, but we don't actually
+  // verify this. In fact, this whole buffer business is ugly and should be done
+  // away with if possible.
+  const int d = _fgen->getAlphabet()->size();
+  if (!logArray) {
+    // The alphabet is shared between the two f-gens (see latent_struct.cpp)
+    assert(d == _fgenObs->getAlphabet()->size());
+    logArray.reset(new LogWeight[d]);
+  }
+  assert(logArray);
 
-  // TODO: Need to run the "collect" procedure here and populate fv.
+  tr1::unordered_map<int,LogWeight> sparse;
+  
+  BOOST_FOREACH(const Hypernode& v, _nodes) {
+    BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
+      RingInfo ke(_alphas[v.getId()]);
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+        ke.collectProd(_betas[u->getId()], ring);
+      }
+      assert(e->getFeatureVector());      
+      const FeatureVector<RealWeight>& edgeFv = *e->getFeatureVector();
+      FeatureVector<LogWeight> xe = fvConvert(edgeFv, logArray, d);      
+      xe.addTo(sparse, ke.score().times(e->getWeight()));
+    }
+  }
+  fv.reinit(sparse);
 
   return _betas[_root->getId()].score();
 }
