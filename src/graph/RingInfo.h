@@ -15,8 +15,6 @@
 #include "LogWeight.h"
 #include "Ring.h"
 #include <algorithm>
-#include <boost/shared_ptr.hpp>
-using boost::shared_ptr;
 using std::max;
 
 class RingInfo {
@@ -26,15 +24,41 @@ private:
   LogWeight _score;
   
   // Either edge features (on edge), or accumulated features (on state)
-  shared_ptr<FeatureVector<LogWeight> > _fv;
+  FeatureVector<LogWeight>* _fv;
 
 public:
-  RingInfo() : _score(0) { }
+  RingInfo() : _score(0), _fv(0) { }
   
-  RingInfo(double score) : _score(score) { }
+  RingInfo(double score) : _score(score), _fv(0) { }
   
   RingInfo(double score, const FeatureVector<LogWeight>* fv) : _score(score),
-      _fv(new FeatureVector<LogWeight>(*fv)) { }
+      _fv(0) {
+    if (fv)
+      _fv = new FeatureVector<LogWeight>(*fv);
+  }      
+      
+  ~RingInfo() {
+    if (_fv)
+      delete _fv;
+  }
+  
+  RingInfo(const RingInfo& from) : _score(from._score), _fv(0) {
+    if (from._fv)
+      _fv = new FeatureVector<LogWeight>(*from._fv);
+  }      
+  
+  RingInfo& operator=(const RingInfo& from) {
+    if (this == &from) // Check for self-assignment
+      return (*this);
+    _score = from._score;
+    if (_fv)
+      delete _fv;
+    if (from._fv)
+      _fv = new FeatureVector<LogWeight>(*from._fv);
+    else
+      _fv = 0;
+    return (*this);
+  }
   
   /**
    * Reinterprets an edgeInfo object with appropriate values for use in an edge representation
@@ -42,13 +66,12 @@ public:
    * @param ei  Source edgeInfo
    * @param r   Semiring of interest
    */
-  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
+  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()), _fv(0) {
     const FeatureVector<RealWeight>* fv = edge.getFeatureVector();
     assert(fv);
     const int d = fv->getNumEntries();
     shared_array<LogWeight> values(new LogWeight[d]);
-    assert(_fv == 0);
-    _fv.reset(new FeatureVector<LogWeight>(fvConvert(*fv, values, d)));
+    _fv = new FeatureVector<LogWeight>(fvConvert(*fv, values, d));
     
     if (r == RingExpectation)
       _fv->timesEquals(_score); // pese 
@@ -58,7 +81,7 @@ public:
     return _score;
   }
   
-  const shared_ptr<FeatureVector<LogWeight> > fv() const {
+  const FeatureVector<LogWeight>* fv() const {
     return _fv;
   }
 
