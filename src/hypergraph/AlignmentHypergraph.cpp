@@ -267,11 +267,15 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
       }
       assert(e->getFeatureVector());
       const FeatureVector<RealWeight>& edgeFv = *e->getFeatureVector();
+
       // If a zero vector is encountered, there is no need to accumulate it.
       if (edgeFv.getLength() == 0)
         continue;
-      FeatureVector<LogWeight> xe = fvConvert(edgeFv, logArray, d);      
-      xe.addTo(sparse, ke.score().times(e->getWeight()));
+
+      FeatureVector<LogWeight> xe = fvConvert(edgeFv, logArray, d);
+      LogWeight weight(ke.score());
+      weight.timesEquals(e->getWeight());
+      xe.addTo(sparse, weight);
     }
   }
   fv.reinit(sparse);
