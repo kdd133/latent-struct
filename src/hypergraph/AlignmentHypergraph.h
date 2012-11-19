@@ -36,6 +36,8 @@ class StateType;
 class StringPair;
 class WeightVector;
 
+//#define USE_EXP_SEMI // uncomment to use RingExpectation where possible
+
 class AlignmentHypergraph : public Graph {
   public:
     typedef int StateId;
@@ -117,7 +119,11 @@ class AlignmentHypergraph : public Graph {
     shared_array<RingInfo> _alphas;
     
     shared_array<RingInfo> _betas;
-    
+
+#ifdef USE_EXP_SEMI
+    FeatureVector<LogWeight>* _expectationFv;
+#endif
+
     StateIdTable _stateIdTable;
     
     Hypernode* _root;

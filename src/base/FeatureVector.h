@@ -61,7 +61,7 @@ class FeatureVector {
     
     Weight getValueAtIndex(int location) const;
         
-    void addTo(shared_array<Weight> denseValues, int length,
+    void addTo(shared_array<Weight>& denseValues, int length,
         Weight scale = Weight::kOne) const;
     
     void addTo(FeatureVector& fv, Weight scale = Weight::kOne) const;
@@ -168,7 +168,8 @@ FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
   _indices(0), _values(0), _entries(length), _length(length),
     _scaleFactor(Weight::kOne), _forcedBinary(false), _forcedDense(false),
     _allocatedEntries(length) {
-  _values.reset(new Weight[length]);
+  if (length > 0)
+    _values.reset(new Weight[length]);
   if (allocateIndices)
     _indices.reset(new int[length]);
   zero();
@@ -339,7 +340,7 @@ Weight FeatureVector<Weight>::getValueAtIndex(int index) const {
 
 // adapted from Mallet's SparseVector class
 template <typename Weight>
-void FeatureVector<Weight>::addTo(shared_array<Weight> denseValues, int len,
+void FeatureVector<Weight>::addTo(shared_array<Weight>& denseValues, int len,
     Weight scale) const {
   assert(len >= _length);
   if (isDense()) {
@@ -383,6 +384,26 @@ template <typename Weight>
 void FeatureVector<Weight>::addTo(FeatureVector<Weight>& fv,
     Weight scale) const {
   assert(fv.isDense());
+  if (fv._length < _length) {
+    // This is a hack that was introduced for the sake of RingInfo's collect()
+    // methods, which are typically called from inside() or outside().
+    // TODO: In general, we may want to have an addTo method that does not
+    // require the destination to be a dense FeatureVector.
+    assert(isDense());
+    
+    shared_array<Weight> oldValues;
+    if (fv._length > 0)
+      oldValues = fv._values;
+    fv._values.reset(new Weight[_length]);
+    
+    if (fv._length > 0) {
+      for (int i = 0; i < fv._length; i++)
+        fv._values[i] = oldValues[i];
+    }
+    fv._length = _length;
+    fv._entries = _entries;
+    fv._allocatedEntries = _allocatedEntries;
+  }
   addTo(fv._values, fv._length, scale);
 }
 

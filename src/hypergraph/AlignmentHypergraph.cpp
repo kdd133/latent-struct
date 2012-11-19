@@ -24,6 +24,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <stack>
+#include <tr1/unordered_map>
 #include <vector>
 using namespace boost;
 using namespace std;
@@ -199,6 +200,13 @@ void AlignmentHypergraph::inside(const Ring ring) {
       _betas[parentId].collectSum(k, ring);
     }
   }
+
+#ifdef USE_EXP_SEMI
+  if (ring == RingExpectation) {
+    assert(_betas[_root->getId()].fv());
+    _expectationFv = new FeatureVector<LogWeight>(*_betas[_root->getId()].fv());
+  }
+#endif
 }
 
 void AlignmentHypergraph::outside(const Ring ring) {
@@ -239,6 +247,18 @@ LogWeight AlignmentHypergraph::logPartition() {
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
     FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
+
+#ifdef USE_EXP_SEMI // Test the expectation semiring.
+  cout << "AlignmentHypergraph: Using RingExpectation in " <<
+      "logExpectedFeaturesUnnorm()" << endl;  
+  inside(RingExpectation);
+  tr1::unordered_map<int,LogWeight> temp;
+  for (int i = 0; i < _expectationFv->getNumEntries(); ++i)
+    temp[_expectationFv->getIndexAtLocation(i)] = _expectationFv->getValueAtLocation(i);
+  fv.reinit(temp);
+  return _betas[_root->getId()].score();
+#endif
+
   const Ring ring = RingLog;
   // Run inside() and/or outside() if necessary.
   if (!_betas)

@@ -69,9 +69,14 @@ public:
   RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()), _fv(0) {
     const FeatureVector<RealWeight>* fv = edge.getFeatureVector();
     assert(fv);
-    const int d = fv->getNumEntries();
-    shared_array<LogWeight> values(new LogWeight[d]);
-    _fv = new FeatureVector<LogWeight>(fvConvert(*fv, values, d));
+    
+    // The following is a (tedious) way of converting the edge's FeatureVector
+    // from RealWeight to LogWeight.
+    const int m = fv->getNumEntries();
+    shared_array<LogWeight> values(new LogWeight[m]);
+    FeatureVector<LogWeight> tempSparseFv(fvConvert(*fv, values, m));    
+    _fv = new FeatureVector<LogWeight>(fv->getLength());
+    tempSparseFv.addTo(*_fv);
     
     if (r == RingExpectation)
       _fv->timesEquals(_score); // pese 
@@ -96,6 +101,7 @@ public:
     else if (ring == RingViterbi)
       _score = max(_score, toAdd.score());
     else if (ring == RingExpectation) {
+      // <p,r> = <p1+p2, r1+r2>
       _score.plusEquals(toAdd.score());
       toAdd.fv()->addTo(*_fv);
     }
