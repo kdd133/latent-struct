@@ -33,7 +33,8 @@
 using namespace std;
 
 BmrmOptimizer::BmrmOptimizer(TrainingObjective& objective) :
-    Optimizer(objective, 1e-4), _maxIters(250) {
+    Optimizer(objective, 1e-4), _maxIters(250), _quiet(false),
+    _noShrinking(false) {
 }
 
 int BmrmOptimizer::processOptions(int argc, char** argv) {
