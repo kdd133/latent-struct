@@ -107,4 +107,21 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub).value()), 1e-4);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat).value()), 6, 1e-4);
   BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias).value()), 1, 1e-4);
+  
+  // Check that the Viterbi score is correct.
+  RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
+  BOOST_CHECK_CLOSE(viterbiScore.value(), -300, 1e-8);
+  
+  FeatureVector<RealWeight> realFv(d, true);
+  BOOST_REQUIRE(!realFv.isDense());
+  realFv.zero();
+  RealWeight maxScore = model->maxFeatures(W, realFv, *pair, label, true);
+  BOOST_CHECK_CLOSE(maxScore.value(), viterbiScore.value(), 1e-8);
+  
+  // Check that values in the max-scoring feature vector are correct.  
+  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iIns).value(), 3, 1e-4);
+  BOOST_CHECK_SMALL(realFv.getValueAtIndex(iDel).value(), 1e-4);
+  BOOST_CHECK_SMALL(realFv.getValueAtIndex(iSub).value(), 1e-4);
+  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iMat).value(), 6, 1e-4);
+  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iBias).value(), 1, 1e-4);
 }

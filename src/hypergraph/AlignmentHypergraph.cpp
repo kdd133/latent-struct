@@ -304,12 +304,82 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
 }
 
 RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,
-    bool getCostOnly) {
-    
+    bool getCostOnly) {  
+#if 0
+  // We save and then restore _betas (which will be overwritten by the call to
+  // inside()) in case, e.g., logPartition() had already been computed for this
+  // graph. That is, we have no reason to store the values for RingViterbi.
+  shared_array<RingInfo> betasCopy = _betas;
+  inside(RingViterbi);
+  // Note: This should yield the same score as the call to viterbi() below.
+  const RealWeight viterbiScore = _betas[_root->getId()].score().value();
+  _betas = betasCopy;
+#else
+  list<const Hyperedge*> bestPath;
+  const RealWeight viterbiScore = viterbi(bestPath);
+  if (!getCostOnly) {
+    tr1::unordered_map<int, RealWeight> sparse;
+    BOOST_FOREACH(const Hyperedge* e, bestPath) {
+      assert(e->getChildren().size() == 1); // Only works for graphs at this point
+      const FeatureVector<RealWeight>* edgeFv = e->getFeatureVector();
+      assert(edgeFv);
+      edgeFv->addTo(sparse);
+    }
+    fv.reinit(sparse);
+  }
+#endif
+  return viterbiScore;
 }
-        
-void AlignmentHypergraph::maxAlignment(list<int>& opIds) const {
 
+double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
+  list<const Hypernode*> revTopOrder;
+  getNodesTopologicalOrder(revTopOrder, true);
+  assert(revTopOrder.size() == _nodes.size());
+  path.clear();
+  
+  typedef struct entry {
+    LogWeight score;
+    const Hyperedge* backPointer;
+  } Entry;
+  
+  Entry* chart = new Entry[_nodes.size()];
+  for (size_t i = 0; i < _nodes.size(); ++i) {
+    chart[i].score = LogWeight::kZero;
+    chart[i].backPointer = 0;
+  }
+  chart[_goal->getId()].score = LogWeight::kOne;
+  
+  // For each node, in reverse topological order...
+  BOOST_FOREACH(const Hypernode* v, revTopOrder) {  
+    BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      LogWeight pathScore = e->getWeight();
+      
+      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+        pathScore.timesEquals(chart[u->getId()].score);
+      
+      Entry& nodeEntry = chart[v->getId()];
+      if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
+        nodeEntry.score = pathScore;
+        nodeEntry.backPointer = e;
+      }
+    }
+  }
+  
+  const Hypernode* v = _root;
+  while (v != _goal) {
+    const Hyperedge* e = chart[v->getId()].backPointer;
+    assert(e->getChildren().size() == 1); // Only works for graphs at this point
+    path.push_back(e);
+    v = e->getChildren().front();
+  }
+  
+  const double pathScore = chart[_root->getId()].score.value();
+  delete[] chart;
+  return pathScore;
+}
+
+void AlignmentHypergraph::maxAlignment(list<int>& opIds) const {
+  assert(0);
 }
 
 void AlignmentHypergraph::toGraphviz(const string& fname) const {
@@ -322,8 +392,8 @@ void AlignmentHypergraph::toGraphviz(const string& fname) const {
     fout << "node" << prev << " [label=" << prev << "];\n";
     BOOST_FOREACH(const Hyperedge* edge, node.getEdges()) {
       BOOST_FOREACH(const Hypernode* child, edge->getChildren()) {
-        fout << "node" << prev << " -> node" << child->getId() << " [label=\""
-            << edge->getWeight() << "\"];\n";
+        fout << "node" << prev << " -> node" << child->getId() << " [label=\"("
+            << edge->getId() << ") " << edge->getWeight() << "\"];\n";
       }
     }
   }

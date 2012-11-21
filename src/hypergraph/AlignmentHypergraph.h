@@ -101,6 +101,8 @@ class AlignmentHypergraph : public Graph {
     void inside(const Ring ring);
     
     void outside(const Ring ring);
+    
+    double viterbi(list<const Hyperedge*>& bestPath);
         
     void clear();
     
