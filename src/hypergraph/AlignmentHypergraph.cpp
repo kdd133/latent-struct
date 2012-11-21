@@ -303,12 +303,17 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
   return _betas[_root->getId()].score();
 }
 
+void AlignmentHypergraph::expectedFeatureCooccurrences(FeatureMatrix& fm) {
+
+}
+
 RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,
     bool getCostOnly) {  
 #if 0
   // We save and then restore _betas (which will be overwritten by the call to
   // inside()) in case, e.g., logPartition() had already been computed for this
   // graph. That is, we have no reason to store the values for RingViterbi.
+  cout << "AlignmentHypergraph: Calling inside() instead of viterbi()" << endl;
   shared_array<RingInfo> betasCopy = _betas;
   inside(RingViterbi);
   // Note: This should yield the same score as the call to viterbi() below.

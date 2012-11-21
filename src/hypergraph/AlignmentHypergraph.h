@@ -28,6 +28,7 @@
 using namespace boost;
 using namespace std;
 
+class FeatureMatrix;
 class LogWeight;
 class Pattern;
 class RealWeight;
@@ -42,6 +43,8 @@ class AlignmentHypergraph : public Graph {
   public:
     typedef int StateId;
     typedef multi_array<StateId, 3> StateIdTable;
+    
+    virtual ~AlignmentHypergraph() { }
     
     // The first StateType in the list will be used as the start state and as
     // the finish state.
@@ -63,6 +66,8 @@ class AlignmentHypergraph : public Graph {
     // Note: Assumes fv has been zeroed out.
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
         shared_array<LogWeight> buffer); 
+
+    void expectedFeatureCooccurrences(FeatureMatrix& fm);
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,

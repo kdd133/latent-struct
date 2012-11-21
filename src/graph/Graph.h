@@ -18,6 +18,7 @@
 using namespace boost;
 using namespace std;
 
+class FeatureMatrix;
 class LogWeight;
 class Pattern;
 class RealWeight;
@@ -25,33 +26,35 @@ class WeightVector;
 
 class Graph {
   public:
-    void build(const WeightVector& w, const Pattern& x, Label label,
-        bool includeStartArc, bool includeObservedFeaturesArc);
+    virtual void build(const WeightVector& w, const Pattern& x, Label label,
+        bool includeStartArc, bool includeObservedFeaturesArc) = 0;
       
-    void rescore(const WeightVector& w);
+    virtual void rescore(const WeightVector& w) = 0;
 
-    LogWeight logPartition();
-
-    // Note: Assumes fv has been zeroed out.
-    LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
-        shared_array<LogWeight> buffer); 
+    virtual LogWeight logPartition() = 0;
 
     // Note: Assumes fv has been zeroed out.
-    RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
-        bool getCostOnly = false);
+    virtual LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
+        shared_array<LogWeight> buffer) = 0; 
+
+    // Note: Assumes fv has been zeroed out.
+    virtual RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
+        bool getCostOnly = false) = 0;
+        
+    virtual void expectedFeatureCooccurrences(FeatureMatrix& fm) = 0;
         
     // Returns the *reverse* sequence of edit operations in to the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
     // be applied in reverse order to reconstruct the optimal alignment.
-    void maxAlignment(list<int>& opIds) const;
+    virtual void maxAlignment(list<int>& opIds) const = 0;
     
-    void toGraphviz(const string& fname) const;
+    virtual void toGraphviz(const string& fname) const = 0;
     
-    int numArcs();
+    virtual int numArcs() = 0;
     
-    void clearDynProgVariables();
+    virtual void clearDynProgVariables() = 0;
     
-    void clearBuildVariables();
+    virtual void clearBuildVariables() = 0;
 };
 
 #endif
