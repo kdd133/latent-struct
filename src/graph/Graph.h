@@ -41,8 +41,9 @@ class Graph {
     virtual RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
         bool getCostOnly = false) = 0;
         
-    virtual LogWeight logExpectedFeatureCooccurrences(FeatureMatrix& fm,
-        FeatureVector<LogWeight>& fv) = 0;
+    virtual LogWeight logExpectedFeatureCooccurrences(
+        shared_ptr<FeatureMatrix> fm,
+        shared_ptr<FeatureVector<LogWeight> > fv) = 0;
         
     // Returns the *reverse* sequence of edit operations in to the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can

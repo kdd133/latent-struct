@@ -76,8 +76,8 @@ class StringEditModel : public Model {
       bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      FeatureMatrix& fm, FeatureVector<LogWeight>& fv, const Pattern& pattern,
-      const Label label, bool normalize = true);
+      shared_ptr<FeatureMatrix> fm, shared_ptr<FeatureVector<LogWeight> > fv,
+      const Pattern& pattern, const Label label, bool normalize = true);
       
     virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
@@ -588,13 +588,14 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-    const WeightVector& w, FeatureMatrix& fm, FeatureVector<LogWeight>& fv,
-    const Pattern& x, const Label y, bool normalize) {
+      const WeightVector& w, shared_ptr<FeatureMatrix> fm,
+      shared_ptr<FeatureVector<LogWeight> > fv, const Pattern& x, const Label y,
+      bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeatureCooccurrences(fm, fv);
   graph->clearDynProgVariables();
   if (normalize) {
-    fv.timesEquals(-logZ);
+    fv->timesEquals(-logZ);
     assert(0); // TODO: Normalize fm as well
   }
   return logZ;

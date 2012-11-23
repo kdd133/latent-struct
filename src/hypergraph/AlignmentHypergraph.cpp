@@ -236,7 +236,8 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
   return alphas;
 }
 
-void AlignmentHypergraph::insideOutside(const Ring ring) {
+AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
+    const Ring ring) {
 
 }
 
@@ -301,7 +302,7 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
-    FeatureMatrix& fm, FeatureVector<LogWeight>& fv) {
+    shared_ptr<FeatureMatrix> fm, shared_ptr<FeatureVector<LogWeight> > fv) {
   const Ring ring = RingExpectation;
 }
 

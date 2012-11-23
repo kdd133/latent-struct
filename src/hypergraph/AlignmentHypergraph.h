@@ -42,6 +42,13 @@ class AlignmentHypergraph : public Graph {
     typedef int StateId;
     typedef multi_array<StateId, 3> StateIdTable;
     
+    typedef struct insideOutsideResult {
+      LogWeight Z;
+      shared_ptr<FeatureVector<LogWeight> > rBar;
+      shared_ptr<FeatureVector<LogWeight> > sBar;
+      shared_ptr<FeatureMatrix> tBar;
+    } InsideOutsideResult;
+    
     virtual ~AlignmentHypergraph() { }
     
     // The first StateType in the list will be used as the start state and as
@@ -67,6 +74,9 @@ class AlignmentHypergraph : public Graph {
 
     LogWeight logExpectedFeatureCooccurrences(FeatureMatrix& fm,
         FeatureVector<LogWeight>& fv);
+        
+    LogWeight logExpectedFeatureCooccurrences(shared_ptr<FeatureMatrix> fm,
+        shared_ptr<FeatureVector<LogWeight> > fv);
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -107,7 +117,7 @@ class AlignmentHypergraph : public Graph {
     shared_array<RingInfo> outside(const Ring ring,
         shared_array<RingInfo> betas);
         
-    void insideOutside(const Ring ring);
+    InsideOutsideResult insideOutside(const Ring ring);
     
     double viterbi(list<const Hyperedge*>& bestPath);
         
