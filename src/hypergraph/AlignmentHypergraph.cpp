@@ -29,6 +29,8 @@
 using namespace boost;
 using namespace std;
 
+//#define USE_EXP_SEMI // uncomment to use RingExpectation where possible
+
 const AlignmentHypergraph::StateId AlignmentHypergraph::noId = -1;
 
 AlignmentHypergraph::AlignmentHypergraph(const ptr_vector<StateType>& stateTypes,
@@ -172,16 +174,16 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
   }
 }
 
-void AlignmentHypergraph::inside(const Ring ring) {
+shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
   list<const Hypernode*> revTopOrder;
   getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == _nodes.size());
   
-  _betas.reset(new RingInfo[_nodes.size()]);
+  shared_array<RingInfo> betas(new RingInfo[_nodes.size()]);
   
   // The beta value for the "root" node (i.e., the goal node in this case, since
   // we are working in reverse) is one by construction.
-  _betas[_goal->getId()] = RingInfo::one(ring);
+  betas[_goal->getId()] = RingInfo::one(ring);
   
   // For each node, in reverse topological order...
   BOOST_FOREACH(const Hypernode* v, revTopOrder) {
@@ -189,36 +191,31 @@ void AlignmentHypergraph::inside(const Ring ring) {
       continue; // Skip the goal node, which was handled above.
       
     const int parentId = v->getId();      
-    _betas[parentId] = RingInfo::zero(ring);
+    betas[parentId] = RingInfo::zero(ring);
     
     // For each incoming edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
       RingInfo k(*e, ring);
       // For each antecedent node...
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        k.collectProd(_betas[u->getId()], ring);
-      _betas[parentId].collectSum(k, ring);
+        k.collectProd(betas[u->getId()], ring);
+      betas[parentId].collectSum(k, ring);
     }
   }
-
-#ifdef USE_EXP_SEMI
-  if (ring == RingExpectation) {
-    assert(_betas[_root->getId()].fv());
-    _expectationFv = new FeatureVector<LogWeight>(*_betas[_root->getId()].fv());
-  }
-#endif
+  return betas;
 }
 
-void AlignmentHypergraph::outside(const Ring ring) {
+shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
+    shared_array<RingInfo> betas) {
   list<const Hypernode*> topOrder;
   getNodesTopologicalOrder(topOrder, false);
   assert(topOrder.size() == _nodes.size());
   
-  _alphas.reset(new RingInfo[_nodes.size()]);
+  shared_array<RingInfo> alphas(new RingInfo[_nodes.size()]);
   for (size_t i = 0; i < _nodes.size(); ++i)
-    _alphas[i] = RingInfo::zero(ring);
+    alphas[i] = RingInfo::zero(ring);
   
-  _alphas[_root->getId()] = RingInfo::one(ring);
+  alphas[_root->getId()] = RingInfo::one(ring);
   
   // For each node, in topological order...
   BOOST_FOREACH(const Hypernode* v, topOrder) {
@@ -229,42 +226,41 @@ void AlignmentHypergraph::outside(const Ring ring) {
         // Incorporate the product of the sibling beta scores
         BOOST_FOREACH(const Hypernode* w, e->getChildren()) {
           if (w != u)
-            score.collectProd(_betas[w->getId()], ring);
+            score.collectProd(betas[w->getId()], ring);
         }
-        score.collectProd(_alphas[v->getId()], ring);
-        _alphas[u->getId()].collectSum(score, ring);
+        score.collectProd(alphas[v->getId()], ring);
+        alphas[u->getId()].collectSum(score, ring);
       }
     }
   }
+  return alphas;
+}
+
+void AlignmentHypergraph::insideOutside(const Ring ring) {
+
 }
 
 LogWeight AlignmentHypergraph::logPartition() {
-  const Ring ring = RingLog;
-  if (!_betas)
-    inside(ring);
-  return _betas[_root->getId()].score();
+  shared_array<RingInfo> betas = inside(RingLog);
+  return betas[_root->getId()].score();
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
     FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
-
 #ifdef USE_EXP_SEMI // Test the expectation semiring.
   cout << "AlignmentHypergraph: Using RingExpectation in " <<
       "logExpectedFeaturesUnnorm()" << endl;  
-  inside(RingExpectation);
+  shared_array<RingInfo> betas = inside(RingExpectation);
   tr1::unordered_map<int,LogWeight> temp;
-  for (int i = 0; i < _expectationFv->getNumEntries(); ++i)
-    temp[_expectationFv->getIndexAtLocation(i)] = _expectationFv->getValueAtLocation(i);
+  const FeatureVector<LogWeight>* expFv = betas[_root->getId()].fv();
+  for (int i = 0; i < expFv->getNumEntries(); ++i)
+    temp[expFv->getIndexAtLocation(i)] = expFv->getValueAtLocation(i);
   fv.reinit(temp);
-  return _betas[_root->getId()].score();
-#endif
-
-  const Ring ring = RingLog;
-  // Run inside() and/or outside() if necessary.
-  if (!_betas)
-    inside(ring);
-  if (!_alphas)
-    outside(ring);
+  return betas[_root->getId()].score();
+#else
+  // Run inside() and outside().
+  shared_array<RingInfo> betas = inside(RingLog);
+  shared_array<RingInfo> alphas = outside(RingLog, betas);
   
   // FIXME: We're assuming d doesn't change between calls, but we don't actually
   // verify this. In fact, this whole buffer business is ugly and should be done
@@ -281,9 +277,9 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
-      RingInfo ke(_alphas[v.getId()]);
+      RingInfo ke(alphas[v.getId()]);
       BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
-        ke.collectProd(_betas[u->getId()], ring);
+        ke.collectProd(betas[u->getId()], RingLog);
       }
       assert(e->getFeatureVector());
       const FeatureVector<RealWeight>& edgeFv = *e->getFeatureVector();
@@ -300,11 +296,13 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
   }
   fv.reinit(sparse);
 
-  return _betas[_root->getId()].score();
+  return betas[_root->getId()].score();
+#endif
 }
 
-void AlignmentHypergraph::expectedFeatureCooccurrences(FeatureMatrix& fm) {
-
+LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
+    FeatureMatrix& fm, FeatureVector<LogWeight>& fv) {
+  const Ring ring = RingExpectation;
 }
 
 RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -412,8 +410,7 @@ int AlignmentHypergraph::numArcs() {
 }
 
 void AlignmentHypergraph::clearDynProgVariables() {
-  _alphas.reset();
-  _betas.reset();
+
 }
 
 void AlignmentHypergraph::clearBuildVariables() {

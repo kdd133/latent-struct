@@ -19,6 +19,7 @@
 #include <iostream>
 using boost::shared_ptr;
 
+class FeatureMatrix;
 class InputReader;
 class LogWeight;
 class Pattern;
@@ -53,6 +54,10 @@ class Model {
     virtual LogWeight expectedFeatures(const WeightVector& w,
       FeatureVector<LogWeight>& fv, const Pattern& pattern, const Label label,
       bool normalize = true) = 0;
+      
+    virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
+      FeatureMatrix& fm, FeatureVector<LogWeight>& fv, const Pattern& pattern,
+      const Label label, bool normalize = true) = 0;
       
     // Returns true of the caller assumes ownership of the FeatureVector.
     virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,

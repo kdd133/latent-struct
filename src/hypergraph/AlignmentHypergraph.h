@@ -37,8 +37,6 @@ class StateType;
 class StringPair;
 class WeightVector;
 
-//#define USE_EXP_SEMI // uncomment to use RingExpectation where possible
-
 class AlignmentHypergraph : public Graph {
   public:
     typedef int StateId;
@@ -67,7 +65,8 @@ class AlignmentHypergraph : public Graph {
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
         shared_array<LogWeight> buffer); 
 
-    void expectedFeatureCooccurrences(FeatureMatrix& fm);
+    LogWeight logExpectedFeatureCooccurrences(FeatureMatrix& fm,
+        FeatureVector<LogWeight>& fv);
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -103,9 +102,12 @@ class AlignmentHypergraph : public Graph {
         const StateId sourceId, const StateId destId,
         FeatureVector<RealWeight>* fv, const WeightVector& w);
         
-    void inside(const Ring ring);
+    shared_array<RingInfo> inside(const Ring ring);
     
-    void outside(const Ring ring);
+    shared_array<RingInfo> outside(const Ring ring,
+        shared_array<RingInfo> betas);
+        
+    void insideOutside(const Ring ring);
     
     double viterbi(list<const Hyperedge*>& bestPath);
         
@@ -122,14 +124,6 @@ class AlignmentHypergraph : public Graph {
     shared_ptr<AlignmentFeatureGen> _fgen;
     
     shared_ptr<ObservedFeatureGen> _fgenObs;
-
-    shared_array<RingInfo> _alphas;
-    
-    shared_array<RingInfo> _betas;
-
-#ifdef USE_EXP_SEMI
-    FeatureVector<LogWeight>* _expectationFv;
-#endif
 
     StateIdTable _stateIdTable;
     
