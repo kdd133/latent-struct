@@ -10,17 +10,21 @@
 #ifndef _FEATUREVECTOR_H
 #define _FEATUREVECTOR_H
 
-#include <boost/shared_array.hpp>
-using boost::shared_array;
 #include "Alphabet.h"
+#include "FeatureMatrix.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
+#include <algorithm>
 #include <assert.h>
-#include <set>
+#include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <ostream>
+#include <set>
 #include <stdexcept>
-using namespace std;
 #include <tr1/unordered_map>
+using boost::shared_array;
+using boost::shared_ptr;
+using namespace std;
 using tr1::unordered_map;
 
 // Tell the compiler that the friend function is a specialization of the
@@ -54,7 +58,10 @@ class FeatureVector {
     
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
-    
+ 
+    shared_ptr<FeatureMatrix> outerProd(const FeatureVector<Weight>& fv,
+      const int d = 0) const;
+ 
     int getIndexAtLocation(int location) const;
     
     Weight getValueAtLocation(int location) const;
@@ -254,6 +261,53 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
+shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
+    const FeatureVector<Weight>& fv, const int d) const {
+  const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
+  assert(dim > 0);
+  shared_ptr<FeatureMatrix> fm(new FeatureMatrix(dim));
+  
+  if (isDense()) {
+    if (fv.isDense()) {
+      for (size_t row = 0; row < getLength(); ++row) {
+        for (size_t col = 0; col < fv.getLength(); ++col) {
+          const LogWeight prod = getValueAtLocation(row).times(
+              fv.getValueAtLocation(col));
+          fm->assign(row, col, prod.value());
+        }
+      }
+    }
+    else {
+      for (size_t row = 0; row < getLength(); ++row) {
+        for (size_t j = 0; j < fv.getNumEntries(); ++j) {
+          const int col = fv._indices[j];
+          const LogWeight prod = _values[row].times(fv.getValueAtIndex(col));
+          fm->assign(row, col, prod.value());
+        }
+      }
+    }
+  }
+  else {
+    if (fv.isDense()) {
+      assert(0);
+    }
+    else {
+      for (size_t i = 0; i < getNumEntries(); ++i) {
+        for (size_t j = 0; j < fv.getNumEntries(); ++j) {
+          const int row = _indices[i];
+          const int col = fv._indices[j];
+          const LogWeight prod = getValueAtIndex(row).times(fv.getValueAtIndex(
+              col));
+          fm->assign(row, col, prod.value());
+        }
+      }
+    }
+  }
+  
+  return fm;
+}
+
+template <typename Weight>
 void FeatureVector<Weight>::pack() {
   assert(!isDense());
   if (_entries == _allocatedEntries)
@@ -318,8 +372,9 @@ Weight FeatureVector<Weight>::getValueAtLocation(int location) const {
 
 template <typename Weight>
 Weight FeatureVector<Weight>::getValueAtIndex(int index) const {
-  assert(!isDense());
-
+  if (isDense())
+    return getValueAtLocation(index); // Location == Index in this case
+    
   // TODO: If we knew the indices were sorted, a binary search would be faster.
   int location = -1;
   for (int i = 0; i < _entries; i++) {

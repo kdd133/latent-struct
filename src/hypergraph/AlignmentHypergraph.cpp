@@ -13,6 +13,7 @@
 #include "FeatureVector.h"
 #include "Hyperedge.h"
 #include "Hypernode.h"
+#include "LogWeight.h"
 #include "OpNone.h"
 #include "Ring.h"
 #include "RingInfo.h"
@@ -239,6 +240,57 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
 AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
     const Ring ring) {
 
+  // Run inside() and outside().
+  shared_array<RingInfo> betas = inside(ring);
+  shared_array<RingInfo> alphas = outside(ring, betas);
+    
+  const int d = _fgen->getAlphabet()->size();
+  shared_array<LogWeight> array(new LogWeight[d]);
+  tr1::unordered_map<int,LogWeight> fvExp;
+  shared_ptr<FeatureMatrix> fmExp(new FeatureMatrix(d));
+  
+  BOOST_FOREACH(const Hypernode& v, _nodes) {
+    BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
+      RingInfo keBar(alphas[v.getId()]);      
+      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+        keBar.collectProd(betas[u->getId()], RingLog);
+
+      LogWeight pe = e->getWeight();
+      assert(e->getFeatureVector());
+      FeatureVector<LogWeight> fv = fvConvert(*e->getFeatureVector(), array, d);
+      
+      if (ring == RingLog || ring == RingViterbi) {
+        // Compute: xHat = xHat + keBar*xe
+        //    where xe = pe*re
+        FeatureVector<LogWeight>& re = fv; // Interpret fv as re in this case
+        pe.timesEquals(keBar.score());
+        re.addTo(fvExp, pe);
+      }
+      else {
+        assert(ring == RingExpectation);
+        FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
+        FeatureVector<LogWeight> pese(se);
+        pese.timesEquals(pe);
+        shared_ptr<FeatureMatrix> pesese = pese.outerProd(se, d);
+        
+        pese.addTo(fvExp, keBar.score());
+        
+        pesese->timesEquals(keBar.score()); // pt
+        assert(keBar.fv());
+        shared_ptr<FeatureMatrix> rs = keBar.fv()->outerProd(pese, d); // rs
+        fmExp->logAppend(*pesese);
+        fmExp->logAppend(*rs);
+      }
+    }
+  }
+  
+  InsideOutsideResult result;
+  result.Z = betas[_root->getId()].score();
+  result.rBar.reset(new FeatureVector<LogWeight>(*betas[_root->getId()].fv()));
+  result.sBar.reset(new FeatureVector<LogWeight>(fvExp));
+  result.tBar = fmExp;
+  
+  return result;
 }
 
 LogWeight AlignmentHypergraph::logPartition() {
@@ -302,8 +354,11 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
-    shared_ptr<FeatureMatrix> fm, shared_ptr<FeatureVector<LogWeight> > fv) {
-  const Ring ring = RingExpectation;
+    shared_ptr<FeatureMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv) {
+  InsideOutsideResult inOut = insideOutside(RingExpectation);
+  fv = inOut.sBar;
+  fm = inOut.tBar;
+  return inOut.Z;
 }
 
 RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,

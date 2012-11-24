@@ -10,8 +10,25 @@
 #ifndef _FEATUREMATRIX_H
 #define _FEATUREMATRIX_H
 
+#include "FeatureMatrix.h"
+#include <boost/numeric/ublas/matrix.hpp>
+using boost::numeric::ublas::matrix;
+
 class FeatureMatrix {
 
+public:
+  FeatureMatrix(int m);
+
+  void assign(int row, int col, double value);
+  
+  double get(int row, int col) const;
+
+  void logAppend(const FeatureMatrix& toAppend);
+  
+  void timesEquals(double value);
+  
+private:
+  matrix<double> _A;
 };
 
 #endif

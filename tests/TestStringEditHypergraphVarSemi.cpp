@@ -79,19 +79,17 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_REQUIRE(iSub >= 0);
   W.add(iSub, -100);
   
-  shared_ptr<FeatureMatrix> fm;
-  shared_ptr<FeatureVector<LogWeight> > fv;
-  model->expectedFeatureCooccurrences(W, fm, fv, *pair, label, false);
-  BOOST_REQUIRE(fm != 0);
-  BOOST_REQUIRE(fv != 0);  
-  
   // Check that the total mass is correct.
   LogWeight totalMass = model->totalMass(W, *pair, label);
   BOOST_CHECK_CLOSE(totalMass.value(), -300, 1e-8);
   
-//  BOOST_REQUIRE(!fv->isDense());
-//  LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
-//  BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
+  shared_ptr<FeatureMatrix> fm;
+  shared_ptr<FeatureVector<LogWeight> > fv;
+  LogWeight totalMassAlt = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
+      label, false);
+  BOOST_REQUIRE(fm != 0);
+  BOOST_REQUIRE(fv != 0);    
+  BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);

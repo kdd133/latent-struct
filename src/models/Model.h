@@ -56,7 +56,7 @@ class Model {
       bool normalize = true) = 0;
       
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<FeatureMatrix> fm, shared_ptr<FeatureVector<LogWeight> > fv,
+      shared_ptr<FeatureMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     // Returns true of the caller assumes ownership of the FeatureVector.

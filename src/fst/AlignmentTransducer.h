@@ -78,8 +78,8 @@ class AlignmentTransducer : public Graph {
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
         shared_array<LogWeight> buffer);
         
-    LogWeight logExpectedFeatureCooccurrences(shared_ptr<FeatureMatrix> fm,
-        shared_ptr<FeatureVector<LogWeight> > fv);
+    LogWeight logExpectedFeatureCooccurrences(shared_ptr<FeatureMatrix>& fm,
+        shared_ptr<FeatureVector<LogWeight> >& fv);
 
     // Note: Assumes fv has been zeroed out.
     RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
@@ -466,7 +466,7 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
 
 template<typename Arc>
 LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(
-    shared_ptr<FeatureMatrix> fm, shared_ptr<FeatureVector<LogWeight> > fv) {
+    shared_ptr<FeatureMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv) {
   assert(0); // Not implemented.
 }
 
