@@ -251,14 +251,18 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
+      assert(e->getFeatureVector());
+      // If a zero vector is encountered, there is no need to accumulate.
+      if (e->getFeatureVector()->getLength() == 0)
+        continue;
+        
       RingInfo keBar(alphas[v.getId()]);      
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
         keBar.collectProd(betas[u->getId()], RingLog);
 
       LogWeight pe = e->getWeight();
-      assert(e->getFeatureVector());
       FeatureVector<LogWeight> fv = fvConvert(*e->getFeatureVector(), array, d);
-      
+
       if (ring == RingLog || ring == RingViterbi) {
         // Compute: xHat = xHat + keBar*xe
         //    where xe = pe*re
@@ -268,6 +272,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
       }
       else {
         assert(ring == RingExpectation);
+        
         FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
         FeatureVector<LogWeight> pese(se);
         pese.timesEquals(pe);
