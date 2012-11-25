@@ -291,9 +291,13 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   
   InsideOutsideResult result;
   result.Z = betas[_root->getId()].score();
-  result.rBar.reset(new FeatureVector<LogWeight>(*betas[_root->getId()].fv()));
-  result.sBar.reset(new FeatureVector<LogWeight>(fvExp));
-  result.tBar = fmExp;
+  result.rBar.reset(new FeatureVector<LogWeight>(fvExp));
+  if (ring == RingExpectation) {
+    assert(betas[_root->getId()].fv());
+    result.sBar.reset(new FeatureVector<LogWeight>(
+        *betas[_root->getId()].fv()));
+    result.tBar = fmExp;
+  }
   
   return result;
 }
@@ -305,57 +309,16 @@ LogWeight AlignmentHypergraph::logPartition() {
 
 LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
     FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
-#ifdef USE_EXP_SEMI // Test the expectation semiring.
-  cout << "AlignmentHypergraph: Using RingExpectation in " <<
-      "logExpectedFeaturesUnnorm()" << endl;  
-  shared_array<RingInfo> betas = inside(RingExpectation);
+  InsideOutsideResult inOut = insideOutside(RingLog);
+  
+  // TODO: We shouldn't have to do all this just to make an assignment to fv.  
   tr1::unordered_map<int,LogWeight> temp;
-  const FeatureVector<LogWeight>* expFv = betas[_root->getId()].fv();
+  const shared_ptr<FeatureVector<LogWeight> > expFv = inOut.rBar;
   for (int i = 0; i < expFv->getNumEntries(); ++i)
     temp[expFv->getIndexAtLocation(i)] = expFv->getValueAtLocation(i);
   fv.reinit(temp);
-  return betas[_root->getId()].score();
-#else
-  // Run inside() and outside().
-  shared_array<RingInfo> betas = inside(RingLog);
-  shared_array<RingInfo> alphas = outside(RingLog, betas);
   
-  // FIXME: We're assuming d doesn't change between calls, but we don't actually
-  // verify this. In fact, this whole buffer business is ugly and should be done
-  // away with if possible.
-  const int d = _fgen->getAlphabet()->size();
-  if (!logArray) {
-    // The alphabet is shared between the two f-gens (see latent_struct.cpp)
-    assert(d == _fgenObs->getAlphabet()->size());
-    logArray.reset(new LogWeight[d]);
-  }
-  assert(logArray);
-
-  tr1::unordered_map<int,LogWeight> sparse;
-  
-  BOOST_FOREACH(const Hypernode& v, _nodes) {
-    BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
-      RingInfo ke(alphas[v.getId()]);
-      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
-        ke.collectProd(betas[u->getId()], RingLog);
-      }
-      assert(e->getFeatureVector());
-      const FeatureVector<RealWeight>& edgeFv = *e->getFeatureVector();
-
-      // If a zero vector is encountered, there is no need to accumulate it.
-      if (edgeFv.getLength() == 0)
-        continue;
-
-      FeatureVector<LogWeight> xe = fvConvert(edgeFv, logArray, d);
-      LogWeight weight(ke.score());
-      weight.timesEquals(e->getWeight());
-      xe.addTo(sparse, weight);
-    }
-  }
-  fv.reinit(sparse);
-
-  return betas[_root->getId()].score();
-#endif
+  return inOut.Z;
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(

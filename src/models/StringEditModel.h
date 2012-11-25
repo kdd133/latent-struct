@@ -594,9 +594,11 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeatureCooccurrences(fm, fv);
   graph->clearDynProgVariables();
+  assert(fm);
+  assert(fv);
   if (normalize) {
     fv->timesEquals(-logZ);
-    assert(0); // TODO: Normalize fm as well
+    fm->timesEquals(-logZ);
   }
   return logZ;
 }
