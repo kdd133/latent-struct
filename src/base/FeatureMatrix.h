@@ -10,8 +10,10 @@
 #ifndef _FEATUREMATRIX_H
 #define _FEATUREMATRIX_H
 
+#include "Alphabet.h"
 #include "FeatureMatrix.h"
 #include <boost/numeric/ublas/matrix.hpp>
+#include <iostream>
 using boost::numeric::ublas::matrix;
 
 class FeatureMatrix {
@@ -26,6 +28,10 @@ public:
   void logAppend(const FeatureMatrix& toAppend);
   
   void timesEquals(double value);
+  
+  void print(std::ostream& out, const Alphabet& alphabet);
+  
+  void print(std::ostream& out);
   
 private:
   matrix<double> _A;

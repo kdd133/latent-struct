@@ -7,9 +7,11 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "Alphabet.h"
 #include "FeatureMatrix.h"
 #include "LogWeight.h"
 #include <boost/numeric/ublas/matrix.hpp>
+#include <iostream>
 using boost::numeric::ublas::matrix;
 
 FeatureMatrix::FeatureMatrix(int m) {
@@ -54,5 +56,20 @@ void FeatureMatrix::timesEquals(double value) {
       current.timesEquals(scale);
       _A(i,j) = current.value();
     }
+  }
+}
+
+void FeatureMatrix::print(std::ostream& out, const Alphabet& alphabet) {
+  for (int i = 0; i < _A.size1(); ++i)
+    for (int j = 0; j < _A.size2(); ++j)
+      out << alphabet.reverseLookup(i) << "," << alphabet.reverseLookup(j)
+          << "\t" << get(i,j) << endl;
+}
+
+void FeatureMatrix::print(std::ostream& out) {
+  for (int i = 0; i < _A.size1(); ++i) {
+    for (int j = 0; j < _A.size2(); ++j)
+      out << "(" << i << "," << j << ")" << get(i,j) << "\t";
+    out << endl;
   }
 }

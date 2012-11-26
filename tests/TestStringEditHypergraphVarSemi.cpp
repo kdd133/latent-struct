@@ -12,6 +12,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
+#include <iostream>
 #include <math.h>
 #include <string>
 #include <vector>
@@ -90,6 +91,8 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_REQUIRE(fm != 0);
   BOOST_REQUIRE(fv != 0);    
   BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
+  
+  fm->print(cout, *alphabet);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);

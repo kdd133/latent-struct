@@ -258,7 +258,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         
       RingInfo keBar(alphas[v.getId()]);      
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        keBar.collectProd(betas[u->getId()], RingLog);
+        keBar.collectProd(betas[u->getId()], ring);
 
       LogWeight pe = e->getWeight();
       FeatureVector<LogWeight> fv = fvConvert(*e->getFeatureVector(), array, d);
