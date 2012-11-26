@@ -34,7 +34,7 @@ class Alphabet {
     int lookup(string str, bool addIfAbsent = false);
     
     // Return the string that is associated with the given index.
-    string reverseLookup(size_t index);
+    string reverseLookup(size_t index) const;
     
     bool isLocked() const;
   
@@ -65,7 +65,7 @@ class Alphabet {
     DictType _counts;
 };
 
-inline string Alphabet::reverseLookup(size_t index) {
+inline string Alphabet::reverseLookup(size_t index) const {
   assert(index < _entries.size());
   return _entries.at(index);
 }
