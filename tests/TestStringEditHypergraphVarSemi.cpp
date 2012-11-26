@@ -79,25 +79,20 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   const int iSub = alphabet->lookup("0_S:Sub11");
   BOOST_REQUIRE(iSub >= 0);
   W.add(iSub, -100);
-  
-  // Check that the total mass is correct.
-  LogWeight totalMass = model->totalMass(W, *pair, label);
-  BOOST_CHECK_CLOSE(totalMass.value(), -300, 1e-8);
-  
-  shared_ptr<FeatureMatrix> fm;
-  shared_ptr<FeatureVector<LogWeight> > fv;
-  LogWeight totalMassAlt = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
-      label, false);
-  BOOST_REQUIRE(fm != 0);
-  BOOST_REQUIRE(fv != 0);    
-  BOOST_CHECK_CLOSE(totalMass.value(), totalMassAlt.value(), 1e-8);
-  
-  fm->print(cout, *alphabet);
-  
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
+  
+  shared_ptr<FeatureMatrix> fm;
+  shared_ptr<FeatureVector<LogWeight> > fv;
+  LogWeight totalMass = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
+      label, false);
+  BOOST_REQUIRE(fm != 0);
+  BOOST_REQUIRE(fv != 0);
+  
+  // Check that the total mass is correct.
+  BOOST_CHECK_CLOSE(totalMass.value(), -300, 1e-8);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
   BOOST_CHECK_CLOSE(fv->getValueAtIndex(iIns).value(), -298.9014, 1e-4);
@@ -105,29 +100,36 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_CHECK_CLOSE(fv->getValueAtIndex(iSub).value(), -398.2082, 1e-4);
   BOOST_CHECK_CLOSE(fv->getValueAtIndex(iMat).value(), -298.2082, 1e-4);
   BOOST_CHECK_CLOSE(fv->getValueAtIndex(iBias).value(), -300.0000, 1e-4);
-
-  // Check that the (normalized) expected value of each feature is correct.
-  fv->timesEquals(-totalMass);
-  BOOST_CHECK_CLOSE(exp(fv->getValueAtIndex(iIns).value()), 3, 1e-4);
-  BOOST_CHECK_SMALL(exp(fv->getValueAtIndex(iDel).value()), 1e-4);
-  BOOST_CHECK_SMALL(exp(fv->getValueAtIndex(iSub).value()), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv->getValueAtIndex(iMat).value()), 6, 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv->getValueAtIndex(iBias).value()), 1, 1e-4);
   
-  // Check that the Viterbi score is correct.
-  RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
-  BOOST_CHECK_CLOSE(viterbiScore.value(), -300, 1e-8);
+  // Display the matrix of feature cooccurrences.
+//  fm->print(cout);
+//  cout << endl;
+//  fm->print(cout, *alphabet);
   
-  FeatureVector<RealWeight> realFv(d, true);
-  BOOST_REQUIRE(!realFv.isDense());
-  realFv.zero();
-  RealWeight maxScore = model->maxFeatures(W, realFv, *pair, label, true);
-  BOOST_CHECK_CLOSE(maxScore.value(), viterbiScore.value(), 1e-8);
-  
-  // Check that values in the max-scoring feature vector are correct.  
-  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iIns).value(), 3, 1e-4);
-  BOOST_CHECK_SMALL(realFv.getValueAtIndex(iDel).value(), 1e-4);
-  BOOST_CHECK_SMALL(realFv.getValueAtIndex(iSub).value(), 1e-4);
-  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iMat).value(), 6, 1e-4);
-  BOOST_CHECK_CLOSE(realFv.getValueAtIndex(iBias).value(), 1, 1e-4);
+  // Check that the entries in the cooccurrence matrix are correct.
+  BOOST_CHECK_CLOSE(fm->get(iBias,iBias), -300, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iBias,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iBias,iIns), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iBias,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iBias,iMat), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iDel,iBias), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iDel,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iDel,iIns), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iDel,iSub), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iDel,iMat), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iIns,iBias), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iIns,iDel), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iIns,iIns), -297.803, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iIns,iSub), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iIns,iMat), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iSub,iBias), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iSub,iDel), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iSub,iIns), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iSub,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iSub,iMat), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iMat,iBias), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iMat,iDel), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iMat,iIns), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iMat,iSub), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE(fm->get(iMat,iMat), -296.416, 1e-3);
 }
