@@ -11,7 +11,6 @@
 #define _FEATUREMATRIX_H
 
 #include "Alphabet.h"
-#include "FeatureMatrix.h"
 #include <boost/numeric/ublas/matrix.hpp>
 #include <iostream>
 using boost::numeric::ublas::matrix;
