@@ -59,7 +59,7 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     else
       logSizeZx = item->second;
 
-    const LogWeight z = logMass.times(-logSizeZx);
+    const LogWeight z = logMass * (-logSizeZx);
     const LogWeight fW = (yi == 1) ? -z : z;
     funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
     
@@ -79,7 +79,7 @@ void LogLinearBinary::predictPart(const WeightVector& w, Model& model,
     const size_t id = x.getId();
     const LogWeight logMass = model.totalMass(w, x, ypos);
     const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
-    const LogWeight z = logMass.times(-logSizeZx);
+    const LogWeight z = logMass * (-logSizeZx);
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

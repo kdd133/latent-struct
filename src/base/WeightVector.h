@@ -28,10 +28,10 @@ class WeightVector {
     
     void reAlloc(int dim);
     
-    RealWeight innerProd(const FeatureVector<RealWeight>& fv) const;
+    double innerProd(const FeatureVector<RealWeight>& fv) const;
     
     // The inner product with a 0 FeatureVector is defined to be zero.
-    RealWeight innerProd(const FeatureVector<RealWeight>* fv) const;
+    double innerProd(const FeatureVector<RealWeight>* fv) const;
     
     void add(const FeatureVector<RealWeight>& fv, const double scale = 1);
     

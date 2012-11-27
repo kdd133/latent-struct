@@ -24,17 +24,17 @@ class RealWeight {
     
     inline int sign() const { return (int)_sign; }
     
-    inline RealWeight plus(const double d) const { return _val + d; }
-    
-    inline RealWeight times(const double d) const { return _val * d; }
-    
-    inline void plusEquals(const double d) { _val += d; }
-    
-    inline void timesEquals(const double d) { _val *= d; }
-    
     LogWeight convert() const;
     
     operator double() const { return _val; }
+    
+    const RealWeight operator+(const RealWeight& w) const;
+    
+    const RealWeight operator*(const RealWeight& w) const;
+    
+    RealWeight& operator+=(const RealWeight& w);
+    
+    RealWeight& operator*=(const RealWeight& w);
     
     friend RealWeight operator-(const RealWeight& v);
     
@@ -46,12 +46,19 @@ class RealWeight {
     static const double kOne;
     
   private:
+    inline RealWeight plus(const double d) const { return _val + d; }
+    
+    inline RealWeight times(const double d) const { return _val * d; }
+    
+    inline void plusEquals(const double d) { _val += d; }
+    
+    inline void timesEquals(const double d) { _val *= d; }
+    
     double _val;
     
     // Not used in RealWeight, but needed so that we can cast between arrays
     // of RealWeight and LogWeight.
     char _sign;
-    
 };
 
 #endif

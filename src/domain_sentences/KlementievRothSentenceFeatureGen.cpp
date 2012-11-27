@@ -139,7 +139,7 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
           // to count unseen features; we pretend we never saw them
           const int fId = _alphabet->lookup(ss.str(), true);
           if (fId >= 0)
-            sub_pair_counts[fId].plusEquals(RealWeight::kOne);
+            sub_pair_counts[fId] += RealWeight::kOne;
         }
     }
   }

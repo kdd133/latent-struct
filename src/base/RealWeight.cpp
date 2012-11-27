@@ -38,3 +38,21 @@ RealWeight operator-(const RealWeight& v)
 ostream& operator<<(ostream& out, const RealWeight& w) {
   return out << "(" << (int)w._sign << ")" << w._val;
 }
+
+const RealWeight RealWeight::operator+(const RealWeight& w) const {
+  return plus(w);
+}
+
+RealWeight& RealWeight::operator+=(const RealWeight& w) {
+  plusEquals(w);
+  return (*this);
+}
+
+RealWeight& RealWeight::operator*=(const RealWeight& w) {
+  timesEquals(w);
+  return (*this);
+}
+
+const RealWeight RealWeight::operator*(const RealWeight& w) const {
+  return times(w);
+}

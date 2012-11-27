@@ -98,15 +98,29 @@ RealWeight LogWeight::convert() const {
     return RealWeight(-v);
 }
 
-LogWeight::operator double() const {
-  return _sign * _val;
+const LogWeight LogWeight::operator+(const LogWeight& w) const {
+  return plus(w);
 }
 
-LogWeight operator-(const LogWeight& v)
+LogWeight& LogWeight::operator+=(const LogWeight& w) {
+  plusEquals(w);
+  return (*this);
+}
+
+LogWeight& LogWeight::operator*=(const LogWeight& w) {
+  timesEquals(w);
+  return (*this);
+}
+
+const LogWeight LogWeight::operator*(const LogWeight& w) const {
+  return times(w);
+}
+
+LogWeight operator-(const LogWeight& w)
 {
   // The sign refers to the sign in real-space; so, since we're negating in
   // log-space the sign is not flipped. Only the log value is negated.
-  return LogWeight(-v._val, v._sign);
+  return LogWeight(-w._val, w._sign);
 }
 
 ostream& operator<<(ostream& out, const LogWeight& w) {

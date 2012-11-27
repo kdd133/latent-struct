@@ -271,9 +271,9 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
     if (fv.isDense()) {
       for (size_t row = 0; row < getLength(); ++row) {
         for (size_t col = 0; col < fv.getLength(); ++col) {
-          const LogWeight prod = getValueAtLocation(row).times(
-              fv.getValueAtLocation(col));
-          fm->assign(row, col, prod.value());
+          const LogWeight prod = getValueAtLocation(row) * 
+              fv.getValueAtLocation(col);
+          fm->assign(row, col, prod);
         }
       }
     }
@@ -281,8 +281,8 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
       for (size_t row = 0; row < getLength(); ++row) {
         for (size_t j = 0; j < fv.getNumEntries(); ++j) {
           const int col = fv._indices[j];
-          const LogWeight prod = _values[row].times(fv.getValueAtIndex(col));
-          fm->assign(row, col, prod.value());
+          const LogWeight prod = _values[row] * fv.getValueAtIndex(col);
+          fm->assign(row, col, prod);
         }
       }
     }
@@ -296,9 +296,9 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
         for (size_t j = 0; j < fv.getNumEntries(); ++j) {
           const int row = _indices[i];
           const int col = fv._indices[j];
-          const LogWeight prod = getValueAtIndex(row).times(fv.getValueAtIndex(
-              col));
-          fm->assign(row, col, prod.value());
+          const LogWeight prod = getValueAtIndex(row) * fv.getValueAtIndex(
+              col);
+          fm->assign(row, col, prod);
         }
       }
     }
@@ -400,16 +400,16 @@ void FeatureVector<Weight>::addTo(shared_array<Weight>& denseValues, int len,
   assert(len >= _length);
   if (isDense()) {
     for (int i = 0; i < _entries; i++)
-      denseValues[i].plusEquals(_values[i].times(scale));
+      denseValues[i] += (_values[i] * scale);
   }
   else if (isBinary()) { // binary-valued, sparse vector
-    scale.timesEquals(_scaleFactor);
+    scale *= _scaleFactor;
     for (int i = 0; i < _entries; i++)
-      denseValues[_indices[i]].plusEquals(scale);
+      denseValues[_indices[i]] += scale;
   }
   else {
     for (int i = 0; i < _entries; i++) // real-valued, sparse vector
-      denseValues[_indices[i]].plusEquals(_values[i].times(scale));
+      denseValues[_indices[i]] += (_values[i] * scale);
   }
 }
 
@@ -420,17 +420,17 @@ void FeatureVector<Weight>::addTo(unordered_map<int,Weight>& featureCounts,
     return;
   assert(!isDense()); // pointless to add a dense vector to a sparse vector
   if (isBinary()) { // binary-valued, sparse vector
-    scale.timesEquals(_scaleFactor);
+    scale *= _scaleFactor;
     if (scale == Weight::kZero)
       return;
     for (int i = 0; i < _entries; i++)
-      featureCounts[_indices[i]].plusEquals(scale);
+      featureCounts[_indices[i]] += scale;
   }
   else {
     for (int i = 0; i < _entries; i++) { // real-valued, sparse vector
-      const Weight increment = _values[i].times(scale);
+      const Weight increment = _values[i] * scale;
       if (increment != Weight::kZero)
-        featureCounts[_indices[i]].plusEquals(increment);
+        featureCounts[_indices[i]] += increment;
     }
   }
 }
@@ -468,7 +468,7 @@ void FeatureVector<Weight>::plusEquals(const double* dense, int len,
   assert(!(isBinary() || !isDense()));
   assert(_length == len);
   for (int i = 0; i < _entries; i++)
-    _values[i].plusEquals(Weight(dense[i]).times(scale));
+    _values[i] += (Weight(dense[i]) * (Weight)scale);
 }
 
 template<>
@@ -482,7 +482,7 @@ template <typename Weight>
 void FeatureVector<Weight>::plusEquals(const Weight amount) {
   assert(!isBinary());
   for (int i = 0; i < _entries; i++)
-    _values[i].plusEquals(amount);
+    _values[i] += amount;
 }
 
 template <typename Weight>
@@ -491,10 +491,10 @@ void FeatureVector<Weight>::timesEquals(const Weight amount) {
   // update the scale factor, which is subsequently used in, e.g.,
   // getValueAtIndex(). For real vectors, we explictly multiply the values.
   if (isBinary())
-    _scaleFactor.timesEquals(amount);
+    _scaleFactor *= amount;
   else {
     for (int i = 0; i < _entries; i++)
-      _values[i].timesEquals(amount);
+      _values[i] *= amount;
   }
 }
 

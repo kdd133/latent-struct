@@ -97,12 +97,12 @@ public:
    */
   void collectSum(const RingInfo& toAdd, const Ring& ring) {
     if (ring == RingLog)
-      _score.plusEquals(toAdd.score());
+      _score += toAdd.score();
     else if (ring == RingViterbi)
       _score = max(_score, toAdd.score());
     else if (ring == RingExpectation) {
       // <p,r> = <p1+p2, r1+r2>
-      _score.plusEquals(toAdd.score());
+      _score += toAdd.score();
       toAdd.fv()->addTo(*_fv);
     }
     else
@@ -116,7 +116,7 @@ public:
    */
   void collectProd(const RingInfo& toProd, const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
-      _score.timesEquals(toProd.score());
+      _score *= toProd.score();
     else if (ring == RingExpectation) {
       // <p,r> = <p1p2, p1r2 + p2r1>
       
@@ -127,7 +127,7 @@ public:
       r2.addTo(*_fv);
     
       // p1p2
-      _score.timesEquals(toProd.score());
+      _score *= toProd.score();
     }
     else
       assert(0);

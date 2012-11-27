@@ -50,7 +50,7 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
       // Note: The last argument is false b/c we want unnormalized features.
       mass[y] = model.expectedFeatures(w, feats[y], xi, y, false);
       feats[y].addTo(featsTotal);
-      massTotal.plusEquals(mass[y]);
+      massTotal += mass[y];
     }
     
     // Normalize

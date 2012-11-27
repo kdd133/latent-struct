@@ -61,7 +61,7 @@ void LogLinearBinaryUnscaled::predictPart(const WeightVector& w, Model& model,
     const size_t id = x.getId();
     const LogWeight logMass = model.totalMass(w, x, ypos);
     const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
-    const LogWeight z = logMass.times(-logSizeZx);
+    const LogWeight z = logMass * (-logSizeZx);
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

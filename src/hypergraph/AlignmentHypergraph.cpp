@@ -267,7 +267,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         // Compute: xHat = xHat + keBar*xe
         //    where xe = pe*re
         FeatureVector<LogWeight>& re = fv; // Interpret fv as re in this case
-        pe.timesEquals(keBar.score());
+        pe *= keBar.score();
         re.addTo(fvExp, pe);
       }
       else {
@@ -382,7 +382,7 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
       LogWeight pathScore = e->getWeight();
       
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        pathScore.timesEquals(chart[u->getId()].score);
+        pathScore *= chart[u->getId()].score;
       
       Entry& nodeEntry = chart[v->getId()];
       if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
@@ -400,7 +400,7 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
     v = e->getChildren().front();
   }
   
-  const double pathScore = chart[_root->getId()].score.value();
+  const double pathScore = chart[_root->getId()].score;
   delete[] chart;
   return pathScore;
 }

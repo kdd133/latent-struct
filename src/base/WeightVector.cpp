@@ -39,19 +39,19 @@ void WeightVector::reAlloc(int dim) {
   zero();
 }
 
-RealWeight WeightVector::innerProd(const FeatureVector<RealWeight>& fv) const {
+double WeightVector::innerProd(const FeatureVector<RealWeight>& fv) const {
   if (_dim == 0)
     return 0.0;
-  RealWeight prod = 0;
+  double prod = 0;
   for (int i = 0; i < fv.getNumEntries(); i++) {
     const int index = fv.getIndexAtLocation(i);
     assert(index >= 0 && index < _dim);
-    prod.plusEquals(fv.getValueAtLocation(i).times(_weights[index]));
+    prod += (fv.getValueAtLocation(i) * (RealWeight)_weights[index]);
   }
   return prod;
 }
 
-RealWeight WeightVector::innerProd(const FeatureVector<RealWeight>* fv) const {
+double WeightVector::innerProd(const FeatureVector<RealWeight>* fv) const {
   if (fv == 0)
     return 0.0;
   return innerProd(*fv);

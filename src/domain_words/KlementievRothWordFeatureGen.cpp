@@ -166,14 +166,14 @@ FeatureVector<RealWeight>* KlementievRothWordFeatureGen::getFeatures(
         // want to count unseen features; so, we pretend we never saw them.
         int fId = _alphabet->lookup(prefix.str() + phrasePair.str(), true);
         if (fId >= 0)
-          sub_pair_counts[fId].plusEquals(RealWeight::kOne);
+          sub_pair_counts[fId] += RealWeight::kOne;
           
         if (_regexEnabled) {
           const string temp = regex_replace(phrasePair.str(), _regConsonant, C);
           const string VC = regex_replace(temp, _regVowel, V);
           fId = _alphabet->lookup(prefix.str() + VC, true);
           if (fId >= 0)
-            sub_pair_counts[fId].plusEquals(RealWeight::kOne);
+            sub_pair_counts[fId] += RealWeight::kOne;
         }
       }
   }

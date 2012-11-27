@@ -26,20 +26,20 @@ class LogWeight {
     inline double value() const { return _val; }
     
     inline int sign() const { return (int)_sign; }
-
-    LogWeight plus(const LogWeight d) const;
-    
-    LogWeight times(const LogWeight d) const;
-
-    void plusEquals(const LogWeight d);
-    
-    void timesEquals(const LogWeight d);
     
     RealWeight convert() const;
     
-    operator double() const;
+    operator double() const { return _val; }
     
-    friend LogWeight operator-(const LogWeight& v);
+    const LogWeight operator+(const LogWeight& w) const;
+    
+    const LogWeight operator*(const LogWeight& w) const;
+    
+    LogWeight& operator+=(const LogWeight& w);
+    
+    LogWeight& operator*=(const LogWeight& w);
+    
+    friend LogWeight operator-(const LogWeight& w);
     
     friend ostream& operator<<(ostream& out, const LogWeight& w);
     
@@ -49,10 +49,17 @@ class LogWeight {
     static const double kOne;
     
   private:
+    LogWeight plus(const LogWeight d) const;
+    
+    LogWeight times(const LogWeight d) const;
+
+    void plusEquals(const LogWeight d);
+    
+    void timesEquals(const LogWeight d);
+    
     double _val;
     
     char _sign; // set to 1 if the corresponding real value is positive; or -1
-    
 };
 
 #endif
