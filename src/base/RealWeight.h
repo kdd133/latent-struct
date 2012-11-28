@@ -18,11 +18,9 @@ class LogWeight;
 class RealWeight {
 
   public:
-    RealWeight(double value = kZero) : _val(value), _sign(0) {}
+    RealWeight(double value = kZero) : _val(value) {}
     
     inline double value() const { return _val; }
-    
-    inline int sign() const { return (int)_sign; }
     
     LogWeight convert() const;
     
@@ -55,10 +53,6 @@ class RealWeight {
     inline void timesEquals(const double d) { _val *= d; }
     
     double _val;
-    
-    // Not used in RealWeight, but needed so that we can cast between arrays
-    // of RealWeight and LogWeight.
-    char _sign;
 };
 
 #endif

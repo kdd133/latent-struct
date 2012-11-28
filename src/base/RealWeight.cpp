@@ -22,12 +22,9 @@ LogWeight RealWeight::convert() const {
     return LogWeight(LogWeight::kOne);
   else if (_val == RealWeight::kZero)
     return LogWeight(LogWeight::kZero);
-  else {
-    if (_val > 0)
-      return LogWeight(log(_val));
-    else
-      return LogWeight(log(-_val), -1);
-  }
+
+  assert(_val > 0);
+  return LogWeight(log(_val));
 }
 
 RealWeight operator-(const RealWeight& v)
@@ -36,7 +33,7 @@ RealWeight operator-(const RealWeight& v)
 }
 
 ostream& operator<<(ostream& out, const RealWeight& w) {
-  return out << "(" << (int)w._sign << ")" << w._val;
+  return out << w._val;
 }
 
 const RealWeight RealWeight::operator+(const RealWeight& w) const {

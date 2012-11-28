@@ -30,42 +30,23 @@ LogWeight LogWeight::plus(const LogWeight w) const {
   else {
     double la; // natural log of a
     double lb; // natural log of b
-    char sa;   // sign bit for a
-    char sb;   // sign bit for b
     // Choose a and b s.t. log(a) >= log(b).
     if (_val >= w._val) {
       la = _val;
       lb = w._val;
-      sa = _sign;
-      sb = w._sign;
     }
     else {
       la = w._val;
       lb = _val;
-      sa = w._sign;
-      sb = _sign;
     }
     const double x = exp(lb - la);
-    if (sa > 0) {
-      if (sb > 0)
-        return LogWeight(la + Utility::log1Plus(x), 1);
-      else // sb < 0
-        return LogWeight(la + log(1.0F - x), 1);
-    }
-    else { // sa < 0
-      if (sb > 0)
-        return LogWeight(la + log(1.0F - x), -1);
-      else { // sb < 0
-        return LogWeight(la + Utility::log1Plus(x), -1);
-      }
-    }
+    return LogWeight(la + Utility::log1Plus(x));
   }
 }
 
 void LogWeight::plusEquals(const LogWeight w) {
   const LogWeight result = this->plus(w);
   _val = result._val;
-  _sign = result._sign;
 }
 
 LogWeight LogWeight::times(const LogWeight w) const {
@@ -74,13 +55,12 @@ LogWeight LogWeight::times(const LogWeight w) const {
   else if (w._val == kZero)
     return w;
   else
-    return LogWeight(_val + w._val, _sign * w._sign);
+    return LogWeight(_val + w._val);
 }
 
 void LogWeight::timesEquals(const LogWeight w) {
   const LogWeight result = this->times(w);
   _val = result._val;
-  _sign = result._sign;
 }
 
 RealWeight LogWeight::convert() const {
@@ -92,10 +72,7 @@ RealWeight LogWeight::convert() const {
   else
     v = exp(_val);
     
-  if (_sign)
-    return RealWeight(v);
-  else
-    return RealWeight(-v);
+  return RealWeight(v);
 }
 
 const LogWeight LogWeight::operator+(const LogWeight& w) const {
@@ -120,9 +97,9 @@ LogWeight operator-(const LogWeight& w)
 {
   // The sign refers to the sign in real-space; so, since we're negating in
   // log-space the sign is not flipped. Only the log value is negated.
-  return LogWeight(-w._val, w._sign);
+  return LogWeight(-w._val);
 }
 
 ostream& operator<<(ostream& out, const LogWeight& w) {
-  return out << "(" << (int)w._sign << ")" << w._val;
+  return out << w._val;
 }

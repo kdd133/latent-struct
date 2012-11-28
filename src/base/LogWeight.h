@@ -19,13 +19,11 @@ class RealWeight;
 class LogWeight {
 
   public:
-    LogWeight(double value = kZero, short s = 1) : _val(value), _sign(s) {}
+    LogWeight(double value = kZero) : _val(value) {}
     
-    LogWeight(fst::LogWeightTpl<double> w) : _val(-w.Value()), _sign(1) {}
+    LogWeight(fst::LogWeightTpl<double> w) : _val(-w.Value()) {}
     
     inline double value() const { return _val; }
-    
-    inline int sign() const { return (int)_sign; }
     
     RealWeight convert() const;
     
@@ -58,8 +56,6 @@ class LogWeight {
     void timesEquals(const LogWeight d);
     
     double _val;
-    
-    char _sign; // set to 1 if the corresponding real value is positive; or -1
 };
 
 #endif
