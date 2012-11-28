@@ -18,6 +18,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include <boost/regex.hpp>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <tr1/unordered_map>

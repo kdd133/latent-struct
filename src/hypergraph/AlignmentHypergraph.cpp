@@ -24,6 +24,7 @@
 #include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <fstream>
 #include <stack>
 #include <tr1/unordered_map>
 #include <vector>

@@ -10,7 +10,6 @@
 #ifndef _LOGWEIGHT_H
 #define _LOGWEIGHT_H
 
-#include <fst/float-weight.h>
 #include <ostream>
 using std::ostream;
 
@@ -20,8 +19,6 @@ class LogWeight {
 
   public:
     LogWeight(double value = kZero) : _val(value) {}
-    
-    LogWeight(fst::LogWeightTpl<double> w) : _val(-w.Value()) {}
     
     inline double value() const { return _val; }
     
