@@ -69,12 +69,12 @@ class FeatureVector {
     Weight getValueAtIndex(int location) const;
         
     void addTo(shared_array<Weight>& denseValues, int length,
-        Weight scale = Weight::kOne) const;
+        Weight scale = Weight(1)) const;
     
-    void addTo(FeatureVector& fv, Weight scale = Weight::kOne) const;
+    void addTo(FeatureVector& fv, Weight scale = Weight(1)) const;
     
     void addTo(unordered_map<int,Weight>& featureCounts,
-      Weight scale = Weight::kOne) const;
+      Weight scale = Weight(1)) const;
     
     // Interpret dense as real weights.
     void plusEquals(const double* dense, int len, double scale = 1.0);
@@ -140,7 +140,7 @@ template <typename Weight>
 FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
     shared_array<Weight> values, int entries, bool copy) :
   _indices(indices), _values(values), _entries(entries), _length(0),
-    _scaleFactor(Weight::kOne), _forcedBinary(false), _forcedDense(false),
+    _scaleFactor(Weight(1)), _forcedBinary(false), _forcedDense(false),
     _allocatedEntries(entries) {
   if (isDense()) { // dense vector
     _length = _entries;
@@ -173,7 +173,7 @@ FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
   _indices(0), _values(0), _entries(length), _length(length),
-    _scaleFactor(Weight::kOne), _forcedBinary(false), _forcedDense(false),
+    _scaleFactor(Weight(1)), _forcedBinary(false), _forcedDense(false),
     _allocatedEntries(length) {
   if (length > 0)
     _values.reset(new Weight[length]);
@@ -219,7 +219,7 @@ template <typename Weight>
 inline bool FeatureVector<Weight>::reinit() {
   _entries = 0;
   _length = 0;
-  _scaleFactor = Weight::kOne;
+  _scaleFactor = Weight(1);
   _forcedBinary = false;
   _forcedDense = false;
   return true;
@@ -273,7 +273,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
         for (size_t col = 0; col < fv.getLength(); ++col) {
           const LogWeight prod = getValueAtLocation(row) * 
               fv.getValueAtLocation(col);
-          fm->assign(row, col, prod);
+          fm->assign(row, col, prod.toDouble());
         }
       }
     }
@@ -282,7 +282,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
         for (size_t j = 0; j < fv.getNumEntries(); ++j) {
           const int col = fv._indices[j];
           const LogWeight prod = _values[row] * fv.getValueAtIndex(col);
-          fm->assign(row, col, prod);
+          fm->assign(row, col, prod.toDouble());
         }
       }
     }
@@ -298,7 +298,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
           const int col = fv._indices[j];
           const LogWeight prod = getValueAtIndex(row) * fv.getValueAtIndex(
               col);
-          fm->assign(row, col, prod);
+          fm->assign(row, col, prod.toDouble());
         }
       }
     }
@@ -387,7 +387,7 @@ Weight FeatureVector<Weight>::getValueAtIndex(int index) const {
   if (location == -1) {
     // A missing entry in a sparse vector implies the weight is zero for this
     // feature.
-    return Weight::kZero;
+    return Weight(0);
   }
   assert(location >= 0 && location < _entries);
   return getValueAtLocation(location);
@@ -421,7 +421,7 @@ void FeatureVector<Weight>::addTo(unordered_map<int,Weight>& featureCounts,
   assert(!isDense()); // pointless to add a dense vector to a sparse vector
   if (isBinary()) { // binary-valued, sparse vector
     scale *= _scaleFactor;
-    if (scale == Weight::kZero)
+    if (scale == Weight(0))
       return;
     for (int i = 0; i < _entries; i++)
       featureCounts[_indices[i]] += scale;
@@ -429,7 +429,7 @@ void FeatureVector<Weight>::addTo(unordered_map<int,Weight>& featureCounts,
   else {
     for (int i = 0; i < _entries; i++) { // real-valued, sparse vector
       const Weight increment = _values[i] * scale;
-      if (increment != Weight::kZero)
+      if (increment != Weight(0))
         featureCounts[_indices[i]] += increment;
     }
   }
@@ -542,10 +542,10 @@ void FeatureVector<Weight>::forceDense(bool state) {
 template <typename Weight>
 void FeatureVector<Weight>::zero() {
   if (isBinary())
-    _scaleFactor = Weight::kZero;
+    _scaleFactor = Weight(0);
   else {
     for (int i = 0; i < _entries; i++)
-      _values[i] = Weight(Weight::kZero);
+      _values[i] = Weight(0);
   }
 }
 
@@ -554,7 +554,7 @@ ostream& operator<<(ostream& out, const FeatureVector<Weight>& fv) {
   if (fv.isDense()) {
     bool allZero = true;
     for (int i = 0; i < fv._entries; i++) {
-      if (fv._values[i] != Weight::kZero) { // skip zero entries
+      if (fv._values[i] != Weight(0)) { // skip zero entries
         out << i << " " << fv._values[i] << endl;
         if (allZero)
           allZero = false;
@@ -588,7 +588,7 @@ FeatureVector<B> fvConvert(const FeatureVector<A>& source,
     fv._values.reset(); // i.e., set values to 0
   }
   else {
-    fv._scaleFactor = B::kOne;
+    fv._scaleFactor = B(1);
     if (copy)
       fv._values.reset(new B[fv._entries]);
     else

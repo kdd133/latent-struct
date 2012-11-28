@@ -89,12 +89,12 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   
   // Check that the Viterbi score is correct.
   RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
-  BOOST_CHECK_CLOSE(viterbiScore.value(), -300, 1e-8);
+  BOOST_CHECK_CLOSE(viterbiScore.toDouble(), -300, 1e-8);
   
   FeatureVector<RealWeight> fv(d, true);
   BOOST_REQUIRE(!fv.isDense());
   RealWeight maxScore = model->maxFeatures(W, fv, *pair, label, true);
-  BOOST_CHECK_CLOSE(maxScore.value(), viterbiScore.value(), 1e-8);
+  BOOST_CHECK_CLOSE(maxScore.toDouble(), viterbiScore.toDouble(), 1e-8);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);
@@ -102,11 +102,11 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that values in the max-scoring feature vector are correct.  
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iIns).value(), 3, 1e-4);
-  BOOST_CHECK_SMALL(fv.getValueAtIndex(iDel).value(), 1e-4);
-  BOOST_CHECK_SMALL(fv.getValueAtIndex(iSub).value(), 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iMat).value(), 6, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iBias).value(), 1, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iIns).toDouble(), 3, 1e-4);
+  BOOST_CHECK_SMALL(fv.getValueAtIndex(iDel).toDouble(), 1e-4);
+  BOOST_CHECK_SMALL(fv.getValueAtIndex(iSub).toDouble(), 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iMat).toDouble(), 6, 1e-4);
+  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iBias).toDouble(), 1, 1e-4);
   
   // Check that the max-scoring alignment is correct.
   stringstream alignmentStr;

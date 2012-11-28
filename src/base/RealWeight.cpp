@@ -13,18 +13,15 @@
 #include "LogWeight.h"
 #include "RealWeight.h"
 
-const double RealWeight::kZero = 0.0;
-
-const double RealWeight::kOne = 1.0;
 
 LogWeight RealWeight::convert() const {
-  if (_val == RealWeight::kOne)
-    return LogWeight(LogWeight::kOne);
-  else if (_val == RealWeight::kZero)
-    return LogWeight(LogWeight::kZero);
+  if (_val == 1)
+    return LogWeight(1);
+  else if (_val == 0)
+    return LogWeight(0);
 
   assert(_val > 0);
-  return LogWeight(log(_val));
+  return LogWeight(_val);
 }
 
 RealWeight operator-(const RealWeight& v)
@@ -52,4 +49,12 @@ RealWeight& RealWeight::operator*=(const RealWeight& w) {
 
 const RealWeight RealWeight::operator*(const RealWeight& w) const {
   return times(w);
+}
+
+bool operator==(const RealWeight& a, const RealWeight& b) {
+  return a._val == b._val;
+}
+
+bool operator!=(const RealWeight& a, const RealWeight& b) {
+  return a._val != b._val;
 }

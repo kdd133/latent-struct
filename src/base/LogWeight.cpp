@@ -7,26 +7,39 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include <assert.h>
-#include <cmath>
-#include <limits>
-#include <ostream>
-using namespace std;
 #include "LogWeight.h"
 #include "RealWeight.h"
 #include "Utility.h"
+#include <assert.h>
+#include <cmath>
+#include <ostream>
+using namespace std;
 
-const double LogWeight::kZero = -numeric_limits<double>::infinity();
+LogWeight::LogWeight(double value) {
+  if (value < 0)
+    _val = value;
+  else
+    _val = log(value);
+}
 
-const double LogWeight::kOne = 0.0;
+LogWeight::LogWeight(const LogWeight& from) : _val(from._val) {
+}
+
+LogWeight& LogWeight::operator=(const LogWeight& from) {
+  if (this == &from) // Check for self-assignment
+    return (*this);
+  _val = from._val;
+  return (*this);
+}
 
 // See Table 3 in Li & Eisner paper titled:
 // "First- and Second-Order Expectation Semirings with Applications..."
-LogWeight LogWeight::plus(const LogWeight w) const {
-  if (_val == kZero)
+LogWeight LogWeight::plus(const LogWeight& w) const {
+  const LogWeight zero(0);
+  if ((*this) == zero)
     return w;
-  else if (w._val == kZero)
-    return *this;
+  else if (w == zero)
+    return (*this);
   else {
     double la; // natural log of a
     double lb; // natural log of b
@@ -40,35 +53,40 @@ LogWeight LogWeight::plus(const LogWeight w) const {
       lb = _val;
     }
     const double x = exp(lb - la);
-    return LogWeight(la + Utility::log1Plus(x));
+    
+    LogWeight result;
+    result._val = la + Utility::log1Plus(x);
+    return result;
   }
 }
 
-void LogWeight::plusEquals(const LogWeight w) {
+void LogWeight::plusEquals(const LogWeight& w) {
   const LogWeight result = this->plus(w);
   _val = result._val;
 }
 
-LogWeight LogWeight::times(const LogWeight w) const {
-  if (_val == kZero)
-    return *this;
-  else if (w._val == kZero)
-    return w;
-  else
-    return LogWeight(_val + w._val);
+LogWeight LogWeight::times(const LogWeight& w) const {
+  const LogWeight zero(0);
+  if ((*this) == zero || w == zero)
+    return zero;
+  else {
+    LogWeight result;
+    result._val = _val + w._val;
+    return result;
+  }
 }
 
-void LogWeight::timesEquals(const LogWeight w) {
+void LogWeight::timesEquals(const LogWeight& w) {
   const LogWeight result = this->times(w);
   _val = result._val;
 }
 
 RealWeight LogWeight::convert() const {
   double v;
-  if (_val == LogWeight::kOne)
-    v = RealWeight::kOne;
-  else if (_val == LogWeight::kZero)
-    v = RealWeight::kZero;
+  if ((*this) == LogWeight(1))
+    v = 1;
+  else if ((*this) == LogWeight(0))
+    v = 0;
   else
     v = exp(_val);
     
@@ -95,11 +113,19 @@ const LogWeight LogWeight::operator*(const LogWeight& w) const {
 
 LogWeight operator-(const LogWeight& w)
 {
-  // The sign refers to the sign in real-space; so, since we're negating in
-  // log-space the sign is not flipped. Only the log value is negated.
-  return LogWeight(-w._val);
+  LogWeight negated = w;
+  negated._val *= -1;
+  return negated;
 }
 
 ostream& operator<<(ostream& out, const LogWeight& w) {
   return out << w._val;
+}
+
+bool operator==(const LogWeight& a, const LogWeight& b) {
+  return a._val == b._val;
+}
+
+bool operator!=(const LogWeight& a, const LogWeight& b) {
+  return a._val != b._val;
 }

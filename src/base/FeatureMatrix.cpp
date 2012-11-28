@@ -16,20 +16,20 @@ using boost::numeric::ublas::matrix;
 
 FeatureMatrix::FeatureMatrix(int m) {
   assert(m > 0);
-  _A = matrix<double>(m, m);
+  _A = matrix<LogWeight>(m, m);
   
   for (size_t i = 0; i < m; ++i)
     for (size_t j = 0; j < m; ++j)
-      _A(i,j) = LogWeight::kZero;
+      _A(i,j) = 0;
 }
 
-void FeatureMatrix::assign(int row, int col, double value) {
+void FeatureMatrix::assign(int row, int col, LogWeight value) {
   assert(row < _A.size1());
   assert(col < _A.size2());
   _A(row, col) = value;
 }
 
-double FeatureMatrix::get(int row, int col) const {
+LogWeight FeatureMatrix::get(int row, int col) const {
   assert(row < _A.size1());
   assert(col < _A.size2());
   return _A(row, col);
@@ -48,7 +48,7 @@ void FeatureMatrix::logAppend(const FeatureMatrix& fm) {
   }
 }
 
-void FeatureMatrix::timesEquals(double value) {
+void FeatureMatrix::timesEquals(const LogWeight& value) {
   for (size_t i = 0; i < _A.size1(); ++i) {
     for (size_t j = 0; j < _A.size2(); ++j) {
       LogWeight current(_A(i,j));

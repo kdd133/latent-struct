@@ -24,6 +24,7 @@
 #include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <cmath>
 #include <fstream>
 #include <stack>
 #include <tr1/unordered_map>
@@ -199,9 +200,13 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
       RingInfo k(*e, ring);
       // For each antecedent node...
-      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+//        cout << "betas[" << u->getId() << "]=" << betas[u->getId()].score() << endl;
         k.collectProd(betas[u->getId()], ring);
+      }
+//      cout << endl << "k.score(): " << k.score() << endl; if (k.fv()) cout << "k.fv():" << endl << *k.fv();
       betas[parentId].collectSum(k, ring);
+//      cout << "beta.score(): " << betas[parentId].score() << endl; if (betas[parentId].fv()) cout << "beta.fv():" << endl << *betas[parentId].fv();
     }
   }
   return betas;
@@ -372,10 +377,10 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
   
   Entry* chart = new Entry[_nodes.size()];
   for (size_t i = 0; i < _nodes.size(); ++i) {
-    chart[i].score = LogWeight::kZero;
+    chart[i].score = LogWeight(0);
     chart[i].backPointer = 0;
   }
-  chart[_goal->getId()].score = LogWeight::kOne;
+  chart[_goal->getId()].score = LogWeight(1);
   
   // For each node, in reverse topological order...
   BOOST_FOREACH(const Hypernode* v, revTopOrder) {  
@@ -386,7 +391,8 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
         pathScore *= chart[u->getId()].score;
       
       Entry& nodeEntry = chart[v->getId()];
-      if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
+      if (!nodeEntry.backPointer || nodeEntry.score.toDouble() <
+          pathScore.toDouble()) {
         nodeEntry.score = pathScore;
         nodeEntry.backPointer = e;
       }
@@ -401,7 +407,7 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
     v = e->getChildren().front();
   }
   
-  const double pathScore = chart[_root->getId()].score;
+  const double pathScore = chart[_root->getId()].score.toDouble();
   delete[] chart;
   return pathScore;
 }
@@ -550,7 +556,7 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   list<const Hypernode*> children;
   children.push_back(onlyChild);
   const int edgeId = _edges.size();
-  const double edgeWeight = w.innerProd(fv);
+  const double edgeWeight = exp(w.innerProd(fv));
 //  _fst->AddArc(sourceId, arc);
   Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, fv);
   parent.addEdge(edge);

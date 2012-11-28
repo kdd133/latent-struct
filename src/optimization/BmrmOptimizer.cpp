@@ -98,7 +98,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     // a ptr_vector of column vectors.
     ublas::vector<double>* g_t = new ublas::vector<double>(d);
     for (size_t i = 0; i < d; i++)
-      (*g_t)(i) = grad_t.getValueAtLocation(i);
+      (*g_t)(i) = grad_t.getValueAtLocation(i).toDouble();
     grads.push_back(g_t);
     
     const size_t bs = grads.size(); // The current bundle size.

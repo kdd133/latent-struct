@@ -50,8 +50,8 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     RealWeight scoreMax(-numeric_limits<double>::infinity());
     Label yMax = 0;
     for (Label y = 0; y < k; y++) {
-      score[y] = Utility::delta(yi,y) + model.maxFeatures(w, feats[y], xi, y);
-      if (score[y] > scoreMax) {
+      score[y] = Utility::delta(yi,y) + model.maxFeatures(w, feats[y], xi, y).toDouble();
+      if (score[y].toDouble() > scoreMax.toDouble()) {
         scoreMax = score[y];
         yMax = y;
       }
@@ -59,7 +59,7 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     
     // Update the gradient and function value.
     feats[yMax].addTo(gradFv);    
-    funcVal += score[yMax];
+    funcVal += score[yMax].toDouble();
     
     // Subtract the observed features and score for the correct label yi.
     bool own = false;
@@ -115,7 +115,7 @@ void MaxMarginMulti::predictPart(const WeightVector& w, Model& model,
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double yScore = model.viterbiScore(w, x, y);
+      const double yScore = model.viterbiScore(w, x, y).toDouble();
       scores.setScore(id, y, yScore);
     }
   }

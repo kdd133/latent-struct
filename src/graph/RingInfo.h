@@ -29,9 +29,9 @@ private:
 public:
   RingInfo() : _score(0), _fv(0) { }
   
-  RingInfo(double score) : _score(score), _fv(0) { }
+  RingInfo(LogWeight score) : _score(score), _fv(0) { }
   
-  RingInfo(double score, const FeatureVector<LogWeight>* fv) : _score(score),
+  RingInfo(LogWeight score, const FeatureVector<LogWeight>* fv) : _score(score),
       _fv(0) {
     if (fv)
       _fv = new FeatureVector<LogWeight>(*fv);
@@ -99,7 +99,7 @@ public:
     if (ring == RingLog)
       _score += toAdd.score();
     else if (ring == RingViterbi)
-      _score = max(_score, toAdd.score());
+      _score = max(_score.toDouble(), toAdd.score().toDouble());
     else if (ring == RingExpectation) {
       // <p,r> = <p1+p2, r1+r2>
       _score += toAdd.score();
@@ -140,10 +140,10 @@ public:
    */
   static RingInfo one(const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
-      return RingInfo(LogWeight::kOne);
+      return RingInfo(LogWeight(1));
     else {
       assert(ring == RingExpectation);
-      return RingInfo(LogWeight::kOne, new FeatureVector<LogWeight>());
+      return RingInfo(LogWeight(1), new FeatureVector<LogWeight>());
     }
   }
 
@@ -154,10 +154,10 @@ public:
    */
   static RingInfo zero(const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
-      return RingInfo(LogWeight::kZero);
+      return RingInfo(LogWeight(0));
     else {
       assert(ring == RingExpectation);
-      return RingInfo(LogWeight::kZero, new FeatureVector<LogWeight>());
+      return RingInfo(LogWeight(0), new FeatureVector<LogWeight>());
     }
   }
 };

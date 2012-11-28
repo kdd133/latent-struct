@@ -10,6 +10,7 @@
 #ifndef _LOGWEIGHT_H
 #define _LOGWEIGHT_H
 
+#include <assert.h>
 #include <ostream>
 using std::ostream;
 
@@ -18,13 +19,15 @@ class RealWeight;
 class LogWeight {
 
   public:
-    LogWeight(double value = kZero) : _val(value) {}
+    LogWeight(double value = 0);
     
-    inline double value() const { return _val; }
+    LogWeight(const LogWeight& from);
+    
+    LogWeight& operator=(const LogWeight& from);
+    
+    inline double toDouble() const { return _val; }
     
     RealWeight convert() const;
-    
-    operator double() const { return _val; }
     
     const LogWeight operator+(const LogWeight& w) const;
     
@@ -37,20 +40,19 @@ class LogWeight {
     friend LogWeight operator-(const LogWeight& w);
     
     friend ostream& operator<<(ostream& out, const LogWeight& w);
+
+    friend bool operator==(const LogWeight& a, const LogWeight& b);
     
-    
-    static const double kZero;
-    
-    static const double kOne;
+    friend bool operator!=(const LogWeight& a, const LogWeight& b);
     
   private:
-    LogWeight plus(const LogWeight d) const;
+    LogWeight plus(const LogWeight& d) const;
     
-    LogWeight times(const LogWeight d) const;
+    LogWeight times(const LogWeight& d) const;
 
-    void plusEquals(const LogWeight d);
+    void plusEquals(const LogWeight& d);
     
-    void timesEquals(const LogWeight d);
+    void timesEquals(const LogWeight& d);
     
     double _val;
 };

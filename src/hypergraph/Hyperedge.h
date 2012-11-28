@@ -11,9 +11,11 @@
 #define _HYPEREDGE_H
 
 #include "FeatureVector.h"
+#include "LogWeight.h"
+#include <boost/shared_ptr.hpp>
 #include <list>
-using namespace boost;
-using namespace std;
+using boost::shared_ptr;
+using std::list;
 
 class Hypernode;
 class RealWeight;
@@ -21,21 +23,21 @@ class RealWeight;
 class Hyperedge {
 
 public:
-  Hyperedge(int id, const Hypernode& parent, double weight,
+  Hyperedge(int id, const Hypernode& parent, LogWeight weight,
       FeatureVector<RealWeight>* fv = 0) :
     _id(id), _parent(parent), _weight(weight), _fv(fv) { }
   
   Hyperedge(int id, const Hypernode& parent, list<const Hypernode*> children,
-      double weight, FeatureVector<RealWeight>* fv = 0) :
+      LogWeight weight, FeatureVector<RealWeight>* fv = 0) :
     _id(id), _parent(parent), _children(children), _weight(weight), _fv(fv) { }
   
   int getId() const;
   
   const Hypernode& getParent() const;
   
-  void setWeight(double weight);
+  void setWeight(LogWeight weight);
   
-  double getWeight() const;
+  LogWeight getWeight() const;
   
   const list<const Hypernode*>& getChildren() const;
   
@@ -45,7 +47,7 @@ private:
   int _id;
   const Hypernode& _parent;
   list<const Hypernode*> _children;
-  double _weight;
+  LogWeight _weight;
   shared_ptr<FeatureVector<RealWeight> > _fv;
   
 };
@@ -58,11 +60,11 @@ inline const Hypernode& Hyperedge::getParent() const {
   return _parent;
 }
 
-inline void Hyperedge::setWeight(double weight) {
+inline void Hyperedge::setWeight(LogWeight weight) {
   _weight = weight;
 }
 
-inline double Hyperedge::getWeight() const {
+inline LogWeight Hyperedge::getWeight() const {
   return _weight;
 }
 

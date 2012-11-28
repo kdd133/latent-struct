@@ -10,30 +10,32 @@
 #ifndef _FEATUREMATRIX_H
 #define _FEATUREMATRIX_H
 
-#include "Alphabet.h"
 #include <boost/numeric/ublas/matrix.hpp>
 #include <iostream>
 using boost::numeric::ublas::matrix;
+
+class Alphabet;
+class LogWeight;
 
 class FeatureMatrix {
 
 public:
   FeatureMatrix(int m);
 
-  void assign(int row, int col, double value);
+  void assign(int row, int col, const LogWeight v);
   
-  double get(int row, int col) const;
+  LogWeight get(int row, int col) const;
 
   void logAppend(const FeatureMatrix& toAppend);
   
-  void timesEquals(double value);
+  void timesEquals(const LogWeight& v);
   
   void print(std::ostream& out, const Alphabet& alphabet);
   
   void print(std::ostream& out);
   
 private:
-  matrix<double> _A;
+  matrix<LogWeight> _A;
 };
 
 #endif

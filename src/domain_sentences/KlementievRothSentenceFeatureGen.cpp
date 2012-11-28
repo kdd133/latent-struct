@@ -139,7 +139,7 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
           // to count unseen features; we pretend we never saw them
           const int fId = _alphabet->lookup(ss.str(), true);
           if (fId >= 0)
-            sub_pair_counts[fId] += RealWeight::kOne;
+            sub_pair_counts[fId] += RealWeight(1);
         }
     }
   }
@@ -153,7 +153,7 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
     ss << y << FeatureGenConstants::PART_SEP << BiasFeatureGen::kPrefix;
     const int fId = _alphabet->lookup(ss.str(), true);
     if (fId >= 0)
-      sub_pair_counts[fId] = RealWeight(RealWeight::kOne);
+      sub_pair_counts[fId] = RealWeight(1);
   }
   
   // TODO: Add the optional "distance" feature described in Feb. 17, 2011

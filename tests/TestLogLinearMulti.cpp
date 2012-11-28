@@ -73,18 +73,18 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, gradFv.getValueAtLocation(0).value(), 1e-8);
-  BOOST_CHECK_CLOSE(0.71278741450, gradFv.getValueAtLocation(1).value(), 1e-8);
-  BOOST_CHECK_CLOSE(0.69725812519, gradFv.getValueAtLocation(2).value(), 1e-8);
-  BOOST_CHECK_CLOSE(0.30803476795, gradFv.getValueAtLocation(3).value(), 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(0).value(),
-      gradFv.getValueAtLocation(4).value(), 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(1).value(),
-      gradFv.getValueAtLocation(5).value(), 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(2).value(),
-      gradFv.getValueAtLocation(6).value(), 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(3).value(),
-      gradFv.getValueAtLocation(7).value(), 1e-8);
+  BOOST_CHECK_CLOSE(0.23105857863, gradFv.getValueAtLocation(0).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(0.71278741450, gradFv.getValueAtLocation(1).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(0.69725812519, gradFv.getValueAtLocation(2).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(0.30803476795, gradFv.getValueAtLocation(3).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(0).toDouble(),
+      gradFv.getValueAtLocation(4).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(1).toDouble(),
+      gradFv.getValueAtLocation(5).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(2).toDouble(),
+      gradFv.getValueAtLocation(6).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv.getValueAtLocation(3).toDouble(),
+      gradFv.getValueAtLocation(7).toDouble(), 1e-8);
   
   LbfgsOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

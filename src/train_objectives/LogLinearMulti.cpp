@@ -41,7 +41,7 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Pattern& xi = *it->x();
     const Label yi = it->y();
     
-    LogWeight massTotal(LogWeight::kZero);
+    LogWeight massTotal(0);
 
     // Note: feats[y] is initially zeroed out by expectedFeatures() 
     featsTotal.zero();
@@ -63,8 +63,8 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
 
     // Update function value
     // Note: We want the log, which is why we don't convert to RealWeight.
-    funcVal += massTotal;
-    funcVal -= mass[yi];
+    funcVal += massTotal.toDouble();
+    funcVal -= mass[yi].toDouble();
   }
 }
 
@@ -75,7 +75,7 @@ void LogLinearMulti::predictPart(const WeightVector& w, Model& model,
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double yScore = model.totalMass(w, x, y);
+      const double yScore = model.totalMass(w, x, y).toDouble();
       scores.setScore(id, y, yScore);
     }
   }

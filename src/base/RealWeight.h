@@ -18,13 +18,11 @@ class LogWeight;
 class RealWeight {
 
   public:
-    RealWeight(double value = kZero) : _val(value) {}
+    RealWeight(double value = 0) : _val(value) {}
     
-    inline double value() const { return _val; }
+    inline double toDouble() const { return _val; }
     
     LogWeight convert() const;
-    
-    operator double() const { return _val; }
     
     const RealWeight operator+(const RealWeight& w) const;
     
@@ -38,19 +36,18 @@ class RealWeight {
     
     friend ostream& operator<<(ostream& out, const RealWeight& w);
     
+    friend bool operator==(const RealWeight& a, const RealWeight& b);
     
-    static const double kZero;
-    
-    static const double kOne;
+    friend bool operator!=(const RealWeight& a, const RealWeight& b);
     
   private:
-    inline RealWeight plus(const double d) const { return _val + d; }
+    inline RealWeight plus(const RealWeight& d) const { return _val + d._val; }
     
-    inline RealWeight times(const double d) const { return _val * d; }
+    inline RealWeight times(const RealWeight& d) const { return _val * d._val; }
     
-    inline void plusEquals(const double d) { _val += d; }
+    inline void plusEquals(const RealWeight& d) { _val += d._val; }
     
-    inline void timesEquals(const double d) { _val *= d; }
+    inline void timesEquals(const RealWeight& d) { _val *= d._val; }
     
     double _val;
 };

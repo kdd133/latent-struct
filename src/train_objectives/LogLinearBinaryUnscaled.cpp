@@ -43,10 +43,10 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
 
     const LogWeight fW = (yi == 1) ? -logMass : logMass;
-    funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
+    funcVal += Utility::log1Plus(fW.convert().toDouble()); // i.e., exp(fW)
     
     FeatureVector<RealWeight> realFeats = fvConvert(feats, tempVals, d);
-    realFeats.timesEquals(-yi * (1 - Utility::sigmoid(-fW)));
+    realFeats.timesEquals(-yi * (1 - Utility::sigmoid(-fW.toDouble())));
     realFeats.addTo(gradFv);
   }
 }
@@ -62,7 +62,7 @@ void LogLinearBinaryUnscaled::predictPart(const WeightVector& w, Model& model,
     const LogWeight logMass = model.totalMass(w, x, ypos);
     const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
     const LogWeight z = logMass * (-logSizeZx);
-    scores.setScore(id, ypos, z);
-    scores.setScore(id, !ypos, -z);
+    scores.setScore(id, ypos, z.toDouble());
+    scores.setScore(id, !ypos, (-z).toDouble());
   }
 }
