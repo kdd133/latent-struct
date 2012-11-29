@@ -19,12 +19,8 @@ class RealWeight;
 class LogWeight {
 
   public:
-    LogWeight(double value = 0);
-    
-    LogWeight(const LogWeight& from);
-    
-    LogWeight& operator=(const LogWeight& from);
-    
+    LogWeight(double value = 0, bool valueIsLog = false);
+
     inline double toDouble() const { return _val; }
     
     RealWeight convert() const;

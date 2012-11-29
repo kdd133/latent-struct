@@ -15,21 +15,13 @@
 #include <ostream>
 using namespace std;
 
-LogWeight::LogWeight(double value) {
-  if (value < 0)
+LogWeight::LogWeight(double value, bool valueIsLog) {
+  if (valueIsLog)
     _val = value;
-  else
+  else {
+    assert(value >= 0);
     _val = log(value);
-}
-
-LogWeight::LogWeight(const LogWeight& from) : _val(from._val) {
-}
-
-LogWeight& LogWeight::operator=(const LogWeight& from) {
-  if (this == &from) // Check for self-assignment
-    return (*this);
-  _val = from._val;
-  return (*this);
+  }
 }
 
 // See Table 3 in Li & Eisner paper titled:

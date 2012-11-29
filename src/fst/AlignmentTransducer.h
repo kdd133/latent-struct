@@ -415,7 +415,7 @@ LogWeight AlignmentTransducer<Arc>::logPartition() {
       _betas.push_back(ArcWeight::Zero());
   }
   assert(_betas.size() > 0 && (int)_betas.size() == _fst->NumStates());  
-  return LogWeight(-_betas[_fst->Start()].Value());
+  return LogWeight(-_betas[_fst->Start()].Value(), true);
 }
 
 template<typename Arc>
@@ -454,9 +454,9 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
       const Arc& arc = aIt.Value();
       if (!arc.fv)
         continue;
-      LogWeight weight(-arc.weight.Value());
-      weight *= -_alphas[prevstate].Value();
-      weight *= -_betas[arc.nextstate].Value();
+      LogWeight weight(-arc.weight.Value(), true);
+      weight *= LogWeight(-_alphas[prevstate].Value(), true);
+      weight *= LogWeight(-_betas[arc.nextstate].Value(), true);
       fvConvert(*arc.fv, logArray, d).addTo(sparse, weight);
     }
   }
