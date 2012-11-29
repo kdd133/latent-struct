@@ -16,11 +16,7 @@ using boost::numeric::ublas::matrix;
 
 FeatureMatrix::FeatureMatrix(int m) {
   assert(m > 0);
-  _A = matrix<LogWeight>(m, m);
-  
-  for (size_t i = 0; i < m; ++i)
-    for (size_t j = 0; j < m; ++j)
-      _A(i,j) = LogWeight(0);
+  _A = matrix<LogWeight>(m, m); // entries are initialized to 0
 }
 
 void FeatureMatrix::set(int row, int col, LogWeight value) {
