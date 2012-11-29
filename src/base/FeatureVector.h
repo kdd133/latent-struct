@@ -273,7 +273,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
         for (size_t col = 0; col < fv.getLength(); ++col) {
           const LogWeight prod = getValueAtLocation(row) * 
               fv.getValueAtLocation(col);
-          fm->assign(row, col, prod);
+          fm->set(row, col, prod);
         }
       }
     }
@@ -282,7 +282,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
         for (size_t j = 0; j < fv.getNumEntries(); ++j) {
           const int col = fv._indices[j];
           const LogWeight prod = _values[row] * fv.getValueAtIndex(col);
-          fm->assign(row, col, prod);
+          fm->set(row, col, prod);
         }
       }
     }
@@ -298,7 +298,7 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
           const int col = fv._indices[j];
           const LogWeight prod = getValueAtIndex(row) * fv.getValueAtIndex(
               col);
-          fm->assign(row, col, prod);
+          fm->set(row, col, prod);
         }
       }
     }

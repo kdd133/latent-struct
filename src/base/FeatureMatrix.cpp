@@ -23,7 +23,7 @@ FeatureMatrix::FeatureMatrix(int m) {
       _A(i,j) = LogWeight(0);
 }
 
-void FeatureMatrix::assign(int row, int col, LogWeight value) {
+void FeatureMatrix::set(int row, int col, LogWeight value) {
   assert(row < _A.size1());
   assert(col < _A.size2());
   _A(row, col) = value;
@@ -40,10 +40,7 @@ void FeatureMatrix::logAppend(const FeatureMatrix& fm) {
   assert(fm._A.size2() == _A.size2());
   for (size_t i = 0; i < _A.size1(); ++i) {
     for (size_t j = 0; j < _A.size2(); ++j) {
-      LogWeight dest(get(i,j));
-      LogWeight append(fm.get(i,j));
-      dest += append;
-      _A(i,j) = dest;
+      _A(i,j) += fm.get(i,j);
     }
   }
 }
@@ -51,10 +48,7 @@ void FeatureMatrix::logAppend(const FeatureMatrix& fm) {
 void FeatureMatrix::timesEquals(const LogWeight& value) {
   for (size_t i = 0; i < _A.size1(); ++i) {
     for (size_t j = 0; j < _A.size2(); ++j) {
-      LogWeight current(_A(i,j));
-      LogWeight scale(value);
-      current *= scale;
-      _A(i,j) = current;
+      _A(i,j) *= value;
     }
   }
 }

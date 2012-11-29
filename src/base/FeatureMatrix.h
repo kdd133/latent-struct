@@ -22,7 +22,7 @@ class FeatureMatrix {
 public:
   FeatureMatrix(int m);
 
-  void assign(int row, int col, const LogWeight v);
+  void set(int row, int col, const LogWeight v);
   
   LogWeight get(int row, int col) const;
 
