@@ -289,8 +289,8 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         pesese->timesEquals(keBar.score()); // pt
         assert(keBar.fv());
         shared_ptr<FeatureMatrix> rs = keBar.fv()->outerProd(pese, d); // rs
-        fmExp->logAppend(*pesese);
-        fmExp->logAppend(*rs);
+        fmExp->append(*pesese);
+        fmExp->append(*rs);
       }
     }
   }

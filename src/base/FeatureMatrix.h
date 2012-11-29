@@ -26,7 +26,7 @@ public:
   
   LogWeight get(int row, int col) const;
 
-  void logAppend(const FeatureMatrix& toAppend);
+  void append(const FeatureMatrix& toAppend);
   
   void timesEquals(const LogWeight& v);
   

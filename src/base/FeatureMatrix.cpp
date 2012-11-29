@@ -35,22 +35,14 @@ LogWeight FeatureMatrix::get(int row, int col) const {
   return _A(row, col);
 }
 
-void FeatureMatrix::logAppend(const FeatureMatrix& fm) {
+void FeatureMatrix::append(const FeatureMatrix& fm) {
   assert(fm._A.size1() == _A.size1());
   assert(fm._A.size2() == _A.size2());
-  for (size_t i = 0; i < _A.size1(); ++i) {
-    for (size_t j = 0; j < _A.size2(); ++j) {
-      _A(i,j) += fm.get(i,j);
-    }
-  }
+  _A += fm._A;
 }
 
 void FeatureMatrix::timesEquals(const LogWeight& value) {
-  for (size_t i = 0; i < _A.size1(); ++i) {
-    for (size_t j = 0; j < _A.size2(); ++j) {
-      _A(i,j) *= value;
-    }
-  }
+  _A *= value;
 }
 
 void FeatureMatrix::print(std::ostream& out, const Alphabet& alphabet) {
