@@ -15,12 +15,6 @@
 
 
 LogWeight RealWeight::convert() const {
-  if (_val == 1)
-    return LogWeight(1);
-  else if (_val == 0)
-    return LogWeight(0);
-
-  assert(_val > 0);
   return LogWeight(_val);
 }
 
@@ -57,4 +51,12 @@ bool operator==(const RealWeight& a, const RealWeight& b) {
 
 bool operator!=(const RealWeight& a, const RealWeight& b) {
   return a._val != b._val;
+}
+
+bool operator<(const RealWeight& a, const RealWeight& b) {
+  return a._val < b._val;
+}
+
+bool operator>(const RealWeight& a, const RealWeight& b) {
+  return a._val > b._val;
 }

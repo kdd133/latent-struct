@@ -391,8 +391,7 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
         pathScore *= chart[u->getId()].score;
       
       Entry& nodeEntry = chart[v->getId()];
-      if (!nodeEntry.backPointer || nodeEntry.score.toDouble() <
-          pathScore.toDouble()) {
+      if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
         nodeEntry.score = pathScore;
         nodeEntry.backPointer = e;
       }

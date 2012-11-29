@@ -41,15 +41,11 @@ class LogWeight {
     
     friend bool operator!=(const LogWeight& a, const LogWeight& b);
     
+    friend bool operator<(const LogWeight& a, const LogWeight& b);
+    
+    friend bool operator>(const LogWeight& a, const LogWeight& b);
+    
   private:
-    LogWeight plus(const LogWeight& d) const;
-    
-    LogWeight times(const LogWeight& d) const;
-
-    void plusEquals(const LogWeight& d);
-    
-    void timesEquals(const LogWeight& d);
-    
     double _val;
 };
 

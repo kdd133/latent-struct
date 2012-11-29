@@ -40,6 +40,10 @@ class RealWeight {
     
     friend bool operator!=(const RealWeight& a, const RealWeight& b);
     
+    friend bool operator<(const RealWeight& a, const RealWeight& b);
+    
+    friend bool operator>(const RealWeight& a, const RealWeight& b);
+    
   private:
     inline RealWeight plus(const RealWeight& d) const { return _val + d._val; }
     

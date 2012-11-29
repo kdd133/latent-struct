@@ -24,9 +24,13 @@ LogWeight::LogWeight(double value, bool valueIsLog) {
   }
 }
 
+RealWeight LogWeight::convert() const {
+  return RealWeight(exp(_val));
+}
+
 // See Table 3 in Li & Eisner paper titled:
 // "First- and Second-Order Expectation Semirings with Applications..."
-LogWeight LogWeight::plus(const LogWeight& w) const {
+const LogWeight LogWeight::operator+(const LogWeight& w) const {
   const LogWeight zero(0);
   if ((*this) == zero)
     return w;
@@ -52,12 +56,19 @@ LogWeight LogWeight::plus(const LogWeight& w) const {
   }
 }
 
-void LogWeight::plusEquals(const LogWeight& w) {
-  const LogWeight result = this->plus(w);
+LogWeight& LogWeight::operator+=(const LogWeight& w) {
+  const LogWeight result = (*this) + w;
   _val = result._val;
+  return (*this);
 }
 
-LogWeight LogWeight::times(const LogWeight& w) const {
+LogWeight& LogWeight::operator*=(const LogWeight& w) {
+  const LogWeight result = (*this) * w;
+  _val = result._val;
+  return (*this);
+}
+
+const LogWeight LogWeight::operator*(const LogWeight& w) const {
   const LogWeight zero(0);
   if ((*this) == zero || w == zero)
     return zero;
@@ -66,41 +77,6 @@ LogWeight LogWeight::times(const LogWeight& w) const {
     result._val = _val + w._val;
     return result;
   }
-}
-
-void LogWeight::timesEquals(const LogWeight& w) {
-  const LogWeight result = this->times(w);
-  _val = result._val;
-}
-
-RealWeight LogWeight::convert() const {
-  double v;
-  if ((*this) == LogWeight(1))
-    v = 1;
-  else if ((*this) == LogWeight(0))
-    v = 0;
-  else
-    v = exp(_val);
-    
-  return RealWeight(v);
-}
-
-const LogWeight LogWeight::operator+(const LogWeight& w) const {
-  return plus(w);
-}
-
-LogWeight& LogWeight::operator+=(const LogWeight& w) {
-  plusEquals(w);
-  return (*this);
-}
-
-LogWeight& LogWeight::operator*=(const LogWeight& w) {
-  timesEquals(w);
-  return (*this);
-}
-
-const LogWeight LogWeight::operator*(const LogWeight& w) const {
-  return times(w);
 }
 
 LogWeight operator-(const LogWeight& w)
@@ -120,4 +96,12 @@ bool operator==(const LogWeight& a, const LogWeight& b) {
 
 bool operator!=(const LogWeight& a, const LogWeight& b) {
   return a._val != b._val;
+}
+
+bool operator<(const LogWeight& a, const LogWeight& b) {
+  return a._val < b._val;
+}
+
+bool operator>(const LogWeight& a, const LogWeight& b) {
+  return a._val > b._val;
 }

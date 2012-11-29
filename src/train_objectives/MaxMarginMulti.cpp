@@ -50,8 +50,8 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     RealWeight scoreMax(-numeric_limits<double>::infinity());
     Label yMax = 0;
     for (Label y = 0; y < k; y++) {
-      score[y] = Utility::delta(yi,y) + model.maxFeatures(w, feats[y], xi, y).toDouble();
-      if (score[y].toDouble() > scoreMax.toDouble()) {
+      score[y] = model.maxFeatures(w, feats[y], xi, y) + Utility::delta(yi,y);
+      if (score[y] > scoreMax) {
         scoreMax = score[y];
         yMax = y;
       }
