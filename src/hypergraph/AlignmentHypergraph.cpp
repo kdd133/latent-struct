@@ -119,7 +119,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
       
 void AlignmentHypergraph::rescore(const WeightVector& w) {
   BOOST_FOREACH(Hyperedge edge, _edges) {
-    const double newWeight = w.innerProd(edge.getFeatureVector());
+    const LogWeight newWeight(exp(w.innerProd(edge.getFeatureVector())));
     edge.setWeight(newWeight);
   }
 }
@@ -406,7 +406,7 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
     v = e->getChildren().front();
   }
   
-  const double pathScore = chart[_root->getId()].score.toDouble();
+  const double pathScore = chart[_root->getId()].score;
   delete[] chart;
   return pathScore;
 }
@@ -555,7 +555,7 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   list<const Hypernode*> children;
   children.push_back(onlyChild);
   const int edgeId = _edges.size();
-  const double edgeWeight = exp(w.innerProd(fv));
+  const LogWeight edgeWeight(exp(w.innerProd(fv)));
 //  _fst->AddArc(sourceId, arc);
   Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, fv);
   parent.addEdge(edge);

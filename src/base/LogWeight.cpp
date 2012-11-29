@@ -89,19 +89,3 @@ LogWeight operator-(const LogWeight& w)
 ostream& operator<<(ostream& out, const LogWeight& w) {
   return out << w._val;
 }
-
-bool operator==(const LogWeight& a, const LogWeight& b) {
-  return a._val == b._val;
-}
-
-bool operator!=(const LogWeight& a, const LogWeight& b) {
-  return a._val != b._val;
-}
-
-bool operator<(const LogWeight& a, const LogWeight& b) {
-  return a._val < b._val;
-}
-
-bool operator>(const LogWeight& a, const LogWeight& b) {
-  return a._val > b._val;
-}

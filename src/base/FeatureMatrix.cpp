@@ -20,7 +20,7 @@ FeatureMatrix::FeatureMatrix(int m) {
   
   for (size_t i = 0; i < m; ++i)
     for (size_t j = 0; j < m; ++j)
-      _A(i,j) = 0;
+      _A(i,j) = LogWeight(0);
 }
 
 void FeatureMatrix::assign(int row, int col, LogWeight value) {

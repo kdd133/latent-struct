@@ -67,10 +67,10 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.96922619047, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.0125, gradFv.getValueAtLocation(0).toDouble(), 1e-6);
-  BOOST_CHECK_CLOSE(-0.0166666666, gradFv.getValueAtLocation(1).toDouble(), 1e-6);
-  BOOST_CHECK_CLOSE(-0.0011904761, gradFv.getValueAtLocation(280).toDouble(),1e-4);
-  BOOST_CHECK_CLOSE(0.0125, gradFv.getValueAtLocation(362).toDouble(), 1e-4);
+  BOOST_CHECK_CLOSE(-0.0125, (double)gradFv.getValueAtLocation(0), 1e-6);
+  BOOST_CHECK_CLOSE(-0.0166666666, (double)gradFv.getValueAtLocation(1), 1e-6);
+  BOOST_CHECK_CLOSE(-0.0011904761, (double)gradFv.getValueAtLocation(280),1e-4);
+  BOOST_CHECK_CLOSE(0.0125, (double)gradFv.getValueAtLocation(362), 1e-4);
   
   BmrmOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

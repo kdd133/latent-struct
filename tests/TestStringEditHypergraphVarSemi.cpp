@@ -92,14 +92,14 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_REQUIRE(fv != 0);
   
   // Check that the total mass is correct.
-  BOOST_CHECK_CLOSE(totalMass.toDouble(), -300, 1e-8);
+  BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE(fv->getValueAtIndex(iIns).toDouble(), -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE(fv->getValueAtIndex(iDel).toDouble(), -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE(fv->getValueAtIndex(iSub).toDouble(), -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv->getValueAtIndex(iMat).toDouble(), -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv->getValueAtIndex(iBias).toDouble(), -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iIns), -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iDel), -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iSub), -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iMat), -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iBias), -300.0000, 1e-4);
   
   // Display the matrix of feature cooccurrences.
 //  fm->print(cout);
@@ -107,29 +107,29 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
 //  fm->print(cout, *alphabet);
   
   // Check that the entries in the cooccurrence matrix are correct.
-  BOOST_CHECK_CLOSE(fm->get(iBias,iBias).toDouble(), -300, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iBias,iDel).toDouble(), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iBias,iIns).toDouble(), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iBias,iSub).toDouble(), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iBias,iMat).toDouble(), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iDel,iBias).toDouble(), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iDel,iDel).toDouble(), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iDel,iIns).toDouble(), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iDel,iSub).toDouble(), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iDel,iMat).toDouble(), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iIns,iBias).toDouble(), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iIns,iDel).toDouble(), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iIns,iIns).toDouble(), -297.803, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iIns,iSub).toDouble(), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iIns,iMat).toDouble(), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iSub,iBias).toDouble(), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iSub,iDel).toDouble(), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iSub,iIns).toDouble(), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iSub,iSub).toDouble(), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iSub,iMat).toDouble(), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iMat,iBias).toDouble(), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iMat,iDel).toDouble(), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iMat,iIns).toDouble(), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iMat,iSub).toDouble(), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE(fm->get(iMat,iMat).toDouble(), -296.416, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iBias,iBias), -300, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iBias,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iBias,iIns), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iBias,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iBias,iMat), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iDel,iBias), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iDel,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iDel,iIns), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iDel,iSub), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iDel,iMat), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iIns,iBias), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iIns,iDel), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iIns,iIns), -297.803, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iIns,iSub), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iIns,iMat), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iSub,iBias), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iSub,iDel), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iSub,iIns), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iSub,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iSub,iMat), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iMat,iBias), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iMat,iDel), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iMat,iIns), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iMat,iSub), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm->get(iMat,iMat), -296.416, 1e-3);
 }

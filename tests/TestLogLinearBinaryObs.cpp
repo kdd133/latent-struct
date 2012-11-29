@@ -67,10 +67,10 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinaryObs)
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.68330888445, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.00478707453, gradFv.getValueAtLocation(0).toDouble(), 1e-6);
-  BOOST_CHECK_CLOSE(-0.00695716322, gradFv.getValueAtLocation(1).toDouble(), 1e-6);
-  BOOST_CHECK_CLOSE(5.85168e-06, gradFv.getValueAtLocation(280).toDouble(), 1e-4);
-  BOOST_CHECK_CLOSE(0.00668318, gradFv.getValueAtLocation(362).toDouble(), 1e-4);
+  BOOST_CHECK_CLOSE(-0.00478707453, (double)gradFv.getValueAtLocation(0), 1e-6);
+  BOOST_CHECK_CLOSE(-0.00695716322, (double)gradFv.getValueAtLocation(1), 1e-6);
+  BOOST_CHECK_CLOSE(5.85168e-06, (double)gradFv.getValueAtLocation(280), 1e-4);
+  BOOST_CHECK_CLOSE(0.00668318, (double)gradFv.getValueAtLocation(362), 1e-4);
   
   LbfgsOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

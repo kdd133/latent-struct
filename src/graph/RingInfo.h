@@ -99,7 +99,7 @@ public:
     if (ring == RingLog)
       _score += toAdd.score();
     else if (ring == RingViterbi)
-      _score = max(_score.toDouble(), toAdd.score().toDouble());
+      _score = max(_score, toAdd.score());
     else if (ring == RingExpectation) {
       // <p,r> = <p1+p2, r1+r2>
       _score += toAdd.score();

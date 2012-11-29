@@ -20,7 +20,7 @@ class RealWeight {
   public:
     RealWeight(double value = 0) : _val(value) {}
     
-    inline double toDouble() const { return _val; }
+    operator double() const { return _val; }
     
     LogWeight convert() const;
     
@@ -35,14 +35,6 @@ class RealWeight {
     friend RealWeight operator-(const RealWeight& v);
     
     friend ostream& operator<<(ostream& out, const RealWeight& w);
-    
-    friend bool operator==(const RealWeight& a, const RealWeight& b);
-    
-    friend bool operator!=(const RealWeight& a, const RealWeight& b);
-    
-    friend bool operator<(const RealWeight& a, const RealWeight& b);
-    
-    friend bool operator>(const RealWeight& a, const RealWeight& b);
     
   private:
     inline RealWeight plus(const RealWeight& d) const { return _val + d._val; }

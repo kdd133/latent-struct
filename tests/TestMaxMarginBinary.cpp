@@ -75,10 +75,10 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   objective.valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(1, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.50, gradFv.getValueAtLocation(0).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0.65, gradFv.getValueAtLocation(1).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0.30, gradFv.getValueAtLocation(2).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(2.35, gradFv.getValueAtLocation(3).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(0.50, (double)gradFv.getValueAtLocation(0), 1e-8);
+  BOOST_CHECK_CLOSE(0.65, (double)gradFv.getValueAtLocation(1), 1e-8);
+  BOOST_CHECK_CLOSE(0.30, (double)gradFv.getValueAtLocation(2), 1e-8);
+  BOOST_CHECK_CLOSE(2.35, (double)gradFv.getValueAtLocation(3), 1e-8);
   
   shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
   ret = convexOpt->processOptions(argc, argv);

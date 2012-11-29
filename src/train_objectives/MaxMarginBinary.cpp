@@ -45,8 +45,8 @@ void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     RealWeight z;
     if (yi == -1) {
       feats.zero();
-      z = yi * model.maxFeatures(w, feats, xi, ypos).toDouble(); // gets latent+obs feats
-      if (z.toDouble() < 1)
+      z = yi * model.maxFeatures(w, feats, xi, ypos); // gets latent+obs feats
+      if (z < 1)
         feats.addTo(gradFv, -yi);
     }
     else {
@@ -57,13 +57,13 @@ void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
       FeatureVector<RealWeight>* phiObs = model.observedFeatures(xi, ypos, own);
       assert(phiObs);
       z = yi * (w.innerProd(phiObs) + w.innerProd(_imputedFvs[i]));
-      if (z.toDouble() < 1) {
+      if (z < 1) {
         _imputedFvs[i]->addTo(gradFv, -yi);
         phiObs->addTo(gradFv, -yi);
       }
       if (own) delete phiObs;
     }
-    funcVal += Utility::hinge(1 - z.toDouble());
+    funcVal += Utility::hinge(1 - z);
   }
 }
 
@@ -129,7 +129,7 @@ void MaxMarginBinary::predictPart(const WeightVector& w, Model& model,
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     const RealWeight z = model.viterbiScore(w, x, ypos);
-    scores.setScore(id, ypos, z.toDouble());
-    scores.setScore(id, !ypos, (-z).toDouble());
+    scores.setScore(id, ypos, z);
+    scores.setScore(id, !ypos, (-z));
   }
 }

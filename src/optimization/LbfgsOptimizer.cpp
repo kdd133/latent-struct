@@ -80,7 +80,7 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   
   // Copy the new gradient back into g, for return to lbfgs.
   for (int i = 0; i < d; i++)
-    g[i] = gradFv.getValueAtLocation(i).toDouble();
+    g[i] = gradFv.getValueAtLocation(i);
   
   if (!inst->quiet)
     cout << timer.format();

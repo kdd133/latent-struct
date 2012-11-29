@@ -44,19 +44,3 @@ RealWeight& RealWeight::operator*=(const RealWeight& w) {
 const RealWeight RealWeight::operator*(const RealWeight& w) const {
   return times(w);
 }
-
-bool operator==(const RealWeight& a, const RealWeight& b) {
-  return a._val == b._val;
-}
-
-bool operator!=(const RealWeight& a, const RealWeight& b) {
-  return a._val != b._val;
-}
-
-bool operator<(const RealWeight& a, const RealWeight& b) {
-  return a._val < b._val;
-}
-
-bool operator>(const RealWeight& a, const RealWeight& b) {
-  return a._val > b._val;
-}

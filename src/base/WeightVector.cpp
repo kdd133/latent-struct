@@ -46,7 +46,7 @@ double WeightVector::innerProd(const FeatureVector<RealWeight>& fv) const {
   for (int i = 0; i < fv.getNumEntries(); i++) {
     const int index = fv.getIndexAtLocation(i);
     assert(index >= 0 && index < _dim);
-    prod += (fv.getValueAtLocation(i).toDouble() * _weights[index]);
+    prod += (double)fv.getValueAtLocation(i) * _weights[index];
   }
   return prod;
 }
@@ -74,7 +74,7 @@ void WeightVector::add(const FeatureVector<RealWeight>& fv, const double scale) 
     for (int i = 0; i < fv.getNumEntries(); i++) {
       const int index = fv.getIndexAtLocation(i);
       assert(index >= 0 && index < _dim);
-      const double update = scale * fv.getValueAtLocation(i).toDouble();
+      const double update = scale * fv.getValueAtLocation(i);
       const double currentVal = _weights[index];
       _weights[index] = currentVal + update;
       /* use the formula: (w + x)^2 = w^2 + x^2 + 2*x*w */

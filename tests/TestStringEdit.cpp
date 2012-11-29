@@ -92,12 +92,12 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   
   // Check that the total mass is correct.
   LogWeight totalMass = model->totalMass(W, *pair, label);
-  BOOST_CHECK_CLOSE(totalMass.toDouble(), -300, 1e-8);
+  BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   FeatureVector<LogWeight> fv(d, true);
   BOOST_REQUIRE(!fv.isDense());
   LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
-  BOOST_CHECK_CLOSE(totalMass.toDouble(), totalMassAlt.toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
   BOOST_REQUIRE(iMat >= 0);
@@ -105,17 +105,17 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iIns).toDouble(), -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iDel).toDouble(), -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iSub).toDouble(), -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iMat).toDouble(), -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE(fv.getValueAtIndex(iBias).toDouble(), -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iIns), -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iDel), -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iSub), -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iMat), -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iBias), -300.0000, 1e-4);
 
   // Check that the (normalized) expected value of each feature is correct.
   fv.timesEquals(-totalMass);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iIns).toDouble()), 3, 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iDel).toDouble()), 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub).toDouble()), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat).toDouble()), 6, 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias).toDouble()), 1, 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iIns)), 3, 1e-4);
+  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iDel)), 1e-4);
+  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub)), 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat)), 6, 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias)), 1, 1e-4);
 }

@@ -75,14 +75,14 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   objective.valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(1, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.50, gradFv.getValueAtLocation(0).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0.85, gradFv.getValueAtLocation(1).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0.35, gradFv.getValueAtLocation(2).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(4.65, gradFv.getValueAtLocation(3).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(-0.50, gradFv.getValueAtLocation(4).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv.getValueAtLocation(5).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv.getValueAtLocation(6).toDouble(), 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv.getValueAtLocation(7).toDouble(), 1e-8);
+  BOOST_CHECK_CLOSE(0.50, (double)gradFv.getValueAtLocation(0), 1e-8);
+  BOOST_CHECK_CLOSE(0.85, (double)gradFv.getValueAtLocation(1), 1e-8);
+  BOOST_CHECK_CLOSE(0.35, (double)gradFv.getValueAtLocation(2), 1e-8);
+  BOOST_CHECK_CLOSE(4.65, (double)gradFv.getValueAtLocation(3), 1e-8);
+  BOOST_CHECK_CLOSE(-0.50, (double)gradFv.getValueAtLocation(4), 1e-8);
+  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(5), 1e-8);
+  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(6), 1e-8);
+  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(7), 1e-8);
   
   shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
   ret = convexOpt->processOptions(argc, argv);
