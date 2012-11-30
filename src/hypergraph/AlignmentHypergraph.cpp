@@ -18,6 +18,7 @@
 #include "OpNone.h"
 #include "Ring.h"
 #include "RingInfo.h"
+#include "SparseMatrix.h"
 #include "StateType.h"
 #include "StringPair.h"
 #include "WeightVector.h"
@@ -254,7 +255,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   const int d = _fgen->getAlphabet()->size();
   shared_array<LogWeight> array(new LogWeight[d]);
   tr1::unordered_map<int,LogWeight> fvExp;
-  shared_ptr<DenseMatrix<LogWeight> > fmExp(new DenseMatrix<LogWeight>(d));
+  shared_ptr<DenseMatrix<LogWeight> > fmExp(new DenseMatrix<LogWeight>(d, d));
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
@@ -283,13 +284,15 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
         FeatureVector<LogWeight> pese(se);
         pese.timesEquals(pe);
-        shared_ptr<DenseMatrix<LogWeight> > pesese = pese.outerProd(se, d);
+        shared_ptr<SparseMatrix<LogWeight> > pesese = pese.outerProdSparse(
+            se, d);
         
         pese.addTo(fvExp, keBar.score());
         
         pesese->timesEquals(keBar.score()); // pt
         assert(keBar.fv());
-        shared_ptr<DenseMatrix<LogWeight> > rs = keBar.fv()->outerProd(pese, d); // rs
+        shared_ptr<SparseMatrix<LogWeight> > rs = keBar.fv()->outerProdSparse(
+            pese, d); // rs
         fmExp->plusEquals(*pesese);
         fmExp->plusEquals(*rs);
       }

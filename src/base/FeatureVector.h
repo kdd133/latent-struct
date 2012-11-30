@@ -11,9 +11,9 @@
 #define _FEATUREVECTOR_H
 
 #include "Alphabet.h"
-#include "DenseMatrix.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
+#include "SparseMatrix.h"
 #include <algorithm>
 #include <assert.h>
 #include <boost/shared_array.hpp>
@@ -59,8 +59,8 @@ class FeatureVector {
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
  
-    shared_ptr<DenseMatrix<Weight> > outerProd(const FeatureVector<Weight>& fv,
-      const int d = 0) const;
+    shared_ptr<SparseMatrix<Weight> > outerProdSparse(
+        const FeatureVector<Weight>& fv, const int d = 0) const;
  
     int getIndexAtLocation(int location) const;
     
@@ -74,7 +74,7 @@ class FeatureVector {
     void addTo(FeatureVector& fv, Weight scale = Weight(1)) const;
     
     void addTo(unordered_map<int,Weight>& featureCounts,
-      Weight scale = Weight(1)) const;
+        Weight scale = Weight(1)) const;
     
     // Interpret dense as real weights.
     void plusEquals(const double* dense, int len, double scale = 1.0);
@@ -261,19 +261,21 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
-shared_ptr<DenseMatrix<Weight> > FeatureVector<Weight>::outerProd(
+shared_ptr<SparseMatrix<Weight> > FeatureVector<Weight>::outerProdSparse(
     const FeatureVector<Weight>& fv, const int d) const {
   const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
   assert(dim > 0);
-  shared_ptr<DenseMatrix<Weight> > fm(new DenseMatrix<Weight>(dim));
+  shared_ptr<SparseMatrix<Weight> > fm(new SparseMatrix<Weight>(dim, dim));
+  const Weight zero = Weight(0);
   
   if (isDense()) {
     if (fv.isDense()) {
       for (size_t row = 0; row < getLength(); ++row) {
         for (size_t col = 0; col < fv.getLength(); ++col) {
-          const LogWeight prod = getValueAtLocation(row) * 
+          const Weight prod = getValueAtLocation(row) * 
               fv.getValueAtLocation(col);
-          fm->set(row, col, prod);
+          if (prod != zero)
+            fm->set(row, col, prod);
         }
       }
     }
@@ -281,8 +283,9 @@ shared_ptr<DenseMatrix<Weight> > FeatureVector<Weight>::outerProd(
       for (size_t row = 0; row < getLength(); ++row) {
         for (size_t j = 0; j < fv.getNumEntries(); ++j) {
           const int col = fv._indices[j];
-          const LogWeight prod = _values[row] * fv.getValueAtIndex(col);
-          fm->set(row, col, prod);
+          const Weight prod = _values[row] * fv.getValueAtIndex(col);
+          if (prod != zero)
+            fm->set(row, col, prod);
         }
       }
     }
@@ -298,9 +301,10 @@ shared_ptr<DenseMatrix<Weight> > FeatureVector<Weight>::outerProd(
         for (size_t j = 0; j < n; ++j) {
           const int row = _indices[i];
           const int col = fv._indices[j];
-          const LogWeight prod = getValueAtIndex(row) * fv.getValueAtIndex(
+          const Weight prod = getValueAtIndex(row) * fv.getValueAtIndex(
               col);
-          fm->set(row, col, prod);
+          if (prod != zero)
+            fm->set(row, col, prod);
         }
       }
     }
