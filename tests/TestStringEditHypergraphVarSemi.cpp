@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
   
-  shared_ptr<FeatureMatrix> fm;
+  shared_ptr<DenseMatrix> fm;
   shared_ptr<FeatureVector<LogWeight> > fv;
   LogWeight totalMass = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
       label, false);

@@ -18,7 +18,7 @@
 using namespace boost;
 using namespace std;
 
-class FeatureMatrix;
+class DenseMatrix;
 class LogWeight;
 class Pattern;
 class RealWeight;
@@ -44,7 +44,7 @@ class Graph {
         bool getCostOnly = false) = 0;
         
     virtual LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<FeatureMatrix>& fm,
+        shared_ptr<DenseMatrix>& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv) = 0;
         
     // Returns the *reverse* sequence of edit operations in to the maximum

@@ -7,32 +7,30 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#ifndef _FEATUREMATRIX_H
-#define _FEATUREMATRIX_H
+#ifndef _DENSEMATRIX_H
+#define _DENSEMATRIX_H
 
 #include <boost/numeric/ublas/matrix.hpp>
-#include <iostream>
 using boost::numeric::ublas::matrix;
 
-class Alphabet;
 class LogWeight;
 
-class FeatureMatrix {
+class DenseMatrix {
 
 public:
-  FeatureMatrix(int m);
+  DenseMatrix(int m);
 
-  void set(int row, int col, const LogWeight v);
+  void set(int row, int col, const LogWeight& v);
   
   LogWeight get(int row, int col) const;
+  
+  size_t numRows() const { return _A.size1(); }
+  
+  size_t numCols() const { return _A.size2(); }
 
-  void append(const FeatureMatrix& toAppend);
+  void plusEquals(const DenseMatrix& toAppend);
   
   void timesEquals(const LogWeight& v);
-  
-  void print(std::ostream& out, const Alphabet& alphabet);
-  
-  void print(std::ostream& out);
   
 private:
   matrix<LogWeight> _A;

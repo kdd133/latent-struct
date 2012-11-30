@@ -11,7 +11,7 @@
 #define _FEATUREVECTOR_H
 
 #include "Alphabet.h"
-#include "FeatureMatrix.h"
+#include "DenseMatrix.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
 #include <algorithm>
@@ -59,7 +59,7 @@ class FeatureVector {
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
  
-    shared_ptr<FeatureMatrix> outerProd(const FeatureVector<Weight>& fv,
+    shared_ptr<DenseMatrix> outerProd(const FeatureVector<Weight>& fv,
       const int d = 0) const;
  
     int getIndexAtLocation(int location) const;
@@ -261,11 +261,11 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
-shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
+shared_ptr<DenseMatrix> FeatureVector<Weight>::outerProd(
     const FeatureVector<Weight>& fv, const int d) const {
   const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
   assert(dim > 0);
-  shared_ptr<FeatureMatrix> fm(new FeatureMatrix(dim));
+  shared_ptr<DenseMatrix> fm(new DenseMatrix(dim));
   
   if (isDense()) {
     if (fv.isDense()) {
@@ -292,8 +292,10 @@ shared_ptr<FeatureMatrix> FeatureVector<Weight>::outerProd(
       assert(0);
     }
     else {
-      for (size_t i = 0; i < getNumEntries(); ++i) {
-        for (size_t j = 0; j < fv.getNumEntries(); ++j) {
+      const size_t m = getNumEntries();
+      const size_t n = fv.getNumEntries();
+      for (size_t i = 0; i < m; ++i) {
+        for (size_t j = 0; j < n; ++j) {
           const int row = _indices[i];
           const int col = fv._indices[j];
           const LogWeight prod = getValueAtIndex(row) * fv.getValueAtIndex(

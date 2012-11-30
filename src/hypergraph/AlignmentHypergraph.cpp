@@ -253,7 +253,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   const int d = _fgen->getAlphabet()->size();
   shared_array<LogWeight> array(new LogWeight[d]);
   tr1::unordered_map<int,LogWeight> fvExp;
-  shared_ptr<FeatureMatrix> fmExp(new FeatureMatrix(d));
+  shared_ptr<DenseMatrix> fmExp(new DenseMatrix(d));
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
@@ -282,15 +282,15 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
         FeatureVector<LogWeight> pese(se);
         pese.timesEquals(pe);
-        shared_ptr<FeatureMatrix> pesese = pese.outerProd(se, d);
+        shared_ptr<DenseMatrix> pesese = pese.outerProd(se, d);
         
         pese.addTo(fvExp, keBar.score());
         
         pesese->timesEquals(keBar.score()); // pt
         assert(keBar.fv());
-        shared_ptr<FeatureMatrix> rs = keBar.fv()->outerProd(pese, d); // rs
-        fmExp->append(*pesese);
-        fmExp->append(*rs);
+        shared_ptr<DenseMatrix> rs = keBar.fv()->outerProd(pese, d); // rs
+        fmExp->plusEquals(*pesese);
+        fmExp->plusEquals(*rs);
       }
     }
   }
@@ -328,7 +328,7 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
-    shared_ptr<FeatureMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv) {
+    shared_ptr<DenseMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv) {
   InsideOutsideResult inOut = insideOutside(RingExpectation);
   fv = inOut.sBar;
   fm = inOut.tBar;
