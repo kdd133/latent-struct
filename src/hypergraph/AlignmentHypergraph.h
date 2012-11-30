@@ -12,6 +12,7 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
+#include "DenseMatrix.h"
 #include "FeatureVector.h"
 #include "Graph.h"
 #include "Hyperedge.h"
@@ -28,7 +29,6 @@
 using namespace boost;
 using namespace std;
 
-class DenseMatrix;
 class LogWeight;
 class Pattern;
 class RealWeight;
@@ -46,7 +46,7 @@ class AlignmentHypergraph : public Graph {
       LogWeight Z;
       shared_ptr<FeatureVector<LogWeight> > rBar;
       shared_ptr<FeatureVector<LogWeight> > sBar;
-      shared_ptr<DenseMatrix> tBar;
+      shared_ptr<DenseMatrix<LogWeight> > tBar;
     } InsideOutsideResult;
     
     virtual ~AlignmentHypergraph() { }
@@ -72,7 +72,8 @@ class AlignmentHypergraph : public Graph {
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
         shared_array<LogWeight> buffer);
         
-    LogWeight logExpectedFeatureCooccurrences(shared_ptr<DenseMatrix>& fm,
+    LogWeight logExpectedFeatureCooccurrences(
+        shared_ptr<DenseMatrix<LogWeight> >& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv);
 
     // Note: Assumes fv has been zeroed out.

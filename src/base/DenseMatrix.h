@@ -13,16 +13,15 @@
 #include <boost/numeric/ublas/matrix.hpp>
 using boost::numeric::ublas::matrix;
 
-class LogWeight;
-
+template <typename T>
 class DenseMatrix {
 
 public:
   DenseMatrix(int m);
 
-  void set(int row, int col, const LogWeight& v);
+  void set(int row, int col, const T& v);
   
-  LogWeight get(int row, int col) const;
+  T get(int row, int col) const;
   
   size_t numRows() const { return _A.size1(); }
   
@@ -30,10 +29,42 @@ public:
 
   void plusEquals(const DenseMatrix& toAppend);
   
-  void timesEquals(const LogWeight& v);
+  void timesEquals(const T& v);
   
 private:
-  matrix<LogWeight> _A;
+  matrix<T> _A;
 };
+
+template <typename T>
+DenseMatrix<T>::DenseMatrix(int m) {
+  assert(m > 0);
+  _A = matrix<T>(m, m); // entries are initialized to 0
+}
+
+template <typename T>
+void DenseMatrix<T>::set(int row, int col, const T& value) {
+  assert(row < numRows());
+  assert(col < numCols());
+  _A(row, col) = value;
+}
+
+template <typename T>
+T DenseMatrix<T>::get(int row, int col) const {
+  assert(row < numRows());
+  assert(col < numCols());
+  return _A(row, col);
+}
+
+template <typename T>
+void DenseMatrix<T>::plusEquals(const DenseMatrix<T>& fm) {
+  assert(fm.numRows() == numRows());
+  assert(fm.numCols() == numCols());
+  _A += fm._A;
+}
+
+template <typename T>
+void DenseMatrix<T>::timesEquals(const T& value) {
+  _A *= value;
+}
 
 #endif

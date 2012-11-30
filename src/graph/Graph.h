@@ -10,6 +10,7 @@
 #ifndef _GRAPH_H
 #define _GRAPH_H
 
+#include "DenseMatrix.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include <boost/shared_array.hpp>
@@ -18,7 +19,6 @@
 using namespace boost;
 using namespace std;
 
-class DenseMatrix;
 class LogWeight;
 class Pattern;
 class RealWeight;
@@ -44,7 +44,7 @@ class Graph {
         bool getCostOnly = false) = 0;
         
     virtual LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<DenseMatrix>& fm,
+        shared_ptr<DenseMatrix<LogWeight> >& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv) = 0;
         
     // Returns the *reverse* sequence of edit operations in to the maximum

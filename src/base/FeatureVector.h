@@ -59,7 +59,7 @@ class FeatureVector {
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
  
-    shared_ptr<DenseMatrix> outerProd(const FeatureVector<Weight>& fv,
+    shared_ptr<DenseMatrix<Weight> > outerProd(const FeatureVector<Weight>& fv,
       const int d = 0) const;
  
     int getIndexAtLocation(int location) const;
@@ -261,11 +261,11 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
-shared_ptr<DenseMatrix> FeatureVector<Weight>::outerProd(
+shared_ptr<DenseMatrix<Weight> > FeatureVector<Weight>::outerProd(
     const FeatureVector<Weight>& fv, const int d) const {
   const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
   assert(dim > 0);
-  shared_ptr<DenseMatrix> fm(new DenseMatrix(dim));
+  shared_ptr<DenseMatrix<Weight> > fm(new DenseMatrix<Weight>(dim));
   
   if (isDense()) {
     if (fv.isDense()) {

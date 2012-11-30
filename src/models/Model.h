@@ -11,6 +11,7 @@
 #define _MODEL_H
 
 #include "AlignmentFeatureGen.h"
+#include "DenseMatrix.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
@@ -19,7 +20,6 @@
 #include <iostream>
 using boost::shared_ptr;
 
-class DenseMatrix;
 class InputReader;
 class LogWeight;
 class Pattern;
@@ -56,7 +56,8 @@ class Model {
       bool normalize = true) = 0;
       
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<DenseMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv,
+      shared_ptr<DenseMatrix<LogWeight> >& fm,
+      shared_ptr<FeatureVector<LogWeight> >& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     // Returns true of the caller assumes ownership of the FeatureVector.

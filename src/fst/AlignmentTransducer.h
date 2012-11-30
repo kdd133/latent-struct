@@ -78,7 +78,8 @@ class AlignmentTransducer : public Graph {
     LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
         shared_array<LogWeight> buffer);
         
-    LogWeight logExpectedFeatureCooccurrences(shared_ptr<DenseMatrix>& fm,
+    LogWeight logExpectedFeatureCooccurrences(
+        shared_ptr<DenseMatrix<LogWeight> >& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv);
 
     // Note: Assumes fv has been zeroed out.
@@ -466,7 +467,8 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
 
 template<typename Arc>
 LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(
-    shared_ptr<DenseMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv) {
+    shared_ptr<DenseMatrix<LogWeight> >& fm,
+    shared_ptr<FeatureVector<LogWeight> >& fv) {
   assert(0); // Not implemented.
 }
 

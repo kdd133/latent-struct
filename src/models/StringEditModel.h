@@ -76,7 +76,8 @@ class StringEditModel : public Model {
       bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<DenseMatrix>& fm, shared_ptr<FeatureVector<LogWeight> >& fv,
+      shared_ptr<DenseMatrix<LogWeight> >& fm,
+      shared_ptr<FeatureVector<LogWeight> >& fv,
       const Pattern& pattern, const Label label, bool normalize = true);
       
     virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
@@ -588,7 +589,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, shared_ptr<DenseMatrix>& fm,
+      const WeightVector& w, shared_ptr<DenseMatrix<LogWeight> >& fm,
       shared_ptr<FeatureVector<LogWeight> >& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
