@@ -56,16 +56,8 @@ const LogWeight LogWeight::operator+(const LogWeight& w) const {
   }
 }
 
-LogWeight& LogWeight::operator+=(const LogWeight& w) {
-  const LogWeight result = (*this) + w;
-  _val = result._val;
-  return (*this);
-}
-
-LogWeight& LogWeight::operator*=(const LogWeight& w) {
-  const LogWeight result = (*this) * w;
-  _val = result._val;
-  return (*this);
+const LogWeight LogWeight::operator-(const LogWeight& w) const {
+  return (*this) + (-w);
 }
 
 const LogWeight LogWeight::operator*(const LogWeight& w) const {
@@ -79,13 +71,52 @@ const LogWeight LogWeight::operator*(const LogWeight& w) const {
   }
 }
 
-LogWeight operator-(const LogWeight& w)
-{
+const LogWeight LogWeight::operator/(const LogWeight& w) const {
+  return (*this) * (-w);
+}
+
+LogWeight& LogWeight::operator+=(const LogWeight& w) {
+  const LogWeight result = (*this) + w;
+  _val = result._val;
+  return (*this);
+}
+
+LogWeight& LogWeight::operator-=(const LogWeight& w) {
+  const LogWeight result = (*this) - w;
+  _val = result._val;
+  return (*this);
+}
+
+LogWeight& LogWeight::operator*=(const LogWeight& w) {
+  const LogWeight result = (*this) * w;
+  _val = result._val;
+  return (*this);
+}
+
+LogWeight& LogWeight::operator/=(const LogWeight& w) {
+  const LogWeight result = (*this) / w;
+  _val = result._val;
+  return (*this);
+}
+
+ostream& operator<<(ostream& out, const LogWeight& w) {
+  return out << w._val;
+}
+
+LogWeight operator-(const LogWeight& w) {
   LogWeight negated = w;
   negated._val *= -1;
   return negated;
 }
 
-ostream& operator<<(ostream& out, const LogWeight& w) {
-  return out << w._val;
+LogWeight sqrt(LogWeight w) {
+  double root = sqrt(exp((double)w));
+  return LogWeight(root);
+}
+
+LogWeight abs(LogWeight w) {
+  // abs(w) = log(abs(exp(w))) = log(exp(w)) = w
+  //   Where the second equality follows from the fact that exp(w) is positive
+  //   for any w.
+  return w;
 }

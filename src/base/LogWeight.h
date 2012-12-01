@@ -27,11 +27,19 @@ class LogWeight {
     
     const LogWeight operator+(const LogWeight& w) const;
     
+    const LogWeight operator-(const LogWeight& w) const;
+    
     const LogWeight operator*(const LogWeight& w) const;
+    
+    const LogWeight operator/(const LogWeight& w) const;
     
     LogWeight& operator+=(const LogWeight& w);
     
+    LogWeight& operator-=(const LogWeight& w);
+    
     LogWeight& operator*=(const LogWeight& w);
+    
+    LogWeight& operator/=(const LogWeight& w);
     
     friend LogWeight operator-(const LogWeight& w);
     
@@ -40,5 +48,9 @@ class LogWeight {
   private:
     double _val;
 };
+
+LogWeight sqrt(LogWeight w);
+
+LogWeight abs(LogWeight w);
 
 #endif

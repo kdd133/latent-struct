@@ -10,6 +10,10 @@
 #ifndef _SPARSEMATRIX_H
 #define _SPARSEMATRIX_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 using boost::numeric::ublas::mapped_matrix;
 

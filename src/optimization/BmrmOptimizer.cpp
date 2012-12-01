@@ -7,6 +7,10 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "BmrmOptimizer.h"
 #include "FeatureVector.h"
 #include "Model.h"

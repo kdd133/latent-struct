@@ -10,6 +10,10 @@
 #ifndef _DENSEMATRIX_H
 #define _DENSEMATRIX_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "SparseMatrix.h"
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -74,17 +78,7 @@ template <typename T>
 void DenseMatrix<T>::plusEquals(const SparseMatrix<T>& sparse) {
   assert(numRows() == sparse.numRows());
   assert(numCols() == sparse.numCols());
-  const mapped_matrix<T>& M = sparse.getMatrix();
-  typename mapped_matrix<T>::const_iterator1 itRow;
-  typename mapped_matrix<T>::const_iterator2 itCol;
-  for (itRow = M.begin1(); itRow != M.end1(); ++itRow) {
-    const int row = itRow.index1(); 
-    for (itCol = itRow.begin(); itCol != itRow.end(); ++itCol) {
-      const int col = itCol.index2();
-      const T& toAdd = *itCol;
-      _M(row, col) += toAdd;
-    }
-  }
+  _M += sparse.getMatrix();
 }
 
 template <typename T>
