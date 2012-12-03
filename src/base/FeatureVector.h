@@ -102,10 +102,6 @@ class FeatureVector {
     
     void updateLength();
     
-    void forceBinary(bool state = true);
-    
-    void forceDense(bool state = true);
-    
     // If this is a sparse vector that has more allocated entries than used
     // entries, reallocate to eliminate the wasted space.
     void pack();
@@ -130,10 +126,6 @@ class FeatureVector {
     // implicitly multiplied by this factor.
     Weight _scaleFactor;
     
-    bool _forcedBinary;
-    
-    bool _forcedDense;
-    
     // The number of entries that were initially allocated (i.e., the maximum
     // number of entries this vector can ever assign).
     int _allocatedEntries; 
@@ -145,8 +137,7 @@ template <typename Weight>
 FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
     shared_array<Weight> values, int entries, bool copy) :
   _indices(indices), _values(values), _entries(entries), _length(0),
-    _scaleFactor(Weight(1)), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(entries) {
+    _scaleFactor(Weight(1)), _allocatedEntries(entries) {
   if (isDense()) { // dense vector
     _length = _entries;
     if (copy) {
@@ -178,8 +169,7 @@ FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
   _indices(0), _values(0), _entries(length), _length(length),
-    _scaleFactor(Weight(1)), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(length) {
+    _scaleFactor(Weight(1)), _allocatedEntries(length) {
   if (length > 0)
     _values.reset(new Weight[length]);
   if (allocateIndices)
@@ -203,7 +193,6 @@ bool FeatureVector<Weight>::reinit(const set<int>& indicesList) {
     return false;
   reinit(); // set this to a default zero vector
   _entries = indicesList.size();
-  _forcedBinary = true; // this is a binary vector (since we only have indices)
   if (_entries == 0)
     return true;
   int i = 0;
@@ -225,8 +214,6 @@ inline bool FeatureVector<Weight>::reinit() {
   _entries = 0;
   _length = 0;
   _scaleFactor = Weight(1);
-  _forcedBinary = false;
-  _forcedDense = false;
   return true;
 }
 
@@ -340,8 +327,7 @@ void FeatureVector<Weight>::pack() {
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const FeatureVector<Weight>& fv) :
   _indices(0), _values(0), _entries(fv._entries), _length(fv._length),
-    _scaleFactor(fv._scaleFactor), _forcedBinary(false), _forcedDense(false),
-    _allocatedEntries(_entries) {
+    _scaleFactor(fv._scaleFactor), _allocatedEntries(_entries) {
   if (fv._indices != 0) {
     int* indsTemp = new int[_entries];
     for (int i = 0; i < _entries; i++)
@@ -530,24 +516,12 @@ void FeatureVector<Weight>::setNumEntries(int entries) {
 
 template <typename Weight>
 bool FeatureVector<Weight>::isBinary() const {
-  return _values == 0 || _forcedBinary;
+  return _values == 0;
 }
 
 template <typename Weight>
 bool FeatureVector<Weight>::isDense() const {
-  return _indices == 0 || _forcedDense;
-}
-
-template <typename Weight>
-void FeatureVector<Weight>::forceBinary(bool state) {
-  _forcedBinary = state;
-  assert(!(_forcedBinary && _forcedDense));
-}
-
-template <typename Weight>
-void FeatureVector<Weight>::forceDense(bool state) {
-  _forcedDense = state;
-  assert(!(_forcedBinary && _forcedDense));
+  return _indices == 0;
 }
 
 template <typename Weight>
