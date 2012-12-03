@@ -9,6 +9,7 @@
 #include "Model.h"
 #include "StringEditModel.h"
 #include "WordAlignmentFeatureGen.h"
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
@@ -16,6 +17,7 @@
 #include <math.h>
 #include <string>
 #include <vector>
+using boost::numeric::ublas::matrix;
 using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
@@ -84,7 +86,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
   
-  shared_ptr<DenseMatrix<LogWeight> > fm;
+  shared_ptr<matrix<LogWeight> > fm;
   shared_ptr<FeatureVector<LogWeight> > fv;
   LogWeight totalMass = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
       label, false);
@@ -107,29 +109,30 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
 //  fm->print(cout, *alphabet);
   
   // Check that the entries in the cooccurrence matrix are correct.
-  BOOST_CHECK_CLOSE((double)fm->get(iBias,iBias), -300, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iBias,iDel), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iBias,iIns), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iBias,iSub), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iBias,iMat), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iDel,iBias), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iDel,iDel), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iDel,iIns), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iDel,iSub), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iDel,iMat), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iIns,iBias), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iIns,iDel), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iIns,iIns), -297.803, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iIns,iSub), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iIns,iMat), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iSub,iBias), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iSub,iDel), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iSub,iIns), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iSub,iSub), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iSub,iMat), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iMat,iBias), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iMat,iDel), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iMat,iIns), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iMat,iSub), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE((double)fm->get(iMat,iMat), -296.416, 1e-3);
+  matrix<LogWeight>& featureMatrix = *fm;
+  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iBias), -300, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iIns), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iMat), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iBias), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iIns), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iSub), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iMat), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iBias), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iDel), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iIns), -297.803, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iSub), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iMat), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iBias), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iDel), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iIns), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iMat), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iBias), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iDel), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iIns), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iSub), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iMat), -296.416, 1e-3);
 }

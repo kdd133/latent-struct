@@ -10,18 +10,23 @@
 #ifndef _FEATUREVECTOR_H
 #define _FEATUREVECTOR_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "Alphabet.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
-#include "SparseMatrix.h"
 #include <algorithm>
 #include <assert.h>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <ostream>
 #include <set>
 #include <stdexcept>
 #include <tr1/unordered_map>
+using boost::numeric::ublas::mapped_matrix;
 using boost::shared_array;
 using boost::shared_ptr;
 using namespace std;
@@ -59,7 +64,7 @@ class FeatureVector {
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
  
-    shared_ptr<SparseMatrix<Weight> > outerProdSparse(
+    shared_ptr<mapped_matrix<Weight> > outerProdSparse(
         const FeatureVector<Weight>& fv, const int d = 0) const;
  
     int getIndexAtLocation(int location) const;
@@ -261,11 +266,11 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
-shared_ptr<SparseMatrix<Weight> > FeatureVector<Weight>::outerProdSparse(
+shared_ptr<mapped_matrix<Weight> > FeatureVector<Weight>::outerProdSparse(
     const FeatureVector<Weight>& fv, const int d) const {
   const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
   assert(dim > 0);
-  shared_ptr<SparseMatrix<Weight> > fm(new SparseMatrix<Weight>(dim, dim));
+  shared_ptr<mapped_matrix<Weight> > fm(new mapped_matrix<Weight>(dim, dim));
   const Weight zero = Weight(0);
   
   if (isDense()) {
@@ -275,7 +280,7 @@ shared_ptr<SparseMatrix<Weight> > FeatureVector<Weight>::outerProdSparse(
           const Weight prod = getValueAtLocation(row) * 
               fv.getValueAtLocation(col);
           if (prod != zero)
-            fm->set(row, col, prod);
+            (*fm)(row, col) = prod;
         }
       }
     }
@@ -285,7 +290,7 @@ shared_ptr<SparseMatrix<Weight> > FeatureVector<Weight>::outerProdSparse(
           const int col = fv._indices[j];
           const Weight prod = _values[row] * fv.getValueAtIndex(col);
           if (prod != zero)
-            fm->set(row, col, prod);
+            (*fm)(row, col) = prod;
         }
       }
     }
@@ -304,7 +309,7 @@ shared_ptr<SparseMatrix<Weight> > FeatureVector<Weight>::outerProdSparse(
           const Weight prod = getValueAtIndex(row) * fv.getValueAtIndex(
               col);
           if (prod != zero)
-            fm->set(row, col, prod);
+            (*fm)(row, col) = prod;
         }
       }
     }

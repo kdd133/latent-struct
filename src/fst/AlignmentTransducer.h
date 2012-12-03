@@ -10,9 +10,12 @@
 #ifndef _ALIGNMENTTRANSDUCER_H
 #define _ALIGNMENTTRANSDUCER_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
-#include "DenseMatrix.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
@@ -30,6 +33,7 @@
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
@@ -79,7 +83,7 @@ class AlignmentTransducer : public Graph {
         shared_array<LogWeight> buffer);
         
     LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<DenseMatrix<LogWeight> >& fm,
+        shared_ptr<matrix<LogWeight> >& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv);
 
     // Note: Assumes fv has been zeroed out.
@@ -467,7 +471,7 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
 
 template<typename Arc>
 LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(
-    shared_ptr<DenseMatrix<LogWeight> >& fm,
+    shared_ptr<matrix<LogWeight> >& fm,
     shared_ptr<FeatureVector<LogWeight> >& fv) {
   assert(0); // Not implemented.
 }

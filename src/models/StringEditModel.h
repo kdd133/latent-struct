@@ -10,12 +10,16 @@
 #ifndef _STRINGEDITMODEL_H
 #define _STRINGEDITMODEL_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "AlignmentFeatureGen.h"
-#include "DenseMatrix.h"
 #include "FeatureVector.h"
 #include "InputReader.h"
 #include "Label.h"
 #include "LogFeatArc.h"
+#include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "OpDelete.h"
@@ -35,6 +39,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -43,6 +48,7 @@
 #include <iostream>
 #include <list>
 #include <string>
+using boost::numeric::ublas::matrix;
 using namespace boost;
 using namespace std;
 
@@ -76,7 +82,7 @@ class StringEditModel : public Model {
       bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<DenseMatrix<LogWeight> >& fm,
+      shared_ptr<matrix<LogWeight> >& fm,
       shared_ptr<FeatureVector<LogWeight> >& fv,
       const Pattern& pattern, const Label label, bool normalize = true);
       
@@ -589,7 +595,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, shared_ptr<DenseMatrix<LogWeight> >& fm,
+      const WeightVector& w, shared_ptr<matrix<LogWeight> >& fm,
       shared_ptr<FeatureVector<LogWeight> >& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
@@ -599,7 +605,7 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
   assert(fv);
   if (normalize) {
     fv->timesEquals(-logZ);
-    fm->timesEquals(-logZ);
+    *fm *= -logZ;
   }
   return logZ;
 }

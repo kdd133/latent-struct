@@ -10,14 +10,19 @@
 #ifndef _MODEL_H
 #define _MODEL_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "AlignmentFeatureGen.h"
-#include "DenseMatrix.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
 #include "WeightVector.h"
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
+using boost::numeric::ublas::matrix;
 using boost::shared_ptr;
 
 class InputReader;
@@ -56,7 +61,7 @@ class Model {
       bool normalize = true) = 0;
       
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<DenseMatrix<LogWeight> >& fm,
+      shared_ptr<matrix<LogWeight> >& fm,
       shared_ptr<FeatureVector<LogWeight> >& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       

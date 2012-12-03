@@ -7,9 +7,12 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "AlignmentHypergraph.h"
 #include "AlignmentPart.h"
-#include "DenseMatrix.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
 #include "Hyperedge.h"
@@ -18,14 +21,15 @@
 #include "OpNone.h"
 #include "Ring.h"
 #include "RingInfo.h"
-#include "SparseMatrix.h"
 #include "StateType.h"
 #include "StringPair.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <cmath>
 #include <fstream>
 #include <stack>
@@ -255,7 +259,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   const int d = _fgen->getAlphabet()->size();
   shared_array<LogWeight> array(new LogWeight[d]);
   tr1::unordered_map<int,LogWeight> fvExp;
-  shared_ptr<DenseMatrix<LogWeight> > fmExp(new DenseMatrix<LogWeight>(d, d));
+  shared_ptr<matrix<LogWeight> > fmExp(new matrix<LogWeight>(d, d));
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
@@ -284,17 +288,17 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
         FeatureVector<LogWeight> pese(se);
         pese.timesEquals(pe);
-        shared_ptr<SparseMatrix<LogWeight> > pesese = pese.outerProdSparse(
+        shared_ptr<mapped_matrix<LogWeight> > pesese = pese.outerProdSparse(
             se, d);
         
         pese.addTo(fvExp, keBar.score());
         
-        pesese->timesEquals(keBar.score()); // pt
+        *pesese *= keBar.score(); // pt
         assert(keBar.fv());
-        shared_ptr<SparseMatrix<LogWeight> > rs = keBar.fv()->outerProdSparse(
+        shared_ptr<mapped_matrix<LogWeight> > rs = keBar.fv()->outerProdSparse(
             pese, d); // rs
-        fmExp->plusEquals(*pesese);
-        fmExp->plusEquals(*rs);
+        *fmExp += *pesese;
+        *fmExp += *rs;
       }
     }
   }
@@ -332,7 +336,7 @@ LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
 }
 
 LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
-    shared_ptr<DenseMatrix<LogWeight> >& fm,
+    shared_ptr<matrix<LogWeight> >& fm,
     shared_ptr<FeatureVector<LogWeight> >& fv) {
   InsideOutsideResult inOut = insideOutside(RingExpectation);
   fv = inOut.sBar;

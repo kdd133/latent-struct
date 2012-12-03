@@ -10,12 +10,17 @@
 #ifndef _GRAPH_H
 #define _GRAPH_H
 
-#include "DenseMatrix.h"
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "FeatureVector.h"
 #include "Label.h"
+#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/shared_array.hpp>
 #include <list>
 #include <string>
+using boost::numeric::ublas::matrix;
 using namespace boost;
 using namespace std;
 
@@ -44,7 +49,7 @@ class Graph {
         bool getCostOnly = false) = 0;
         
     virtual LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<DenseMatrix<LogWeight> >& fm,
+        shared_ptr<matrix<LogWeight> >& fm,
         shared_ptr<FeatureVector<LogWeight> >& fv) = 0;
         
     // Returns the *reverse* sequence of edit operations in to the maximum
