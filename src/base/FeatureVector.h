@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <ostream>
@@ -27,6 +28,7 @@
 #include <stdexcept>
 #include <tr1/unordered_map>
 using boost::numeric::ublas::mapped_matrix;
+using boost::numeric::ublas::matrix;
 using boost::shared_array;
 using boost::shared_ptr;
 using namespace std;
@@ -53,6 +55,8 @@ class FeatureVector {
     FeatureVector();
     bool reinit();
     
+    FeatureVector(const boost::numeric::ublas::vector<LogWeight>& vec);
+    
     // Creates a sparse, binary-valued vector with given indices set to one.
     FeatureVector(const set<int>& indices);
     bool reinit(const set<int>& indices);
@@ -63,9 +67,6 @@ class FeatureVector {
     
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
- 
-    shared_ptr<mapped_matrix<Weight> > outerProdSparse(
-        const FeatureVector<Weight>& fv, const int d = 0) const;
  
     int getIndexAtLocation(int location) const;
     
@@ -178,6 +179,16 @@ FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
 }
 
 template <typename Weight>
+FeatureVector<Weight>::FeatureVector(
+    const boost::numeric::ublas::vector<LogWeight>& vec) :
+  _indices(0), _allocatedEntries(0) {
+  _values.reset(new Weight[vec.size()]);
+  for (size_t i = 0; i < vec.size(); ++i)
+    _values[i] = vec(i);
+  _entries = _length = vec.size();
+}
+
+template <typename Weight>
 FeatureVector<Weight>::FeatureVector(const set<int>& indicesList) :
     _indices(0), _values(0), _entries(indicesList.size()),
     _allocatedEntries(_entries) {
@@ -250,59 +261,6 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
   }
   updateLength();
   return true;
-}
-
-template <typename Weight>
-shared_ptr<mapped_matrix<Weight> > FeatureVector<Weight>::outerProdSparse(
-    const FeatureVector<Weight>& fv, const int d) const {
-  const int dim = d > 0 ? d : max(getLength(), fv.getLength()); 
-  assert(dim > 0);
-  shared_ptr<mapped_matrix<Weight> > fm(new mapped_matrix<Weight>(dim, dim));
-  const Weight zero = Weight(0);
-  
-  if (isDense()) {
-    if (fv.isDense()) {
-      for (size_t row = 0; row < getLength(); ++row) {
-        for (size_t col = 0; col < fv.getLength(); ++col) {
-          const Weight prod = getValueAtLocation(row) * 
-              fv.getValueAtLocation(col);
-          if (prod != zero)
-            (*fm)(row, col) = prod;
-        }
-      }
-    }
-    else {
-      for (size_t row = 0; row < getLength(); ++row) {
-        for (size_t j = 0; j < fv.getNumEntries(); ++j) {
-          const int col = fv._indices[j];
-          const Weight prod = _values[row] * fv.getValueAtIndex(col);
-          if (prod != zero)
-            (*fm)(row, col) = prod;
-        }
-      }
-    }
-  }
-  else {
-    if (fv.isDense()) {
-      assert(0);
-    }
-    else {
-      const size_t m = getNumEntries();
-      const size_t n = fv.getNumEntries();
-      for (size_t i = 0; i < m; ++i) {
-        for (size_t j = 0; j < n; ++j) {
-          const int row = _indices[i];
-          const int col = fv._indices[j];
-          const Weight prod = getValueAtIndex(row) * fv.getValueAtIndex(
-              col);
-          if (prod != zero)
-            (*fm)(row, col) = prod;
-        }
-      }
-    }
-  }
-  
-  return fm;
 }
 
 template <typename Weight>

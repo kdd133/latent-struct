@@ -25,15 +25,18 @@
 #include "StringPair.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
+#include <boost/numeric/ublas/io.hpp>
+#include <boost/numeric/ublas/matrix_expression.hpp>
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/vector_sparse.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <fstream>
 #include <stack>
-#include <tr1/unordered_map>
 #include <vector>
 using namespace boost;
 using namespace std;
@@ -57,7 +60,6 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
   const vector<string>& t = pair.getTarget();
   
   clear();
-//  _fst = new fst::VectorFst<Arc>();
   
   StateId startStateId = addNode();
   _root = &_nodes[_nodes.size()-1];
@@ -106,7 +108,6 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
     else
       delete fv;
   }
-//  _fst->SetStart(startStateId);
   
   if (includeStartArc) {
     FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, 0, 0, noOp,
@@ -206,13 +207,9 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
       RingInfo k(*e, ring);
       // For each antecedent node...
-      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
-//        cout << "betas[" << u->getId() << "]=" << betas[u->getId()].score() << endl;
+      BOOST_FOREACH(const Hypernode* u, e->getChildren())
         k.collectProd(betas[u->getId()], ring);
-      }
-//      cout << endl << "k.score(): " << k.score() << endl; if (k.fv()) cout << "k.fv():" << endl << *k.fv();
       betas[parentId].collectSum(k, ring);
-//      cout << "beta.score(): " << betas[parentId].score() << endl; if (betas[parentId].fv()) cout << "beta.fv():" << endl << *betas[parentId].fv();
     }
   }
   return betas;
@@ -251,6 +248,12 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
 
 AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
     const Ring ring) {
+  using boost::numeric::ublas::compressed_matrix;
+  using boost::numeric::ublas::compressed_vector;
+  using boost::numeric::ublas::matrix;
+  using boost::numeric::ublas::vector;
+  typedef compressed_matrix<LogWeight> sparse_matrix;
+  typedef compressed_vector<LogWeight> sparse_vector;
 
   // Run inside() and outside().
   shared_array<RingInfo> betas = inside(ring);
@@ -258,8 +261,9 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
     
   const int d = _fgen->getAlphabet()->size();
   shared_array<LogWeight> array(new LogWeight[d]);
-  tr1::unordered_map<int,LogWeight> fvExp;
-  shared_ptr<matrix<LogWeight> > fmExp(new matrix<LogWeight>(d, d));
+  vector<LogWeight> rBar(d);
+  shared_ptr<matrix<LogWeight> > tBar_(new matrix<LogWeight>(d, d));
+  matrix<LogWeight>& tBar = *tBar_;
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
@@ -272,45 +276,62 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
         keBar.collectProd(betas[u->getId()], ring);
 
-      LogWeight pe = e->getWeight();
-      FeatureVector<LogWeight> fv = fvConvert(*e->getFeatureVector(), array, d);
-
+      const LogWeight pe = e->getWeight();
+      const FeatureVector<LogWeight> fv_ = fvConvert(*e->getFeatureVector(),
+          array, d);      
+      const LogWeight keBarP = keBar.score();
+      
+      sparse_vector re(d);
+      for (int i = 0; i < fv_.getNumEntries(); ++i) {
+        int index = fv_.getIndexAtLocation(i);
+        LogWeight value = fv_.getValueAtLocation(i);
+        re(index) = value;
+      }
+      
       if (ring == RingLog || ring == RingViterbi) {
         // Compute: xHat = xHat + keBar*xe
         //    where xe = pe*re
-        FeatureVector<LogWeight>& re = fv; // Interpret fv as re in this case
-        pe *= keBar.score();
-        re.addTo(fvExp, pe);
+        sparse_vector& pe_re = re;
+        pe_re *= pe * keBarP;
+        rBar += pe_re;
       }
       else {
         assert(ring == RingExpectation);
-        
-        FeatureVector<LogWeight>& se = fv; // Interpret fv as se in this case
-        FeatureVector<LogWeight> pese(se);
-        pese.timesEquals(pe);
-        shared_ptr<mapped_matrix<LogWeight> > pesese = pese.outerProdSparse(
-            se, d);
-        
-        pese.addTo(fvExp, keBar.score());
-        
-        *pesese *= keBar.score(); // pt
         assert(keBar.fv());
-        shared_ptr<mapped_matrix<LogWeight> > rs = keBar.fv()->outerProdSparse(
-            pese, d); // rs
-        *fmExp += *pesese;
-        *fmExp += *rs;
+        
+        sparse_vector& se = re; // In our applications, we have re == se
+        
+        sparse_matrix pe_re_se = outer_prod(re, se);
+        pe_re_se *= pe;
+        
+        sparse_vector keBarR(d);
+        for (int i = 0; i < keBar.fv()->getNumEntries(); ++i) {
+          int index = keBar.fv()->getIndexAtLocation(i);
+          LogWeight value = keBar.fv()->getValueAtLocation(i);
+          keBarR(index) = value;
+        }
+        
+        sparse_vector& pe_se = se;
+        pe_se *= pe;
+        const sparse_matrix pe_se_keBarR = outer_prod(pe_se, keBarR);
+        
+        pe_se *= keBarP;    // = keBarP * pe_se
+        pe_re_se *= keBarP; // = keBarP * pe_re_se
+        
+        rBar += pe_se;
+        tBar += (pe_re_se + pe_se_keBarR);
       }
     }
   }
   
   InsideOutsideResult result;
   result.Z = betas[_root->getId()].score();
-  result.rBar.reset(new FeatureVector<LogWeight>(fvExp));
+  result.rBar.reset(new FeatureVector<LogWeight>(rBar));
   if (ring == RingExpectation) {
     assert(betas[_root->getId()].fv());
     result.sBar.reset(new FeatureVector<LogWeight>(
         *betas[_root->getId()].fv()));
-    result.tBar = fmExp;
+    result.tBar = tBar_;
   }
   
   return result;
@@ -565,7 +586,6 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   children.push_back(onlyChild);
   const int edgeId = _edges.size();
   const LogWeight edgeWeight(exp(w.innerProd(fv)));
-//  _fst->AddArc(sourceId, arc);
   Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, fv);
   parent.addEdge(edge);
   _edges.push_back(edge);
