@@ -12,7 +12,6 @@
 
 #include "Alphabet.h"
 #include "LogWeight.h"
-#include "RealWeight.h"
 #include "Ublas.h"
 #include <algorithm>
 #include <assert.h>

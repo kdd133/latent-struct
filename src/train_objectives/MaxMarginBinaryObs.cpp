@@ -13,7 +13,6 @@
 #include "MaxMarginBinaryObs.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
-#include "RealWeight.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"

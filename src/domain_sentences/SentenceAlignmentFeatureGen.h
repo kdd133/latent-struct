@@ -12,7 +12,6 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
-#include "FeatureVector.h"
 #include "StateType.h"
 #include "Ublas.h"
 #include <boost/shared_ptr.hpp>

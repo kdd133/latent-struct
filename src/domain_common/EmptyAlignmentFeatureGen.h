@@ -12,7 +12,6 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "StateType.h"
 #include "Ublas.h"
@@ -22,7 +21,6 @@
 
 class EditOperation;
 class Pattern;
-class RealWeight;
 
 class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
 

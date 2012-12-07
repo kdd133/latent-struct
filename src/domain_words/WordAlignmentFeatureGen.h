@@ -13,7 +13,6 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "Ublas.h"
 #include <boost/regex.hpp>

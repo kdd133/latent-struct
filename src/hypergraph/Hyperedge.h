@@ -21,7 +21,6 @@
 #include <list>
 
 class Hypernode;
-class RealWeight;
 
 class Hyperedge {
 

@@ -8,7 +8,6 @@
  */
 
 #include "LogWeight.h"
-#include "RealWeight.h"
 #include "Utility.h"
 #include <assert.h>
 #include <cmath>
@@ -21,10 +20,6 @@ LogWeight::LogWeight(double value, bool valueIsLog) {
     assert(value >= 0);
     _val = log(value);
   }
-}
-
-RealWeight LogWeight::convert() const {
-  return RealWeight(exp(_val));
 }
 
 // See Table 3 in Li & Eisner paper titled:

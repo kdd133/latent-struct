@@ -12,7 +12,6 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
-#include "FeatureVector.h"
 #include "Graph.h"
 #include "Hyperedge.h"
 #include "Hypernode.h"
@@ -29,7 +28,6 @@
 
 class LogWeight;
 class Pattern;
-class RealWeight;
 class RingInfo;
 class StateType;
 class StringPair;

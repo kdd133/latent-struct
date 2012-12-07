@@ -41,7 +41,7 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
 
     const LogWeight fW = (yi == 1) ? -logMass : logMass;
-    funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
+    funcVal += Utility::log1Plus(exp(fW)); // i.e., exp(fW)
     
     ublas_util::convertVec(feats, temp);
     gradFv += temp * (-yi * (1 - Utility::sigmoid(-fW)));

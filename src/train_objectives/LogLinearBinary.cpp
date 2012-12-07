@@ -9,7 +9,6 @@
 
 #include "Dataset.h"
 #include "Example.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LogLinearBinary.h"
 #include "LogWeight.h"
@@ -19,6 +18,7 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/shared_array.hpp>
+#include <cmath>
 
 using boost::shared_array;
 
@@ -63,7 +63,7 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
 
     const LogWeight z = logMass * (-logSizeZx);
     const LogWeight fW = (yi == 1) ? -z : z;
-    funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
+    funcVal += Utility::log1Plus(exp(fW));
     
     ublas_util::convertVec(feats, temp);
     gradFv += (temp * -yi * (1 - Utility::sigmoid(-fW)));

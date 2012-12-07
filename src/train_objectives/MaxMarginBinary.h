@@ -17,7 +17,6 @@
 
 class Dataset;
 class Model;
-class RealWeight;
 
 class MaxMarginBinary : public TrainingObjective {
 

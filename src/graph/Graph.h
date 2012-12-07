@@ -10,7 +10,6 @@
 #ifndef _GRAPH_H
 #define _GRAPH_H
 
-#include "FeatureVector.h"
 #include "Label.h"
 #include "Ublas.h"
 #include <boost/numeric/ublas/matrix.hpp>
@@ -20,7 +19,6 @@
 
 class LogWeight;
 class Pattern;
-class RealWeight;
 class WeightVector;
 
 class Graph {

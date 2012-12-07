@@ -11,7 +11,6 @@
 #define _MODEL_H
 
 #include "AlignmentFeatureGen.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
 #include "Ublas.h"
@@ -22,7 +21,6 @@
 class InputReader;
 class LogWeight;
 class Pattern;
-class RealWeight;
 
 class Model {
 
@@ -42,10 +40,10 @@ class Model {
     virtual LogWeight totalMass(const WeightVector& w, const Pattern& pattern,
       const Label label) = 0;
         
-    virtual RealWeight viterbiScore(const WeightVector& w,
-      const Pattern& pattern, const Label label) = 0;
+    virtual double viterbiScore(const WeightVector& w, const Pattern& pattern,
+      const Label label) = 0;
 
-    virtual RealWeight maxFeatures(const WeightVector& w, SparseRealVec& fv,
+    virtual double maxFeatures(const WeightVector& w, SparseRealVec& fv,
       const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true) = 0;
     

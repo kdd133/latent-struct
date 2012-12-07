@@ -13,7 +13,6 @@
 #include "LabelScoreTable.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
-#include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"

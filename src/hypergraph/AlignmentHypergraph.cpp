@@ -9,8 +9,8 @@
 
 #include "AlignmentHypergraph.h"
 #include "AlignmentPart.h"
+#include "Alphabet.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "Hyperedge.h"
 #include "Hypernode.h"
 #include "LogWeight.h"
@@ -333,7 +333,7 @@ double AlignmentHypergraph::maxFeatureVector(SparseRealVec& fv,
   _betas = betasCopy;
 #else
   list<const Hyperedge*> bestPath;
-  const RealWeight viterbiScore = viterbi(bestPath);
+  const double viterbiScore = viterbi(bestPath);
   if (!getCostOnly) {
     fv.clear();
     fv.resize(_fgen->getAlphabet()->size());

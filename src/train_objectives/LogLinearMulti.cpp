@@ -13,7 +13,6 @@
 #include "LogLinearMulti.h"
 #include "LogWeight.h"
 #include "Model.h"
-#include "RealWeight.h"
 #include "Ublas.h"
 #include "WeightVector.h"
 #include <boost/shared_array.hpp>

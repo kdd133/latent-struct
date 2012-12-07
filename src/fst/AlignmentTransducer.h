@@ -14,14 +14,12 @@
 #include "AlignmentPart.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "Graph.h"
 #include "Label.h"
 #include "LogFeatArc.h"
 #include "LogWeight.h"
 #include "ObservedFeatureGen.h"
 #include "OpNone.h"
-#include "RealWeight.h"
 #include "StateType.h"
 #include "StdFeatArc.h"
 #include "StringPair.h"
@@ -478,7 +476,7 @@ double AlignmentTransducer<Arc>::maxFeatureVector(SparseRealVec& fv,
       assert(aIt.Done());
     }
   }
-  return RealWeight(-cost); // the arc weights were negated in build()
+  return -cost; // the arc weights were negated in build()
 }
 
 template<typename Arc>

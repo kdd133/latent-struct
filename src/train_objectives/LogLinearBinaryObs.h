@@ -17,7 +17,6 @@
 
 class Dataset;
 class Model;
-class RealWeight;
 class WeightVector;
 
 class LogLinearBinaryObs : public TrainingObjective {

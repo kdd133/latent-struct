@@ -11,7 +11,6 @@
 #define _KLEMENTIEVROTHSENTENCEFEATUREGEN_H
 
 #include "Alphabet.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
 #include "Ublas.h"
@@ -21,7 +20,6 @@
 #include <vector>
 
 class Pattern;
-class RealWeight;
 
 
 class KlementievRothSentenceFeatureGen : public ObservedFeatureGen {

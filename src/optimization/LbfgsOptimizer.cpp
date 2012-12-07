@@ -10,7 +10,6 @@
 #include "LbfgsOptimizer.h"
 #include "Model.h"
 #include "Optimizer.h"
-#include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"

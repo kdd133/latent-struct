@@ -14,7 +14,6 @@
 // in ublas vector and matrix classes.
 #define BOOST_UBLAS_TYPE_CHECK 0
 
-#include "FeatureVector.h"
 #include "Hyperedge.h"
 #include "LogWeight.h"
 #include "Ring.h"

@@ -10,13 +10,11 @@
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "KlementievRothSentenceFeatureGen.h"
 #include "Label.h"
 #include "LogWeight.h"
 #include "ObservedFeatureGen.h"
-#include "RealWeight.h"
 #include "StringPair.h"
 #include "Ublas.h"
 #include <boost/algorithm/string.hpp>

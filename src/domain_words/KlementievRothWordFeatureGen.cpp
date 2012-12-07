@@ -12,7 +12,6 @@
 #include "FeatureGenConstants.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "Label.h"
-#include "RealWeight.h"
 #include "StringPair.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
@@ -171,7 +170,7 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
         // want to count unseen features; so, we pretend we never saw them.
         int fId = _alphabet->lookup(prefix.str() + phrasePair.str(), true);
         if (fId >= 0)
-          sub_pair_counts[fId] += RealWeight(1);
+          sub_pair_counts[fId]++;
           
         if (_regexEnabled) {
           const string temp = regex_replace(phrasePair.str(), _regConsonant, C);

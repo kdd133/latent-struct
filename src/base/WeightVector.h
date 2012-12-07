@@ -10,13 +10,11 @@
 #ifndef _WEIGHTVECTOR_H
 #define _WEIGHTVECTOR_H
 
-#include "FeatureVector.h"
 #include "Ublas.h"
 #include <boost/shared_array.hpp>
 #include <string>
 
 class LogWeight;
-class RealWeight;
 
 class WeightVector {
   
@@ -29,18 +27,11 @@ class WeightVector {
     
     void reAlloc(int dim);
     
-    double innerProd(const FeatureVector<RealWeight>& fv) const;
-    
-    // The inner product with a 0 FeatureVector is defined to be zero.
-    double innerProd(const FeatureVector<RealWeight>* fv) const;
-    
     double innerProd(const SparseLogVec& fv) const;
     
     double innerProd(const SparseRealVec& fv) const;
     
     double innerProd(const RealVec& fv) const;
-    
-    void add(const FeatureVector<RealWeight>& fv, const double scale = 1);
     
     void add(const int index, const double value);
     

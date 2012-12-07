@@ -10,7 +10,6 @@
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LogWeight.h"
 #include "Pattern.h"

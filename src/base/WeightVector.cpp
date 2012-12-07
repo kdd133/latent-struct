@@ -7,7 +7,6 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include "FeatureVector.h"
 #include "Ublas.h"
 #include "WeightVector.h"
 #include <assert.h>
@@ -41,18 +40,6 @@ void WeightVector::reAlloc(int dim) {
   zero();
 }
 
-double WeightVector::innerProd(const FeatureVector<RealWeight>& fv) const {
-  if (_dim == 0)
-    return 0.0;
-  double prod = 0;
-  for (int i = 0; i < fv.getNumEntries(); i++) {
-    const int index = fv.getIndexAtLocation(i);
-    assert(index >= 0 && index < _dim);
-    prod += (double)fv.getValueAtLocation(i) * _weights[index];
-  }
-  return prod;
-}
-
 double WeightVector::innerProd(const SparseLogVec& fv) const {
   if (_dim == 0)
     return 0.0;
@@ -81,39 +68,6 @@ double WeightVector::innerProd(const RealVec& fv) const {
   for (size_t i = 0; i < fv.size(); ++i)
     prod += fv(i) * _weights[i];
   return prod;
-}
-
-double WeightVector::innerProd(const FeatureVector<RealWeight>* fv) const {
-  if (fv == 0)
-    return 0.0;
-  return innerProd(*fv);
-}
-
-// adapted from Parameters.h in egstra
-void WeightVector::add(const FeatureVector<RealWeight>& fv, const double scale) {
-  double l2Adjust = 0;
-  if (fv.isBinary()) {
-    for (int i = 0; i < fv.getNumEntries(); i++) {
-      const int index = fv.getIndexAtLocation(i);
-      assert(index >= 0 && index < _dim);
-      const double currentVal = _weights[index];
-      _weights[index] = currentVal + scale;
-      /* use the formula: (w + x)^2 = w^2 + x^2 + 2*x*w */
-      l2Adjust += scale * scale + 2 * scale * currentVal;
-    }
-  }
-  else {
-    for (int i = 0; i < fv.getNumEntries(); i++) {
-      const int index = fv.getIndexAtLocation(i);
-      assert(index >= 0 && index < _dim);
-      const double update = scale * fv.getValueAtLocation(i);
-      const double currentVal = _weights[index];
-      _weights[index] = currentVal + update;
-      /* use the formula: (w + x)^2 = w^2 + x^2 + 2*x*w */
-      l2Adjust += update * update + 2 * update * currentVal;
-    }
-  }
-  _l2 += l2Adjust;
 }
 
 void WeightVector::add(const int index, const double update) {

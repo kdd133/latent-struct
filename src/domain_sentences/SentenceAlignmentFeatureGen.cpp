@@ -8,9 +8,9 @@
  */
 
 #include "AlignmentPart.h"
+#include "Alphabet.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "LogWeight.h"
 #include "OpNone.h"
 #include "Pattern.h"

@@ -11,7 +11,6 @@
 #define _STRINGEDITMODEL_H
 
 #include "AlignmentFeatureGen.h"
-#include "FeatureVector.h"
 #include "InputReader.h"
 #include "Label.h"
 #include "LogFeatArc.h"
@@ -64,10 +63,10 @@ class StringEditModel : public Model {
     virtual LogWeight totalMass(const WeightVector& w, const Pattern& pattern,
       const Label label);
     
-    virtual RealWeight viterbiScore(const WeightVector& w,
-      const Pattern& pattern, const Label label);
+    virtual double viterbiScore(const WeightVector& w, const Pattern& pattern,
+      const Label label);
   
-    virtual RealWeight maxFeatures(const WeightVector& w, SparseRealVec& fv,
+    virtual double maxFeatures(const WeightVector& w, SparseRealVec& fv,
       const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true);
     
@@ -558,17 +557,17 @@ LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
 }
 
 template <typename Graph>
-RealWeight StringEditModel<Graph>::viterbiScore(const WeightVector& w,
+double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   SparseRealVec fv;
-  const RealWeight maxScore = graph->maxFeatureVector(fv, true);
+  const double maxScore = graph->maxFeatureVector(fv, true);
   graph->clearDynProgVariables();
   return maxScore;
 }
 
 template <typename Graph>
-RealWeight StringEditModel<Graph>::maxFeatures(const WeightVector& w,
+double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     SparseRealVec& fv, const Pattern& x, const Label y, bool includeObsFeats) {
   Graph* graph = 0;
   if (includeObsFeats)

@@ -126,7 +126,7 @@ void MaxMarginBinary::predictPart(const WeightVector& w, Model& model,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    const RealWeight z = model.viterbiScore(w, x, ypos);
+    const double z = model.viterbiScore(w, x, ypos);
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, (-z));
   }

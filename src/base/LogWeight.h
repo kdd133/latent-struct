@@ -13,16 +13,12 @@
 #include <assert.h>
 #include <ostream>
 
-class RealWeight;
-
 class LogWeight {
 
   public:
     explicit LogWeight(double value = 0, bool valueIsLog = false);
 
     operator double() const { return _val; }
-    
-    RealWeight convert() const;
     
     const LogWeight operator+(const LogWeight& w) const;
     

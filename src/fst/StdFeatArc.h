@@ -11,10 +11,8 @@
 #define _STDFEATARC_H
 
 #include <fst/float-weight.h>
-#include "FeatureVector.h"
 #include "Ublas.h"
 
-class RealWeight;
 
 // Based on ArcTpl in "fst/arc.h".
 class StdFeatArc {

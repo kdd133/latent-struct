@@ -8,9 +8,7 @@
  */
 
 #include "Dataset.h"
-#include "FeatureVector.h"
 #include "Label.h"
-#include "RealWeight.h"
 #include "TrainingObjective.h"
 #include "WeightVector.h"
 #include <boost/bind.hpp>

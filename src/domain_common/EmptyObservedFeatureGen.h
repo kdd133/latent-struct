@@ -10,7 +10,6 @@
 #ifndef _EMPTYOBSERVEDFEATUREGEN_H
 #define _EMPTYOBSERVEDFEATUREGEN_H
 
-#include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
 #include "Ublas.h"
@@ -18,7 +17,6 @@
 
 class Alphabet;
 class Pattern;
-class RealWeight;
 
 
 class EmptyObservedFeatureGen : public ObservedFeatureGen {

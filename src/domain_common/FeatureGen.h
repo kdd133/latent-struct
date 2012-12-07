@@ -10,11 +10,10 @@
 #ifndef _FEATUREGEN_H
 #define _FEATUREGEN_H
 
+#include "Alphabet.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
-
-class Alphabet;
 
 class FeatureGen {
   

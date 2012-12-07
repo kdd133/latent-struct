@@ -14,7 +14,6 @@
 #include "MaxMarginMulti.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
-#include "RealWeight.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
@@ -30,7 +29,7 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   
   const int d = w.getDim();
   
-  vector<RealWeight> score(k, RealWeight());
+  vector<double> score(k);
   vector<SparseRealVec> feats(k, SparseRealVec(d));  
   
   funcVal = 0;

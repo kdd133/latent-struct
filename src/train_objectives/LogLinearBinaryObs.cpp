@@ -17,7 +17,6 @@
 #include "LogLinearBinaryObs.h"
 #include "ObservedFeatureGen.h"
 #include "Model.h"
-#include "RealWeight.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
