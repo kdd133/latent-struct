@@ -11,11 +11,13 @@
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
+#include "LogWeight.h"
 #include "OpNone.h"
 #include "Pattern.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "StateType.h"
 #include "StringPair.h"
+#include "Ublas.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -27,6 +29,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
 using namespace boost;
 using namespace std;
 
@@ -74,11 +77,9 @@ features of the state sequence")
   return 0;
 }
 
-FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
-    const Pattern& x, Label label, int iNew, int jNew,
-    const EditOperation& op, const vector<AlignmentPart>& history) {
-  //const vector<string>& source = ((const StringPair&)x).getSource();
-  //const vector<string>& target = ((const StringPair&)x).getTarget();
+SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
+    Label label, int iNew, int jNew, const EditOperation& op,
+    const vector<AlignmentPart>& history) {
     
   // TODO: May want to do the tokenizing in the reader, store in a
   // different data structure (not StringPair) possibly with
@@ -205,7 +206,7 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
         
         for (int fi = 0; fi < numFeats; fi++) {
           ngramFeats[fi] = sourceFeats[fi] + FeatureGenConstants::OP_SEP +
-              targetFeats[fi] +ngramFeats[fi]; 
+              targetFeats[fi] + ngramFeats[fi]; 
           // The last condition in the if statements implies that we don't fire an
           // alignment unigram feature if the operation was a noop.
           if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
@@ -218,12 +219,15 @@ FeatureVector<RealWeight>* SentenceAlignmentFeatureGen::getFeatures(
     }
   }
   
-  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
+  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
+  set<int>::const_iterator it;
+  for (it = featureIds.begin(); it != featureIds.end(); ++it)
+    (*fv)(*it) = 1.0;
 
   if (_normalize) {
     const double normalization = x.getSize();
     assert(normalization > 0);
-    fv->timesEquals(1.0 / normalization);
+    (*fv) /= normalization;
   }
   
   return fv;

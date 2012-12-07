@@ -8,6 +8,7 @@
 #include "EmOptimizer.h"
 #include "MaxMarginBinary.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
@@ -70,15 +71,15 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
   
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(1, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.50, (double)gradFv.getValueAtLocation(0), 1e-8);
-  BOOST_CHECK_CLOSE(0.65, (double)gradFv.getValueAtLocation(1), 1e-8);
-  BOOST_CHECK_CLOSE(0.30, (double)gradFv.getValueAtLocation(2), 1e-8);
-  BOOST_CHECK_CLOSE(2.35, (double)gradFv.getValueAtLocation(3), 1e-8);
+  BOOST_CHECK_CLOSE(0.50, gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.65, gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.30, gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(2.35, gradFv[3], 1e-8);
   
   shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
   ret = convexOpt->processOptions(argc, argv);

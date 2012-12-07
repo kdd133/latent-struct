@@ -10,15 +10,11 @@
 #ifndef _FEATUREGEN_H
 #define _FEATUREGEN_H
 
-#include "FeatureVector.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 class Alphabet;
-class EditOperation;
-class RealWeight;
 
 class FeatureGen {
   

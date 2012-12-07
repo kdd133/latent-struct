@@ -13,7 +13,6 @@
 #include "Optimizer.h"
 #include <lbfgs.h>
 #include <string>
-using namespace std;
 
 class Dataset;
 class TrainingObjective;
@@ -31,8 +30,8 @@ class LbfgsOptimizer : public Optimizer {
 
     virtual int processOptions(int argc, char** argv);
     
-    static const string& name() {
-      static const string _name = "Lbfgs";
+    static const std::string& name() {
+      static const std::string _name = "Lbfgs";
       return _name;
     }
     

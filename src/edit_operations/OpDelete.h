@@ -12,27 +12,25 @@
 
 #include "EditOperation.h"
 #include <boost/regex.hpp>
-#include <list>
 #include <string>
 #include <vector>
-using namespace std;
 
 class StateType;
 
 class OpDelete : public EditOperation {
   public:
     OpDelete(int opId, const StateType* defaultDestinationState,
-      string name = "Delete", int phraseLengthSource = 1);
+      std::string name = "Delete", int phraseLengthSource = 1);
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,
                                    int& iNew,
                                    int& jNew) const;
               
-    void setCondition(string tokenRegexStr, bool acceptMatching = true);
+    void setCondition(std::string tokenRegexStr, bool acceptMatching = true);
               
   private:
   
@@ -43,7 +41,7 @@ class OpDelete : public EditOperation {
     // otherwise, all tokens must not match the regex.
     boost::regex _tokenRegex;
     
-    // True if a non-empty string was passed to the constructor via the
+    // True if a non-empty std::string was passed to the constructor via the
     // tokensMatchRegex argument.
     bool _conditionEnabled;
     

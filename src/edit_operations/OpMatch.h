@@ -14,27 +14,26 @@
 #include <boost/regex.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 // An operation that is applied if the source and target phrases are identical.
 class OpMatch : public EditOperation {
 
   public:
   
-    OpMatch(int opId, const StateType* defaultDestinationState, string name =
-      "Match", int phraseLength = 1);
+    OpMatch(int opId, const StateType* defaultDestinationState,
+      std::string name = "Match", int phraseLength = 1);
     
     virtual ~OpMatch() {}
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,
                                    int& iNew,
                                    int& jNew) const;
               
-    void setCondition(string tokenRegexStr, bool acceptMatching = true);
+    void setCondition(std::string tokenRegexStr, bool acceptMatching = true);
               
   private:
   
@@ -45,7 +44,7 @@ class OpMatch : public EditOperation {
     // otherwise, all tokens must not match the regex.
     boost::regex _tokenRegex;
     
-    // True if a non-empty string was passed to the constructor via the
+    // True if a non-empty std::string was passed to the constructor via the
     // tokensMatchRegex argument.
     bool _conditionEnabled;
     

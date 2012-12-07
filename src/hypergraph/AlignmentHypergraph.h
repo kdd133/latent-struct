@@ -10,10 +10,6 @@
 #ifndef _ALIGNMENTHYPERGRAPH_H
 #define _ALIGNMENTHYPERGRAPH_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
 #include "FeatureVector.h"
@@ -23,16 +19,13 @@
 #include "Label.h"
 #include "ObservedFeatureGen.h"
 #include "Ring.h"
+#include "Ublas.h"
 #include <boost/multi_array.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <list>
 #include <string>
-using boost::numeric::ublas::matrix;
-using namespace boost;
-using namespace std;
 
 class LogWeight;
 class Pattern;
@@ -45,22 +38,22 @@ class WeightVector;
 class AlignmentHypergraph : public Graph {
   public:
     typedef int StateId;
-    typedef multi_array<StateId, 3> StateIdTable;
+    typedef boost::multi_array<StateId, 3> StateIdTable;
     
     typedef struct insideOutsideResult {
       LogWeight Z;
-      shared_ptr<FeatureVector<LogWeight> > rBar;
-      shared_ptr<FeatureVector<LogWeight> > sBar;
-      shared_ptr<matrix<LogWeight> > tBar;
+      LogVec rBar;
+      LogVec sBar;
+      LogMat tBar;
     } InsideOutsideResult;
     
     virtual ~AlignmentHypergraph() { }
     
     // The first StateType in the list will be used as the start state and as
     // the finish state.
-    AlignmentHypergraph(const ptr_vector<StateType>& stateTypes,
-        shared_ptr<AlignmentFeatureGen> fgen,
-        shared_ptr<ObservedFeatureGen> fgenObs,
+    AlignmentHypergraph(const boost::ptr_vector<StateType>& stateTypes,
+        boost::shared_ptr<AlignmentFeatureGen> fgen,
+        boost::shared_ptr<ObservedFeatureGen> fgenObs,
         bool includeFinalFeats = true);
     
     void build(const WeightVector& w, const Pattern& x, Label label,
@@ -68,29 +61,25 @@ class AlignmentHypergraph : public Graph {
       
     void rescore(const WeightVector& w);
 
-    void getNodesTopologicalOrder(list<const Hypernode*>& ordering,
+    void getNodesTopologicalOrder(std::list<const Hypernode*>& ordering,
       bool reverse = false);
 
     LogWeight logPartition();
 
     // Note: Assumes fv has been zeroed out.
-    LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
-        shared_array<LogWeight> buffer);
+    LogWeight logExpectedFeaturesUnnorm(LogVec& fv);
         
-    LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<matrix<LogWeight> >& fm,
-        shared_ptr<FeatureVector<LogWeight> >& fv);
+    LogWeight logExpectedFeatureCooccurrences(LogMat& fm, LogVec& fv);
 
     // Note: Assumes fv has been zeroed out.
-    RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
-        bool getCostOnly = false);
+    double maxFeatureVector(SparseRealVec& fv, bool getCostOnly = false);
         
     // Returns the *reverse* sequence of edit operations in to the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
     // be applied in reverse order to reconstruct the optimal alignment.
-    void maxAlignment(list<int>& opIds) const;
+    void maxAlignment(std::list<int>& opIds) const;
     
-    void toGraphviz(const string& fname) const;
+    void toGraphviz(const std::string& fname) const;
     
     int numArcs();
     
@@ -104,7 +93,7 @@ class AlignmentHypergraph : public Graph {
     void applyOperations(const WeightVector& w,
                          const StringPair& pair,
                          const Label label,
-                         vector<AlignmentPart>& history,
+                         std::vector<AlignmentPart>& history,
                          const StateType* sourceStateType,
                          const int i,
                          const int j);
@@ -113,30 +102,30 @@ class AlignmentHypergraph : public Graph {
     
     void addEdge(const int opId, const int destStateTypeId,
         const StateId sourceId, const StateId destId,
-        FeatureVector<RealWeight>* fv, const WeightVector& w);
+        SparseRealVec* fv, const WeightVector& w);
         
-    shared_array<RingInfo> inside(const Ring ring);
+    boost::shared_array<RingInfo> inside(const Ring ring);
     
-    shared_array<RingInfo> outside(const Ring ring,
-        shared_array<RingInfo> betas);
+    boost::shared_array<RingInfo> outside(const Ring ring,
+        boost::shared_array<RingInfo> betas);
         
     InsideOutsideResult insideOutside(const Ring ring);
     
-    double viterbi(list<const Hyperedge*>& bestPath);
+    double viterbi(std::list<const Hyperedge*>& bestPath);
         
     void clear();
     
     int numEdges(int nodeId) const;
     
-    ptr_vector<Hypernode> _nodes;
+    boost::ptr_vector<Hypernode> _nodes;
     
-    ptr_vector<Hyperedge> _edges;
+    boost::ptr_vector<Hyperedge> _edges;
     
-    const ptr_vector<StateType>& _stateTypes;
+    const boost::ptr_vector<StateType>& _stateTypes;
     
-    shared_ptr<AlignmentFeatureGen> _fgen;
+    boost::shared_ptr<AlignmentFeatureGen> _fgen;
     
-    shared_ptr<ObservedFeatureGen> _fgenObs;
+    boost::shared_ptr<ObservedFeatureGen> _fgenObs;
 
     StateIdTable _stateIdTable;
     

@@ -8,7 +8,6 @@
  */
 
 #include <string>
-using std::string;
 #include "FeatureGenConstants.h"
 
 const char* FeatureGenConstants::PART_SEP = "_";

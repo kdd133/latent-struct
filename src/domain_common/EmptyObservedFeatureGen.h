@@ -13,6 +13,7 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 
 class Alphabet;
@@ -32,17 +33,16 @@ class EmptyObservedFeatureGen : public ObservedFeatureGen {
     EmptyObservedFeatureGen(boost::shared_ptr<Alphabet> alphabet) :
       ObservedFeatureGen(alphabet) {}
     
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-        const Label y) {
-      return new FeatureVector<RealWeight>(); // return the zero vector
+    virtual SparseRealVec* getFeatures(const Pattern& x, const Label y) {
+      return new SparseRealVec(_alphabet->size()); // return the zero vector
     }
     
     virtual int processOptions(int argc, char** argv) {
       return 0;
     }
     
-    static const string& name() {
-      static const string _name = "Empty";
+    static const std::string& name() {
+      static const std::string _name = "Empty";
       return _name;
     }
 

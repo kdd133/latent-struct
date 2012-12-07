@@ -7,14 +7,15 @@
 #include "LbfgsOptimizer.h"
 #include "LogLinearBinary.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
-using namespace boost;
 
+using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testLogLinearBinary)
 {
@@ -69,14 +70,14 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinary)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
   
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, (double)gradFv.getValueAtLocation(0), 1e-8);
-  BOOST_CHECK_CLOSE(1.12714370334, (double)gradFv.getValueAtLocation(1), 1e-8);
-  BOOST_CHECK_CLOSE(0.91161441403, (double)gradFv.getValueAtLocation(2), 1e-8);
-  BOOST_CHECK_CLOSE(0.39367847911, (double)gradFv.getValueAtLocation(3), 1e-8);
+  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(1.12714370334, gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.91161441403, gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.39367847911, gradFv[3], 1e-8);
   
   LbfgsOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

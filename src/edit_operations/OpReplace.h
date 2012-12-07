@@ -14,7 +14,6 @@
 #include <boost/regex.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 // Replace is an operation that generalizes Substitute and Match. That is,
 // Replace is applied regardless of whether the source phrase and the target
@@ -24,21 +23,22 @@ class OpReplace : public EditOperation {
   public:
   
     OpReplace(int opId, const StateType* defaultDestinationState,
-      string name = "Replace", int phraseLengthSource = 1,
+      std::string name = "Replace", int phraseLengthSource = 1,
       int phraseLengthTarget = 1);
     
     virtual ~OpReplace() {}
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,
                                    int& iNew,
                                    int& jNew) const;
               
-    void setCondition(string tokenRegexStrSource, string tokenRegexStrTarget,
-      bool acceptMatchingSource = true, bool acceptMatchingTarget = true);
+    void setCondition(std::string tokenRegexStrSource,
+      std::string tokenRegexStrTarget, bool acceptMatchingSource = true,
+      bool acceptMatchingTarget = true);
       
   private:
   

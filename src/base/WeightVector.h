@@ -10,21 +10,22 @@
 #ifndef _WEIGHTVECTOR_H
 #define _WEIGHTVECTOR_H
 
-#include <boost/shared_array.hpp>
-using boost::shared_array;
-#include <string>
-using namespace std;
 #include "FeatureVector.h"
+#include "Ublas.h"
+#include <boost/shared_array.hpp>
+#include <string>
 
+class LogWeight;
 class RealWeight;
 
 class WeightVector {
+  
   public:
     WeightVector() : _weights(0), _dim(0), _l2(0) {}
     
     WeightVector(int dim);
     
-    WeightVector(shared_array<double> weights, int dim);
+    WeightVector(boost::shared_array<double> weights, int dim);
     
     void reAlloc(int dim);
     
@@ -32,6 +33,12 @@ class WeightVector {
     
     // The inner product with a 0 FeatureVector is defined to be zero.
     double innerProd(const FeatureVector<RealWeight>* fv) const;
+    
+    double innerProd(const SparseLogVec& fv) const;
+    
+    double innerProd(const SparseRealVec& fv) const;
+    
+    double innerProd(const RealVec& fv) const;
     
     void add(const FeatureVector<RealWeight>& fv, const double scale = 1);
     
@@ -49,13 +56,13 @@ class WeightVector {
     
     void zero();
     
-    bool read(const string& fname, int dim);
+    bool read(const std::string& fname, int dim);
     
-    bool write(const string& fname) const;
+    bool write(const std::string& fname) const;
 
   private:
   
-    shared_array<double> _weights; // the weights
+    boost::shared_array<double> _weights; // the weights
     
     int _dim; // the dimensionality of the vector
     

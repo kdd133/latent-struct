@@ -20,7 +20,11 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <vector>
-using namespace boost;
+
+using boost::bind;
+using boost::ptr_vector;
+using boost::shared_ptr;
+using boost::thread;
 using namespace std;
 
 const Label TrainingObjective::kPositive = 1;
@@ -36,11 +40,11 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
 }
 
 void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
-    FeatureVector<RealWeight>& gradFv) {
+    RealVec& gradFv) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
-  vector<FeatureVector<RealWeight> > grads(numParts, w.getDim());
+  vector<RealVec> grads(numParts, RealVec(w.getDim()));
   vector<double> fvals(numParts, 0);
   
   // Compute the function values and gradients.
@@ -48,18 +52,19 @@ void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = _dataset.partitionBegin(i);
     const Dataset::iterator end = _dataset.partitionEnd(i);
-    threads.push_back(new thread(boost::bind(
-        &TrainingObjective::valueAndGradientPart, this,
-        cref(w), ref(_models[i]), begin, end, k, ref(fvals[i]), ref(grads[i])
+    threads.push_back(new thread(bind(
+        &TrainingObjective::valueAndGradientPart, this, boost::cref(w),
+        boost::ref(_models[i]), begin, end, k, boost::ref(fvals[i]),
+        boost::ref(grads[i])
     )));
   }
     
   // Combine the results.
-  gradFv.zero();
+  gradFv.clear();
   fval = 0;
   for (size_t i = 0; i < numParts; i++) {
     threads[i].join(); // Wait for the thread to finish.
-    grads[i].addTo(gradFv);
+    gradFv += grads[i];
     fval += fvals[i];
   }
   
@@ -69,7 +74,7 @@ void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
     // Scale the value and gradient by 1/t
     const double scaleFactor = 1.0 / _dataset.numExamples();
     fval *= scaleFactor;
-    gradFv.timesEquals(scaleFactor); 
+    gradFv *= scaleFactor; 
   }
 }
 
@@ -83,9 +88,9 @@ void TrainingObjective::predict(const WeightVector& w, const Dataset& evalData,
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = evalData.partitionBegin(i);
     const Dataset::iterator end = evalData.partitionEnd(i);
-    threads.push_back(new thread(boost::bind(
-        &TrainingObjective::predictPart, this,
-        cref(w), ref(_models[i]), begin, end, k, ref(scores)
+    threads.push_back(new thread(bind(
+        &TrainingObjective::predictPart, this, boost::cref(w),
+        boost::ref(_models[i]), begin, end, k, boost::ref(scores)
     )));
   }  
   // Wait for the threads to finish.
@@ -101,9 +106,9 @@ void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = _dataset.partitionBegin(i);
     const Dataset::iterator end = _dataset.partitionEnd(i);
-    threads.push_back(new thread(boost::bind(
+    threads.push_back(new thread(bind(
         &TrainingObjective::setLatentFeatureVectorsPart, this,
-        cref(w), ref(_models[i]), begin, end
+        boost::cref(w), boost::ref(_models[i]), begin, end
     )));
   }
   // Wait for the threads to finish.
@@ -127,7 +132,7 @@ void TrainingObjective::initLatentFeatureVectors(const WeightVector& w) {
 }
 
 void TrainingObjective::valueAndGradientFinalize(const WeightVector& w,
-    double& f, FeatureVector<RealWeight>& g) {
+    double& f, RealVec& g) {
   // Not implemented by the given TrainingObjective subclass. Do nothing.
 }
 
@@ -144,9 +149,9 @@ void TrainingObjective::gatherFeatures(size_t& maxFvs, size_t& totalFvs) {
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = _dataset.partitionBegin(i);
     const Dataset::iterator end = _dataset.partitionEnd(i);
-    threads.push_back(new thread(boost::bind(
-        &TrainingObjective::gatherFeaturesPart, this,
-        ref(_models[i]), begin, end, k, ref(maxFvsPart[i]), ref(totalFvsPart[i])
+    threads.push_back(new thread(bind(
+        &TrainingObjective::gatherFeaturesPart, this, boost::ref(_models[i]),
+        begin, end, k, boost::ref(maxFvsPart[i]), boost::ref(totalFvsPart[i])
     )));
   }
   // Wait for the threads to finish, and combine the results.

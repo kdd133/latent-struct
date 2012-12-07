@@ -13,18 +13,17 @@
 #include "InputReader.h"
 #include "Label.h"
 #include <string>
-using namespace std;
 class Pattern;
 
 class CognatePairReader : public InputReader {
 
   public:
   
-    virtual void readExample(const string& line, Pattern*& pattern,
+    virtual void readExample(const std::string& line, Pattern*& pattern,
         Label& label) const;
         
-    static const string& name() {
-      static const string _name = "CognatePair";
+    static const std::string& name() {
+      static const std::string _name = "CognatePair";
       return _name;
     }
 };

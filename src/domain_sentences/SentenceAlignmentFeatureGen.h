@@ -14,11 +14,11 @@
 #include "AlignmentPart.h"
 #include "FeatureVector.h"
 #include "StateType.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 #include <set>
 #include <string>
 #include <vector>
-using namespace std;
 
 class Alphabet;
 class Pattern;
@@ -33,22 +33,22 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
     
     //i: Current position in the source string.
     //j: Current position in the target string.
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      Label label, int i, int j, const EditOperation& op,
-      const vector<AlignmentPart>& editHistory);
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
+      int j, const EditOperation& op,
+      const std::vector<AlignmentPart>& editHistory);
       
     virtual int processOptions(int argc, char** argv);
     
-    virtual double getDefaultFeatureWeight(const string& feature) const;
+    virtual double getDefaultFeatureWeight(const std::string& feature) const;
     
-    static const string& name() {
-      static const string _name = "SentenceAlignment";
+    static const std::string& name() {
+      static const std::string _name = "SentenceAlignment";
       return _name;
     }
       
   private:
   
-    void addFeatureId(const string& f, set<int>& featureIds) const;
+    void addFeatureId(const std::string& f, std::set<int>& featureIds) const;
       
     int _order;
     

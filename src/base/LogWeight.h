@@ -12,7 +12,6 @@
 
 #include <assert.h>
 #include <ostream>
-using std::ostream;
 
 class RealWeight;
 
@@ -43,7 +42,7 @@ class LogWeight {
     
     friend LogWeight operator-(const LogWeight& w);
     
-    friend ostream& operator<<(ostream& out, const LogWeight& w);
+    friend std::ostream& operator<<(std::ostream& out, const LogWeight& w);
     
   private:
     double _val;

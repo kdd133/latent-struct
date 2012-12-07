@@ -15,68 +15,67 @@
 #include <list>
 #include <set>
 #include <vector>
-using namespace std;
 
 
 class Dataset {
 
   public:
   
-    typedef list<Example>::const_iterator iterator;
+    typedef std::list<Example>::const_iterator iterator;
   
-    Dataset(size_t partitions = 1);
+    Dataset(std::size_t partitions = 1);
     
     void addExample(const Example& ex);
     
-    size_t numExamples() const;
+    std::size_t numExamples() const;
     
-    size_t numPartitions() const;
+    std::size_t numPartitions() const;
     
-    iterator partitionBegin(size_t i) const;
+    iterator partitionBegin(std::size_t i) const;
     
-    iterator partitionEnd(size_t i) const;
+    iterator partitionEnd(std::size_t i) const;
     
     void clear();
 
-    const vector<Example>& getExamples() const;
+    const std::vector<Example>& getExamples() const;
     
-    const set<Label>& getLabelSet() const;
+    const std::set<Label>& getLabelSet() const;
     
-    void addLabels(const set<Label>& labels);
+    void addLabels(const std::set<Label>& labels);
 
   private:
   
-    size_t _numPartitions;
+    std::size_t _numPartitions;
     
-    vector<Example> _examples;
+    std::vector<Example> _examples;
     
-    vector<list<Example> > _partitions;
+    std::vector<std::list<Example> > _partitions;
     
-    set<Label> _labels;
+    std::set<Label> _labels;
 };
 
-inline size_t Dataset::numExamples() const {
+inline std::size_t Dataset::numExamples() const {
   return _examples.size();
 }
 
-inline size_t Dataset::numPartitions() const {
+inline std::size_t Dataset::numPartitions() const {
   assert(_partitions.size() == _numPartitions);
   return _numPartitions;
 }
 
-inline Dataset::iterator Dataset::partitionBegin(size_t i) const {
+inline Dataset::iterator Dataset::partitionBegin(std::size_t i) const {
   return _partitions[i].begin();
 }
 
-inline Dataset::iterator Dataset::partitionEnd(size_t i) const {
+inline Dataset::iterator Dataset::partitionEnd(std::size_t i) const {
   return _partitions[i].end();
 }
 
-inline const vector<Example>& Dataset::getExamples() const {
+inline const std::vector<Example>& Dataset::getExamples() const {
   return _examples;
 }
 
-inline const set<Label>& Dataset::getLabelSet() const {
+inline const std::set<Label>& Dataset::getLabelSet() const {
   return _labels;
 }
 

@@ -10,11 +10,10 @@
 #ifndef _UTILITY_H
 #define _UTILITY_H
 
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LabelScoreTable.h"
+#include "Ublas.h"
 #include <string>
-using std::string;
 
 class Dataset;
 class InputReader;
@@ -26,20 +25,20 @@ class Utility {
 
   public:
   
-    static bool loadDataset(const InputReader& reader, string fileName,
+    static bool loadDataset(const InputReader& reader, std::string fileName,
       Dataset& dataset);
 
     static void addRegularizationL2(const WeightVector& W, const double beta,
-      double& fval, FeatureVector<RealWeight>& grad);
+      double& fval, RealVec& grad);
         
     static void evaluate(const WeightVector& w, TrainingObjective& obj,
-      const Dataset& eval, const string& identifier,
-      const string& outFname = "");
+      const Dataset& eval, const std::string& identifier,
+      const std::string& outFname = "");
       
-    static void evaluate(const vector<WeightVector>& weightVectors,
+    static void evaluate(const std::vector<WeightVector>& weightVectors,
       TrainingObjective& obj, const Dataset& evalData,
-      const vector<string>& ids, const vector<string>& fnames,
-      bool enableCache);
+      const std::vector<std::string>& ids,
+      const std::vector<std::string>& fnames, bool enableCache);
         
     static double sigmoid(double a);
     
@@ -57,7 +56,7 @@ class Utility {
     static const double log1PlusTiny;
     
     static void printResults(const Dataset& evalData, LabelScoreTable& scores,
-        const string& id, const string& fname);
+        const std::string& id, const std::string& fname);
 };
 
 inline double Utility::sigmoid(double a) {

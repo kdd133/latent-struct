@@ -15,13 +15,12 @@
 #include "AlignmentPart.h"
 #include "FeatureVector.h"
 #include "Label.h"
+#include "Ublas.h"
 #include <boost/regex.hpp>
 #include <boost/shared_ptr.hpp>
 #include <set>
 #include <string>
 #include <vector>
-using boost::regex;
-using namespace std;
 
 class Alphabet;
 class Pattern;
@@ -35,25 +34,26 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     //i: Current position in the source string.
     //j: Current position in the target string.
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      Label label, int i, int j, const EditOperation& op,
-      const vector<AlignmentPart>& editHistory);
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
+      int j, const EditOperation& op,
+      const std::vector<AlignmentPart>& editHistory);
       
     virtual int processOptions(int argc, char** argv);
     
-    virtual double getDefaultFeatureWeight(const string& feature) const;
+    virtual double getDefaultFeatureWeight(const std::string& feature) const;
     
-    static const string& name() {
-      static const string _name = "WordAlignment";
+    static const std::string& name() {
+      static const std::string _name = "WordAlignment";
       return _name;
     }
 
   private:
-    void addFeatureId(const string& f, set<int>& featureIds) const;
+    void addFeatureId(const std::string& f, std::set<int>& featureIds) const;
     
     // Extracts a sequence of strings, starting with first and ending with
     // last-1, from the given string vector.
-    static string extractPhrase(const vector<string>& str, int first, int last);
+    static std::string extractPhrase(const std::vector<std::string>& str,
+      int first, int last);
       
     int _order;
     
@@ -73,13 +73,13 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _stateUnigramsOnly;
     
-    regex _regVowel;
+    boost::regex _regVowel;
   
-    regex _regConsonant;
+    boost::regex _regConsonant;
     
-    regex _regPhraseSepMulti;
+    boost::regex _regPhraseSepMulti;
     
-    regex _regPhraseSepLeadTrail;
+    boost::regex _regPhraseSepLeadTrail;
     
     // private copy constructor and assignment operator (passing by value is
     // not supported for this class)

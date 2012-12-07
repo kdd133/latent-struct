@@ -10,6 +10,8 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
 #include <iostream>
+
+using namespace boost;
 using std::cout;
 using std::endl;
 

@@ -7,16 +7,15 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "Alphabet.h"
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
 #include <fstream>
-using namespace boost;
-using namespace std;
 
-#include "Alphabet.h"
+using namespace std;
 
 // If the given string is contained in the alphabet, return its index.
 // Otherwise, if addIfAbsent is true, add the string to the alphabet and return
@@ -51,7 +50,9 @@ int Alphabet::lookup(string key, bool addIfAbsent) {
   return index;
 }
 
-bool Alphabet::read(const string& fname) {
+bool Alphabet::read(const std::string& fname) {
+  using namespace boost;
+  using namespace std;
   assert(_entries.size() == 0);
   _counts.clear();
   _dict.clear();

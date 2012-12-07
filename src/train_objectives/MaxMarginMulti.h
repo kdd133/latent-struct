@@ -10,28 +10,29 @@
 #ifndef _MAXMARGINOBJECTIVE_H
 #define _MAXMARGINOBJECTIVE_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+#include <string>
+#include <vector>
 
 class Dataset;
 class Model;
-class RealWeight;
 
 class MaxMarginMulti : public TrainingObjective {
 
   public:
   
-    MaxMarginMulti(const Dataset& dataset, const vector<Model*>& models) :
+    MaxMarginMulti(const Dataset& dataset, const std::vector<Model*>& models) :
       TrainingObjective(dataset, models), _imputedFv(0) {}
     
     virtual ~MaxMarginMulti() {}
 
     virtual bool isBinary() const { return false; }
 
-    static const string& name() {
-      static const string _name = "MaxMarginMulti";
+    static const std::string& name() {
+      static const std::string _name = "MaxMarginMulti";
       return _name;
     }
     
@@ -39,10 +40,10 @@ class MaxMarginMulti : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void valueAndGradientFinalize(const WeightVector& w, double& f,
-      FeatureVector<RealWeight>& g);
+      RealVec& g);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -55,7 +56,7 @@ class MaxMarginMulti : public TrainingObjective {
     
     virtual void clearLatentFeatureVectors();
   
-    boost::scoped_ptr<FeatureVector<RealWeight> > _imputedFv;
+    boost::scoped_ptr<SparseRealVec> _imputedFv;
     
     boost::mutex _flag;
 };

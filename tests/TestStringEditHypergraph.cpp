@@ -8,6 +8,7 @@
 #include "LogWeight.h"
 #include "Model.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "WordAlignmentFeatureGen.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
@@ -83,8 +84,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   LogWeight totalMass = model->totalMass(W, *pair, label);
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
-  FeatureVector<LogWeight> fv(d, true);
-  BOOST_REQUIRE(!fv.isDense());
+  LogVec fv(d);
   LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
   BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
@@ -94,34 +94,32 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iIns), -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iDel), -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iSub), -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iMat), -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iBias), -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iIns], -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iDel], -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iSub], -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iMat], -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iBias], -300.0000, 1e-4);
 
   // Check that the (normalized) expected value of each feature is correct.
-  fv.timesEquals(-totalMass);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iIns)), 3, 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iDel)), 1e-4);
-  BOOST_CHECK_SMALL(exp(fv.getValueAtIndex(iSub)), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iMat)), 6, 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv.getValueAtIndex(iBias)), 1, 1e-4);
+  fv /= totalMass;
+  BOOST_CHECK_CLOSE(exp(fv[iIns]), 3, 1e-4);
+  BOOST_CHECK_SMALL(exp(fv[iDel]), 1e-4);
+  BOOST_CHECK_SMALL(exp(fv[iSub]), 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv[iMat]), 6, 1e-4);
+  BOOST_CHECK_CLOSE(exp(fv[iBias]), 1, 1e-4);
   
   // Check that the Viterbi score is correct.
   RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
   BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
   
-  FeatureVector<RealWeight> realFv(d, true);
-  BOOST_REQUIRE(!realFv.isDense());
-  realFv.zero();
-  RealWeight maxScore = model->maxFeatures(W, realFv, *pair, label, true);
+  SparseRealVec realFv(d);
+  double maxScore = model->maxFeatures(W, realFv, *pair, label, true);
   BOOST_CHECK_CLOSE((double)maxScore, (double)viterbiScore, 1e-8);
   
   // Check that values in the max-scoring feature vector are correct.  
-  BOOST_CHECK_CLOSE((double)realFv.getValueAtIndex(iIns), 3, 1e-4);
-  BOOST_CHECK_SMALL((double)realFv.getValueAtIndex(iDel), 1e-4);
-  BOOST_CHECK_SMALL((double)realFv.getValueAtIndex(iSub), 1e-4);
-  BOOST_CHECK_CLOSE((double)realFv.getValueAtIndex(iMat), 6, 1e-4);
-  BOOST_CHECK_CLOSE((double)realFv.getValueAtIndex(iBias), 1, 1e-4);
+  BOOST_CHECK_CLOSE((double)realFv[iIns], 3, 1e-4);
+  BOOST_CHECK_SMALL((double)realFv[iDel], 1e-4);
+  BOOST_CHECK_SMALL((double)realFv[iSub], 1e-4);
+  BOOST_CHECK_CLOSE((double)realFv[iMat], 6, 1e-4);
+  BOOST_CHECK_CLOSE((double)realFv[iBias], 1, 1e-4);
 }

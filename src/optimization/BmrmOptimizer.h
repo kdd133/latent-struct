@@ -36,7 +36,7 @@ class BmrmOptimizer : public Optimizer {
     
   private:
     
-    size_t _maxIters; // maximum number of iterations
+    std::size_t _maxIters; // maximum number of iterations
     
     bool _quiet; // suppress optimization output
     

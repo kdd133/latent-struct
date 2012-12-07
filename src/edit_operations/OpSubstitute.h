@@ -15,7 +15,6 @@
 #include <list>
 #include <string>
 #include <vector>
-using namespace std;
 
 // A Substitute operation is only applied when the two phrases differ.
 // (Note: See OpReplace for an operation that is applied unconditionally.) 
@@ -24,21 +23,22 @@ class OpSubstitute : public EditOperation {
   public:
   
     OpSubstitute(int opId, const StateType* defaultDestinationState,
-      string name = "Substitute", int phraseLengthSource = 1,
+      std::string name = "Substitute", int phraseLengthSource = 1,
       int phraseLengthTarget = 1);
     
     virtual ~OpSubstitute() {}
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,
                                    int& iNew,
                                    int& jNew) const;
               
-    void setCondition(string tokenRegexStrSource, string tokenRegexStrTarget,
-      bool acceptMatchingSource = true, bool acceptMatchingTarget = true);
+    void setCondition(std::string tokenRegexStrSource,
+      std::string tokenRegexStrTarget, bool acceptMatchingSource = true,
+      bool acceptMatchingTarget = true);
         
   private:
     

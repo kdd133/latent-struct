@@ -12,16 +12,14 @@
 
 #include "AlignmentPart.h"
 #include "FeatureGen.h"
-#include "FeatureVector.h"
 #include "Label.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 class EditOperation;
 class Pattern;
-class RealWeight;
 class StateType;
 
 class AlignmentFeatureGen : public FeatureGen {
@@ -34,11 +32,11 @@ class AlignmentFeatureGen : public FeatureGen {
     
     //i: Current position in the source string.
     //j: Current position in the target string.
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      Label label, int i, int j, const EditOperation& op,
-      const vector<AlignmentPart>& editHistory) = 0;
-      
-    virtual double getDefaultFeatureWeight(const string& feature) const = 0;
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
+      int j, const EditOperation& op,
+      const std::vector<AlignmentPart>& editHistory) = 0;
+
+    virtual double getDefaultFeatureWeight(const std::string& feature) const = 0;
       
     virtual int processOptions(int argc, char** argv) = 0;
 };

@@ -10,8 +10,10 @@
 #ifndef _LOGLINEARBINARYOBS_H
 #define _LOGLINEARBINARYOBS_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
+#include <string>
+#include <vector>
 
 class Dataset;
 class Model;
@@ -22,15 +24,15 @@ class LogLinearBinaryObs : public TrainingObjective {
 
   public:
   
-    LogLinearBinaryObs(const Dataset& dataset, const vector<Model*>& models) :
-      TrainingObjective(dataset, models) {}
+    LogLinearBinaryObs(const Dataset& dataset,
+      const std::vector<Model*>& models) : TrainingObjective(dataset, models) {}
     
     virtual ~LogLinearBinaryObs() {}
     
     virtual bool isBinary() const { return true; }
 
-    static const string& name() {
-      static const string _name = "LogLinearBinaryObs";
+    static const std::string& name() {
+      static const std::string _name = "LogLinearBinaryObs";
       return _name;
     }
     
@@ -38,7 +40,7 @@ class LogLinearBinaryObs : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

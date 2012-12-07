@@ -13,7 +13,6 @@
 #include "Optimizer.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
-using std::string;
 
 class WeightVector;
 class Dataset;
@@ -33,8 +32,8 @@ class EmOptimizer : public Optimizer {
     
     virtual void setBeta(double beta);
     
-    static const string& name() {
-      static const string _name = "EM";
+    static const std::string& name() {
+      static const std::string _name = "EM";
       return _name;
     }
     

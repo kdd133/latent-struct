@@ -11,12 +11,11 @@
 #define _OBSERVEDFEATUREGEN_H
 
 #include "FeatureGen.h"
-#include "FeatureVector.h"
 #include "Label.h"
-#include <boost/shared_ptr.hpp>
+#include "Ublas.h"
 
 class Pattern;
-class RealWeight;
+class LogWeight;
 
 class ObservedFeatureGen : public FeatureGen {
 
@@ -26,9 +25,8 @@ class ObservedFeatureGen : public FeatureGen {
 
     virtual ~ObservedFeatureGen() {}
 
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-        const Label y) = 0;
-  
+    virtual SparseRealVec* getFeatures(const Pattern& x, const Label y) = 0;
+
     virtual int processOptions(int argc, char** argv) = 0;
 };
 

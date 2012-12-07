@@ -8,6 +8,7 @@
 #include "LogWeight.h"
 #include "Model.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "WordAlignmentFeatureGen.h"
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/shared_ptr.hpp>
@@ -86,53 +87,50 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   const int iBias = alphabet->lookup("0_Bias");
   BOOST_REQUIRE(iBias >= 0);
   
-  shared_ptr<matrix<LogWeight> > fm;
-  shared_ptr<FeatureVector<LogWeight> > fv;
+  LogMat fm;
+  LogVec fv;
   LogWeight totalMass = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
       label, false);
-  BOOST_REQUIRE(fm != 0);
-  BOOST_REQUIRE(fv != 0);
   
   // Check that the total mass is correct.
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iIns), -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iDel), -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iSub), -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iMat), -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv->getValueAtIndex(iBias), -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iIns], -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iDel], -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iSub], -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iMat], -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iBias], -300.0000, 1e-4);
   
   // Display the matrix of feature cooccurrences.
-//  fm->print(cout);
+//  fm.print(cout);
 //  cout << endl;
-//  fm->print(cout, *alphabet);
+//  fm.print(cout, *alphabet);
   
   // Check that the entries in the cooccurrence matrix are correct.
-  matrix<LogWeight>& featureMatrix = *fm;
-  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iBias), -300, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iDel), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iIns), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iSub), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iBias,iMat), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iBias), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iDel), -497.921, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iIns), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iSub), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iDel,iMat), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iBias), -298.901, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iDel), -496.534, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iIns), -297.803, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iSub), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iIns,iMat), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iBias), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iDel), -596.068, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iIns), -397.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iSub), -398.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iSub,iMat), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iBias), -298.208, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iDel), -496.311, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iIns), -297.11, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iSub), -396.599, 1e-3);
-  BOOST_CHECK_CLOSE((double)featureMatrix(iMat,iMat), -296.416, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iBias,iBias), -300, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iBias,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iBias,iIns), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iBias,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iBias,iMat), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iDel,iBias), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iDel,iDel), -497.921, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iDel,iIns), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iDel,iSub), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iDel,iMat), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iIns,iBias), -298.901, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iIns,iDel), -496.534, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iIns,iIns), -297.803, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iIns,iSub), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iIns,iMat), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iSub,iBias), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iSub,iDel), -596.068, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iSub,iIns), -397.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iSub,iSub), -398.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iSub,iMat), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iMat,iBias), -298.208, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iMat,iDel), -496.311, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iMat,iIns), -297.11, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iMat,iSub), -396.599, 1e-3);
+  BOOST_CHECK_CLOSE((double)fm(iMat,iMat), -296.416, 1e-3);
 }

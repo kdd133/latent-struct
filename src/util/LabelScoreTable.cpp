@@ -11,7 +11,10 @@
 #include <assert.h>
 #include <boost/multi_array.hpp>
 #include <boost/thread/mutex.hpp>
-using namespace boost;
+
+using boost::extents;
+using boost::mutex;
+using std::size_t;
 
 LabelScoreTable::LabelScoreTable(size_t t, size_t k) {
   _scores.resize(extents[t][k]);

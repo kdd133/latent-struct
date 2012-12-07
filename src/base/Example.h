@@ -10,11 +10,9 @@
 #ifndef _EXAMPLE_H
 #define _EXAMPLE_H
 
-#include <boost/shared_ptr.hpp>
-using boost::shared_ptr;
-
 #include "Label.h"
 #include "Pattern.h"
+#include <boost/shared_ptr.hpp>
 
 class Example {
 
@@ -34,7 +32,7 @@ class Example {
 
   private:
   
-    shared_ptr<Pattern> _x;
+    boost::shared_ptr<Pattern> _x;
     
     Label _y;
 

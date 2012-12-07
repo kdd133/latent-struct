@@ -12,6 +12,7 @@
 #include <boost/regex.hpp>
 #include <string>
 #include <vector>
+
 using namespace std;
 
 OpSubstitute::OpSubstitute(int opId, const StateType* defaultDestinationState,
@@ -20,7 +21,9 @@ OpSubstitute::OpSubstitute(int opId, const StateType* defaultDestinationState,
     _phraseLengthSource(phraseLengthSource),
     _phraseLengthTarget(phraseLengthTarget),
     _conditionEnabledSource(false),
-    _conditionEnabledTarget(false) {
+    _conditionEnabledTarget(false),
+    _acceptMatchingSource(false),
+    _acceptMatchingTarget(false) {
 }
 
 void OpSubstitute::setCondition(string tokenRegexStrSource,

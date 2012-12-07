@@ -10,9 +10,8 @@
 #ifndef _MAXMARGINBINARY_H
 #define _MAXMARGINBINARY_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
-#include <boost/ptr_container/nullable.hpp>
+#include "Ublas.h"
 #include <vector>
 #include <string>
 
@@ -24,7 +23,7 @@ class MaxMarginBinary : public TrainingObjective {
 
   public:
   
-    MaxMarginBinary(const Dataset& dataset, const vector<Model*>& models) :
+    MaxMarginBinary(const Dataset& dataset, const std::vector<Model*>& models) :
       TrainingObjective(dataset, models) {}
     
     virtual ~MaxMarginBinary();
@@ -40,7 +39,7 @@ class MaxMarginBinary : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -53,7 +52,7 @@ class MaxMarginBinary : public TrainingObjective {
     
     virtual void clearLatentFeatureVectors();
   
-    std::vector<FeatureVector<RealWeight>* > _imputedFvs;
+    std::vector<SparseRealVec*> _imputedFvs;
 };
 
 #endif

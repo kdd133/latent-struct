@@ -13,16 +13,14 @@
 #include "EditOperation.h"
 #include <list>
 #include <string>
-using std::list;
-using std::string;
 
 class StateType {
 
   public:
   
-    StateType(string name) : _id(-1), _name(name) {}
+    StateType(std::string name) : _id(-1), _name(name) {}
   
-    StateType(int id, string name) : _id(id), _name(name) {}
+    StateType(int id, std::string name) : _id(id), _name(name) {}
     
     int getId() const {
       return _id;
@@ -32,7 +30,7 @@ class StateType {
       _id = id;
     }
     
-    const string& getName() const {
+    const std::string& getName() const {
       return _name;
     }
     
@@ -40,7 +38,7 @@ class StateType {
       _validOps.push_back(op);
     }
     
-    const list<const EditOperation*>& getValidOperations() const {
+    const std::list<const EditOperation*>& getValidOperations() const {
       return _validOps;
     }
 
@@ -49,12 +47,12 @@ class StateType {
   
     int _id;
     
-    string _name;
+    std::string _name;
     
     // Each pointer in this list represents a valid/legal edit operation that
     // may be applied while in this state. We do not own the EditOperation
     // objects and are therefore not responsible for deleting them.
-    list<const EditOperation*> _validOps;
+    std::list<const EditOperation*> _validOps;
     
     // We disallow copying in order to avoid accidental (and unnecessary)
     // expense of copying the list member.

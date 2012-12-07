@@ -12,17 +12,18 @@
 #include "FeatureGenConstants.h"
 #include "FeatureVector.h"
 #include "Label.h"
+#include "LogWeight.h"
 #include "Pattern.h"
-#include "RealWeight.h"
+#include "Ublas.h"
 #include <boost/program_options.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <set>
 #include <sstream>
 #include <string>
+
 using namespace boost;
 using namespace std;
-
 
 const string BiasFeatureGen::kPrefix = "Bias";
 
@@ -55,27 +56,24 @@ int BiasFeatureGen::processOptions(int argc, char** argv) {
   return 0;
 }
 
-FeatureVector<RealWeight>* BiasFeatureGen::getFeatures(const Pattern& x,
-    const Label y) {
+SparseRealVec* BiasFeatureGen::getFeatures(const Pattern& x, const Label y) {
+  const size_t d = _alphabet->size();
+  SparseRealVec* fv = new SparseRealVec(d);
   stringstream ss;
   ss << y << FeatureGenConstants::PART_SEP << kPrefix;
   const int fId = _alphabet->lookup(ss.str(), true);
   if (fId == -1) {
     // This should only ever happen if there's a class in the test set that
     // didn't appear in the training set.
-    return new FeatureVector<RealWeight>(); // return the zero vector
+    return fv; // return the zero vector
   }
-
-  set<int> featureIds;
-  featureIds.insert(fId);
   
-  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
-  assert(fv);
+  (*fv)(fId) = 1;
     
   if (_normalize) {
-    double normalization = x.getSize();
+    const double normalization = x.getSize();
     assert(normalization > 0);
-    fv->timesEquals(1.0 / normalization);
+    (*fv) /= normalization;
   }
   
   return fv;

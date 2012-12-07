@@ -7,12 +7,12 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#include "FeatureVector.h"
 #include "LbfgsOptimizer.h"
 #include "Model.h"
 #include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
@@ -21,8 +21,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <lbfgs.h>
-using namespace std;
 
+using namespace boost;
+using namespace std;
 
 LbfgsOptimizer::LbfgsOptimizer(TrainingObjective& objective) :
     Optimizer(objective, 1e-4), _restarts(3), _quiet(false) {
@@ -74,13 +75,13 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   
   // Compute the gradient at the given w.
   // Note: The above setting of w updated the model used here by obj.
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   obj.valueAndGradient(w, fval, gradFv);
   Utility::addRegularizationL2(w, beta, fval, gradFv);
   
   // Copy the new gradient back into g, for return to lbfgs.
   for (int i = 0; i < d; i++)
-    g[i] = gradFv.getValueAtLocation(i);
+    g[i] = gradFv(i);
   
   if (!inst->quiet)
     cout << timer.format();

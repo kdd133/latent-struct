@@ -9,33 +9,29 @@
 
 #include "Dataset.h"
 #include "Example.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LogLinearMulti.h"
 #include "LogWeight.h"
 #include "Model.h"
 #include "RealWeight.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <boost/shared_array.hpp>
 #include <vector>
 
 void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv) {
-  assert(gradFv.isDense() && !gradFv.isBinary());
+    const Label k, double& funcVal, RealVec& gradFv) {
   
   const int d = w.getDim();
   
   std::vector<LogWeight> mass(k, LogWeight());
-  std::vector<FeatureVector<LogWeight> > feats(k, FeatureVector<LogWeight>(d,
-      true));  
-  FeatureVector<LogWeight> featsTotal(d);
-  
-  // This will be passed to convert().
-  boost::shared_array<RealWeight> tempVals(new RealWeight[d]);
+  std::vector<LogVec> feats(k, LogVec(d));  
+  LogVec featsTotal(d);
+  RealVec temp(d);
   
   funcVal = 0;
-  gradFv.zero();
+  gradFv.clear();
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -44,22 +40,22 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     LogWeight massTotal(0);
 
     // Note: feats[y] is initially zeroed out by expectedFeatures() 
-    featsTotal.zero();
+    featsTotal.clear();
     
     for (Label y = 0; y < k; y++) {
       // Note: The last argument is false b/c we want unnormalized features.
       mass[y] = model.expectedFeatures(w, feats[y], xi, y, false);
-      feats[y].addTo(featsTotal);
+      featsTotal += feats[y];
       massTotal += mass[y];
     }
     
     // Normalize
-    featsTotal.timesEquals(-massTotal);
-    feats[yi].timesEquals(-mass[yi]);
+    featsTotal *= -massTotal;
+    feats[yi] *= -mass[yi];
 
     // Convert features from log- to real-space, then update gradient
-    fvConvert(featsTotal, tempVals, d).addTo(gradFv);
-    fvConvert(feats[yi], tempVals, d).addTo(gradFv, -1.0);
+    gradFv += ublas_util::convertVec(featsTotal, temp);
+    gradFv -= ublas_util::convertVec(feats[yi], temp);
 
     // Update function value
     // Note: We want the log, which is why we don't convert to RealWeight.

@@ -11,16 +11,17 @@
 #include "OpDelete.h"
 #include <assert.h>
 #include <boost/regex.hpp>
-#include <list>
 #include <string>
 #include <vector>
+
 using namespace std;
 
 OpDelete::OpDelete(int opId, const StateType* defaultDestinationState,
     string name, int phraseLengthSource) :
     EditOperation(opId, name, defaultDestinationState),
     _phraseLengthSource(phraseLengthSource),
-    _conditionEnabled(false) {
+    _conditionEnabled(false),
+    _acceptMatching(false) {
 }
 
 void OpDelete::setCondition(string tokenRegexStr, bool acceptMatching) {

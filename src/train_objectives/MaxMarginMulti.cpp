@@ -10,31 +10,31 @@
 #include "AlignmentFeatureGen.h"
 #include "Dataset.h"
 #include "Example.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "MaxMarginMulti.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "RealWeight.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
 #include <vector>
 
+using namespace std;
+
 void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv) {
-  assert(gradFv.isDense() && !gradFv.isBinary());
+    const Label k, double& funcVal, RealVec& gradFv) {
   
   const int d = w.getDim();
   
-  std::vector<RealWeight> score(k, RealWeight());
-  std::vector<FeatureVector<RealWeight> > feats(k, FeatureVector<RealWeight>(
-      d, true));  
+  vector<RealWeight> score(k, RealWeight());
+  vector<SparseRealVec> feats(k, SparseRealVec(d));  
   
   funcVal = 0;
-  gradFv.zero();
+  gradFv.clear();
   
   // This if statement should never be executed while the objective is being
   // optimized, since the (EM) optimizer will perform the initialization.
@@ -47,7 +47,7 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     const Pattern& xi = *it->x();
     const Label yi = it->y();
     
-    RealWeight scoreMax(-numeric_limits<double>::infinity());
+    double scoreMax(-numeric_limits<double>::infinity());
     Label yMax = 0;
     for (Label y = 0; y < k; y++) {
       score[y] = Utility::delta(yi,y) + model.maxFeatures(w, feats[y], xi, y);
@@ -58,31 +58,31 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     }
     
     // Update the gradient and function value.
-    feats[yMax].addTo(gradFv);    
+    gradFv += feats[yMax];
     funcVal += score[yMax];
     
     // Subtract the observed features and score for the correct label yi.
     bool own = false;
-    FeatureVector<RealWeight>* phi_yi = model.observedFeatures(xi, yi, own);
+    SparseRealVec* phi_yi = model.observedFeatures(xi, yi, own);
     assert(phi_yi);
-    phi_yi->addTo(gradFv, -1);
-    funcVal -= w.innerProd(phi_yi);
+    gradFv -= (*phi_yi);
+    funcVal -= w.innerProd(*phi_yi);
     if (own) delete phi_yi;
   }
 }
 
 void MaxMarginMulti::valueAndGradientFinalize(const WeightVector& w,
-    double& funcVal, FeatureVector<RealWeight>& gradFv) {    
+    double& funcVal, RealVec& gradFv) {    
   // Subtract the sum of the imputed vectors from the gradient.
-  _imputedFv->addTo(gradFv, -1.0);
+  gradFv -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
-  funcVal = Utility::hinge(funcVal - w.innerProd(_imputedFv.get())); 
+  funcVal = Utility::hinge(funcVal - w.innerProd(*_imputedFv)); 
 }
 
 void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
   const int d = w.getDim();
-  FeatureVector<RealWeight> fv(d, true);  
+  SparseRealVec fv(d);  
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -94,18 +94,18 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
     // property.
     model.maxFeatures(w, fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
-    fv.addTo(*_imputedFv.get());
+    (*_imputedFv) += fv;
   }
 }
 
 void MaxMarginMulti::initLatentFeatureVectors(const WeightVector& w) {
   assert(_dataset.numExamples() > 0);
-  _imputedFv.reset(new FeatureVector<RealWeight>(w.getDim()));
+  _imputedFv.reset(new SparseRealVec(w.getDim()));
 }
 
 void MaxMarginMulti::clearLatentFeatureVectors() {
   assert(_imputedFv);
-  _imputedFv->zero();
+  _imputedFv->clear();
 }
 
 void MaxMarginMulti::predictPart(const WeightVector& w, Model& model,

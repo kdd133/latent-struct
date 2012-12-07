@@ -11,28 +11,27 @@
 #define _TRAININGOBJECTIVE_H
 
 #include "Dataset.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LabelScoreTable.h"
 #include "Model.h"
+#include "Ublas.h"
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <vector>
-using std::vector;
 
 class Pattern;
-class RealWeight;
 class WeightVector;
 
 class TrainingObjective {
 
   public:
 
-    TrainingObjective(const Dataset& dataset, const vector<Model*>& models);
+    TrainingObjective(const Dataset& dataset,
+        const std::vector<Model*>& models);
     
     virtual ~TrainingObjective() {}
   
     virtual void valueAndGradient(const WeightVector& w, double& value,
-      FeatureVector<RealWeight>& grad);
+      RealVec& grad);
     
     virtual void predict(const WeightVector& w, const Dataset& evalData,
       LabelScoreTable& scores);
@@ -79,14 +78,14 @@ class TrainingObjective {
     
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, double& f, FeatureVector<RealWeight>& g) = 0;
+      const Label maxLabel, double& f, RealVec& g) = 0;
     
     // After valueAndGradientPart() completes for each thread, this function is
     // called and may modify the function value and/or gradient. For example,
     // MaxMarginMulti requires us to account for the imputed feature vector
     // exactly once -- but not once per thread.
     virtual void valueAndGradientFinalize(const WeightVector& w, double& f,
-        FeatureVector<RealWeight>& g);
+        RealVec& g);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

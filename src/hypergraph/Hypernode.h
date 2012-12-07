@@ -11,7 +11,6 @@
 #define _HYPERNODE_H
 
 #include <list>
-using namespace std;
 
 class Hyperedge;
 
@@ -26,11 +25,11 @@ public:
   
   void addEdge(const Hyperedge* edge);
   
-  const list<const Hyperedge*>& getEdges() const;
+  const std::list<const Hyperedge*>& getEdges() const;
   
 private:
   int _id;
-  list<const Hyperedge*> _edges;
+  std::list<const Hyperedge*> _edges;
 };
 
 inline int Hypernode::getId() const {
@@ -41,7 +40,7 @@ inline void Hypernode::addEdge(const Hyperedge* edge) {
   _edges.push_back(edge);
 }
 
-inline const list<const Hyperedge*>& Hypernode::getEdges() const {
+inline const std::list<const Hyperedge*>& Hypernode::getEdges() const {
   return _edges;
 }
 

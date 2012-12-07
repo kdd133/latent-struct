@@ -10,27 +10,28 @@
 #ifndef _LOGLINEAROBJECTIVE_H
 #define _LOGLINEAROBJECTIVE_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
+#include <string>
+#include <vector>
 
 class Dataset;
 class LogWeight;
 class Model;
-class RealWeight;
 
 class LogLinearMulti : public TrainingObjective {
 
   public:
   
-    LogLinearMulti(const Dataset& dataset, const vector<Model*>& models) :
+    LogLinearMulti(const Dataset& dataset, const std::vector<Model*>& models) :
       TrainingObjective(dataset, models) {}
     
     virtual ~LogLinearMulti() {}
     
     virtual bool isBinary() const { return false; }
 
-    static const string& name() {
-      static const string _name = "LogLinearMulti";
+    static const std::string& name() {
+      static const std::string _name = "LogLinearMulti";
       return _name;
     }
     
@@ -38,7 +39,7 @@ class LogLinearMulti : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

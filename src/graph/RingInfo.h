@@ -10,54 +10,30 @@
 #ifndef _RINGINFO_H
 #define _RINGINFO_H
 
+// Some of these checks fail when using, e.g., LogWeight as the element type
+// in ublas vector and matrix classes.
+#define BOOST_UBLAS_TYPE_CHECK 0
+
 #include "FeatureVector.h"
 #include "Hyperedge.h"
 #include "LogWeight.h"
 #include "Ring.h"
 #include <algorithm>
-using std::max;
+#include <boost/numeric/ublas/vector_sparse.hpp>
 
 class RingInfo {
 
-private:
-  // Either edge score (on edge), or accumulated mass (on state)
-  LogWeight _score;
-  
-  // Either edge features (on edge), or accumulated features (on state)
-  FeatureVector<LogWeight>* _fv;
-
 public:
-  RingInfo() : _score(0), _fv(0) { }
+  typedef boost::numeric::ublas::compressed_vector<LogWeight> sparse_vector;
   
-  RingInfo(LogWeight score) : _score(score), _fv(0) { }
+  RingInfo() : _score(0) { }
   
-  RingInfo(LogWeight score, const FeatureVector<LogWeight>* fv) : _score(score),
-      _fv(0) {
+  RingInfo(LogWeight score) : _score(score) { }
+  
+  RingInfo(LogWeight score, const FeatureVector<LogWeight>* fv) :
+    _score(score) {
     if (fv)
-      _fv = new FeatureVector<LogWeight>(*fv);
-  }      
-      
-  ~RingInfo() {
-    if (_fv)
-      delete _fv;
-  }
-  
-  RingInfo(const RingInfo& from) : _score(from._score), _fv(0) {
-    if (from._fv)
-      _fv = new FeatureVector<LogWeight>(*from._fv);
-  }      
-  
-  RingInfo& operator=(const RingInfo& from) {
-    if (this == &from) // Check for self-assignment
-      return (*this);
-    _score = from._score;
-    if (_fv)
-      delete _fv;
-    if (from._fv)
-      _fv = new FeatureVector<LogWeight>(*from._fv);
-    else
-      _fv = 0;
-    return (*this);
+      fv->toSparseVector(_fv);
   }
   
   /**
@@ -66,27 +42,18 @@ public:
    * @param ei  Source edgeInfo
    * @param r   Semiring of interest
    */
-  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()), _fv(0) {
-    const FeatureVector<RealWeight>* fv = edge.getFeatureVector();
-    assert(fv);
-    
-    // The following is a (tedious) way of converting the edge's FeatureVector
-    // from RealWeight to LogWeight.
-    const int m = fv->getNumEntries();
-    shared_array<LogWeight> values(new LogWeight[m]);
-    FeatureVector<LogWeight> tempSparseFv(fvConvert(*fv, values, m));    
-    _fv = new FeatureVector<LogWeight>(fv->getLength());
-    tempSparseFv.addTo(*_fv);
+  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
+    _fv = *edge.getFeatureVector();
     
     if (r == RingExpectation)
-      _fv->timesEquals(_score); // pese 
+      _fv *= _score; // pese 
   }
   
   LogWeight score() const {
     return _score;
   }
   
-  const FeatureVector<LogWeight>* fv() const {
+  const sparse_vector& fv() const {
     return _fv;
   }
 
@@ -99,11 +66,11 @@ public:
     if (ring == RingLog)
       _score += toAdd.score();
     else if (ring == RingViterbi)
-      _score = max(_score, toAdd.score());
+      _score = std::max(_score, toAdd.score());
     else if (ring == RingExpectation) {
       // <p,r> = <p1+p2, r1+r2>
       _score += toAdd.score();
-      toAdd.fv()->addTo(*_fv);
+      _fv += toAdd.fv();
     }
     else
       assert(0);
@@ -121,10 +88,10 @@ public:
       // <p,r> = <p1p2, p1r2 + p2r1>
       
       // p1r2 + p2r1
-      _fv->timesEquals(toProd.score()); //p2r1
-      FeatureVector<LogWeight> r2(*toProd.fv());
-      r2.timesEquals(_score); //p1r2
-      r2.addTo(*_fv);
+      _fv *= toProd.score(); // p2r1
+      sparse_vector r2(toProd.fv());
+      r2 *= _score; // p1r2
+      _fv += r2;
     
       // p1p2
       _score *= toProd.score();
@@ -160,6 +127,13 @@ public:
       return RingInfo(LogWeight(0), new FeatureVector<LogWeight>());
     }
   }
+  
+private:
+  // Either edge score (on edge), or accumulated mass (on state)
+  LogWeight _score;
+  
+  // Either edge features (on edge), or accumulated features (on state)
+  sparse_vector _fv;
 };
 
 #endif

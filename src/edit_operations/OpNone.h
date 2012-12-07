@@ -14,16 +14,15 @@
 #include <assert.h>
 #include <string>
 #include <vector>
-using namespace std;
 
 class OpNone : public EditOperation {
 
   public:
   
-    OpNone(string name = "None") : EditOperation(ID, name) {}
+    OpNone(std::string name = "None") : EditOperation(ID, name) {}
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,

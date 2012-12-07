@@ -10,7 +10,6 @@
 #include "AlignmentPart.h"
 #include "EditOperation.h"
 #include "FeatureGenConstants.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "OpNone.h"
 #include "Pattern.h"
@@ -29,6 +28,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
 using namespace boost;
 using namespace std;
 
@@ -135,9 +135,9 @@ Gen need to be updated!\n";
   return 0;
 }
 
-FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
-    const Pattern& x, Label label, int sourcePos, int targetPos,
-    const EditOperation& op, const vector<AlignmentPart>& history) {
+SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
+    Label label, int sourcePos, int targetPos, const EditOperation& op,
+    const vector<AlignmentPart>& history) {
     
   const int histLen = history.size();
   assert(sourcePos >= 0 && targetPos >= 0);
@@ -285,13 +285,15 @@ FeatureVector<RealWeight>* WordAlignmentFeatureGen::getFeatures(
     }
   }
   
-  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(featureIds);
-  assert(fv);
+  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
+  set<int>::const_iterator it;
+  for (it = featureIds.begin(); it != featureIds.end(); ++it)
+    (*fv)(*it) = 1.0;
 
   if (_normalize) {
     const double normalization = x.getSize();
     assert(normalization > 0);
-    fv->timesEquals(1.0 / normalization);
+    (*fv) /= normalization;
   }
   
   return fv;

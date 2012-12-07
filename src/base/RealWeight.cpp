@@ -23,7 +23,7 @@ RealWeight operator-(const RealWeight& v)
   return RealWeight(-v._val);
 }
 
-ostream& operator<<(ostream& out, const RealWeight& w) {
+std::ostream& operator<<(std::ostream& out, const RealWeight& w) {
   return out << w._val;
 }
 

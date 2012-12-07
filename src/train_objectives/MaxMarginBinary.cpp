@@ -9,26 +9,25 @@
 
 #include "Dataset.h"
 #include "Example.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "MaxMarginBinary.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
 
 void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv) {
-  assert(gradFv.isDense() && !gradFv.isBinary());
+    const Label k, double& funcVal, RealVec& gradFv) {
   
   const int d = w.getDim();
   const int ypos = TrainingObjective::kPositive;
   
-  FeatureVector<RealWeight> feats(d, true);
+  SparseRealVec feats(d);
   funcVal = 0;
-  gradFv.zero();
+  gradFv.clear();
   
   // This if statement should never be executed while the objective is being
   // optimized, since the (EM) optimizer will perform the initialization.
@@ -42,24 +41,24 @@ void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const Label yi = (it->y() == ypos) ? 1 : -1;
     
     // Note: Gradient contribution is 0 if z >= 1, and -y*feats otherwise.
-    RealWeight z;
+    double z;
     if (yi == -1) {
-      feats.zero();
+      feats.clear();
       z = yi * model.maxFeatures(w, feats, xi, ypos); // gets latent+obs feats
       if (z < 1)
-        feats.addTo(gradFv, -yi);
+        gradFv += -yi * feats;
     }
     else {
       const size_t i = xi.getId();
       // Since we did not fix the observed features in setLatentFeatureVectorsPart,
       // we need to factor them in here.
       bool own = false;
-      FeatureVector<RealWeight>* phiObs = model.observedFeatures(xi, ypos, own);
+      SparseRealVec* phiObs = model.observedFeatures(xi, ypos, own);
       assert(phiObs);
-      z = yi * (w.innerProd(phiObs) + w.innerProd(_imputedFvs[i]));
+      z = yi * (w.innerProd(*phiObs) + w.innerProd(*_imputedFvs[i]));
       if (z < 1) {
-        _imputedFvs[i]->addTo(gradFv, -yi);
-        phiObs->addTo(gradFv, -yi);
+        gradFv += -yi * (*_imputedFvs[i]);
+        gradFv += -yi * (*phiObs);
       }
       if (own) delete phiObs;
     }
@@ -78,7 +77,6 @@ void MaxMarginBinary::setLatentFeatureVectorsPart(const WeightVector& w,
       // The last argument in the call to maxFeatures is false because we do
       // not want to fix the observed features when computing the objective.
       model.maxFeatures(w, *_imputedFvs[i], xi, yi, false);
-      _imputedFvs[i]->pack();
     }
   }
 }
@@ -104,7 +102,7 @@ void MaxMarginBinary::initLatentFeatureVectors(const WeightVector& w) {
   BOOST_FOREACH(const Example& ex, _dataset.getExamples()) {
     const size_t id = ex.x()->getId();
     if (ex.y() == ypos)
-      _imputedFvs[id] = new FeatureVector<RealWeight>(d, true);
+      _imputedFvs[id] = new SparseRealVec(d);
   }
 }
 

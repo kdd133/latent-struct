@@ -10,26 +10,27 @@
 #ifndef _MAXMARGINBINARYOBS_H
 #define _MAXMARGINBINARYOBS_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
+#include <string>
+#include <vector>
 
 class Dataset;
 class Model;
-class RealWeight;
 
 class MaxMarginBinaryObs : public TrainingObjective {
 
   public:
   
-    MaxMarginBinaryObs(const Dataset& dataset, const vector<Model*>& models) :
-      TrainingObjective(dataset, models) {}
+    MaxMarginBinaryObs(const Dataset& dataset,
+      const std::vector<Model*>& models) : TrainingObjective(dataset, models) {}
     
     virtual ~MaxMarginBinaryObs() {}
     
     virtual bool isBinary() const { return true; }
 
-    static const string& name() {
-      static const string _name = "MaxMarginBinaryObs";
+    static const std::string& name() {
+      static const std::string _name = "MaxMarginBinaryObs";
       return _name;
     }
     
@@ -37,7 +38,7 @@ class MaxMarginBinaryObs : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

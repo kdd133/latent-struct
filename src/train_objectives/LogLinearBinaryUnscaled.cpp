@@ -9,30 +9,28 @@
 
 #include "Dataset.h"
 #include "Example.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "LogLinearBinaryUnscaled.h"
 #include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 
 void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv) {
-  assert(gradFv.isDense() && !gradFv.isBinary());
+    const Label k, double& funcVal, RealVec& gradFv) {
   
   const WeightVector W0; // zero weight vector, for computing |Z(x)|
   
   const int d = w.getDim();
   const int ypos = TrainingObjective::kPositive;
   
-  FeatureVector<LogWeight> feats(d, true);
+  LogVec feats(d);
+  RealVec temp(d);
   funcVal = 0;
-  gradFv.zero();
-  
-  shared_array<RealWeight> tempVals(new RealWeight[d]); // passed to convert()
+  gradFv.clear();
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -45,9 +43,8 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     const LogWeight fW = (yi == 1) ? -logMass : logMass;
     funcVal += Utility::log1Plus(fW.convert()); // i.e., exp(fW)
     
-    FeatureVector<RealWeight> realFeats = fvConvert(feats, tempVals, d);
-    realFeats.timesEquals(-yi * (1 - Utility::sigmoid(-fW)));
-    realFeats.addTo(gradFv);
+    ublas_util::convertVec(feats, temp);
+    gradFv += temp * (-yi * (1 - Utility::sigmoid(-fW)));
   }
 }
 

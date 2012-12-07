@@ -10,31 +10,32 @@
 #ifndef _LOGLINEARBINARY_H
 #define _LOGLINEARBINARY_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
+#include <string>
 #include <tr1/unordered_map>
+#include <vector>
 
 class Dataset;
 class LogWeight;
 class Model;
-class RealWeight;
 
 class LogLinearBinary : public TrainingObjective {
 
   public:
   
-    typedef tr1::unordered_map<int,LogWeight> DictType;
+    typedef std::tr1::unordered_map<int,LogWeight> DictType;
     typedef DictType::value_type PairType;
   
-    LogLinearBinary(const Dataset& dataset, const vector<Model*>& models) :
+    LogLinearBinary(const Dataset& dataset, const std::vector<Model*>& models) :
       TrainingObjective(dataset, models) {}
     
     virtual ~LogLinearBinary() {}
     
     virtual bool isBinary() const { return true; }
 
-    static const string& name() {
-      static const string _name = "LogLinearBinary";
+    static const std::string& name() {
+      static const std::string _name = "LogLinearBinary";
       return _name;
     }
     
@@ -44,7 +45,7 @@ class LogLinearBinary : public TrainingObjective {
     
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

@@ -11,7 +11,6 @@
 #define _REALWEIGHT_H
 
 #include <ostream>
-using std::ostream;
 
 class LogWeight;
 
@@ -34,7 +33,7 @@ class RealWeight {
     
     friend RealWeight operator-(const RealWeight& v);
     
-    friend ostream& operator<<(ostream& out, const RealWeight& w);
+    friend std::ostream& operator<<(std::ostream& out, const RealWeight& w);
     
   private:
     inline RealWeight plus(const RealWeight& d) const { return _val + d._val; }

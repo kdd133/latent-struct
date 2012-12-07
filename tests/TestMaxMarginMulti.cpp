@@ -8,12 +8,14 @@
 #include "EmOptimizer.h"
 #include "MaxMarginMulti.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
+
 using namespace boost;
 
 
@@ -70,19 +72,19 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
   
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(1, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.50, (double)gradFv.getValueAtLocation(0), 1e-8);
-  BOOST_CHECK_CLOSE(0.85, (double)gradFv.getValueAtLocation(1), 1e-8);
-  BOOST_CHECK_CLOSE(0.35, (double)gradFv.getValueAtLocation(2), 1e-8);
-  BOOST_CHECK_CLOSE(4.65, (double)gradFv.getValueAtLocation(3), 1e-8);
-  BOOST_CHECK_CLOSE(-0.50, (double)gradFv.getValueAtLocation(4), 1e-8);
-  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(5), 1e-8);
-  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(6), 1e-8);
-  BOOST_CHECK_CLOSE(0, (double)gradFv.getValueAtLocation(7), 1e-8);
+  BOOST_CHECK_CLOSE(0.50, gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.85, gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.35, gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(4.65, gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(-0.50, gradFv[4], 1e-8);
+  BOOST_CHECK_CLOSE(0, gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(0, gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(0, gradFv[7], 1e-8);
   
   shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
   ret = convexOpt->processOptions(argc, argv);

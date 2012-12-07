@@ -12,6 +12,7 @@
 
 #include <fst/float-weight.h>
 #include "FeatureVector.h"
+#include "Ublas.h"
 
 class RealWeight;
 
@@ -23,7 +24,7 @@ class LogFeatArc {
     typedef int StateId;
 
     LogFeatArc(Label i, Label o, const Weight& w, StateId s,
-        const FeatureVector<RealWeight>* f = 0)
+        const SparseRealVec* f = 0)
       : ilabel(i), olabel(o), weight(w), nextstate(s), fv(f) { }
       
     LogFeatArc() : fv(0) { }
@@ -37,7 +38,7 @@ class LogFeatArc {
     Label olabel;
     Weight weight;
     StateId nextstate;
-    const FeatureVector<RealWeight>* fv;
+    const SparseRealVec* fv;
 };
 
 #endif

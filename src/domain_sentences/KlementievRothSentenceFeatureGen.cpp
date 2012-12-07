@@ -14,20 +14,22 @@
 #include "KlementievRothWordFeatureGen.h"
 #include "KlementievRothSentenceFeatureGen.h"
 #include "Label.h"
+#include "LogWeight.h"
 #include "ObservedFeatureGen.h"
 #include "RealWeight.h"
 #include "StringPair.h"
+#include "Ublas.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
+#include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
 #include <sstream>
 #include <string>
-#include <tr1/unordered_map>
 #include <vector>
+
 using namespace boost;
 using namespace std;
-
 
 KlementievRothSentenceFeatureGen::KlementievRothSentenceFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
@@ -70,7 +72,7 @@ int KlementievRothSentenceFeatureGen::processOptions(int argc, char** argv) {
   return 0;
 }
 
-FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
+SparseRealVec* KlementievRothSentenceFeatureGen::getFeatures(
     const Pattern& x, const Label y) {
   const StringPair& pair = (const StringPair&)x;
   const vector<string>& s = pair.getSource();
@@ -84,7 +86,11 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
   vector<string> subs_lo; // substrings from the longest string
   vector<string>* subs_source; // pointer to the source substrings
   vector<string>* subs_target; // pointer to the target substrings
-  tr1::unordered_map<int,RealWeight> sub_pair_counts; // substring pair counts
+  
+  // substring pair counts
+  scoped_array<int> sub_pair_counts(new int[_alphabet->size()]);
+  for (size_t i = 0; i < _alphabet->size(); ++i)
+    sub_pair_counts[i] = 0;
 
   // set pointers based on which string is the longest 
   if (s.size() > t.size()) {
@@ -139,7 +145,7 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
           // to count unseen features; we pretend we never saw them
           const int fId = _alphabet->lookup(ss.str(), true);
           if (fId >= 0)
-            sub_pair_counts[fId] += RealWeight(1);
+            sub_pair_counts[fId]++;
         }
     }
   }
@@ -153,20 +159,22 @@ FeatureVector<RealWeight>* KlementievRothSentenceFeatureGen::getFeatures(
     ss << y << FeatureGenConstants::PART_SEP << BiasFeatureGen::kPrefix;
     const int fId = _alphabet->lookup(ss.str(), true);
     if (fId >= 0)
-      sub_pair_counts[fId] = RealWeight(1);
+      sub_pair_counts[fId] = 1;
   }
   
   // TODO: Add the optional "distance" feature described in Feb. 17, 2011
   // email from M.W. Chang
 
-  assert(sub_pair_counts.size() > 0);  
-  FeatureVector<RealWeight>* fv = new FeatureVector<RealWeight>(sub_pair_counts);
-  assert(fv);
+  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
+  for (size_t i = 0; i < _alphabet->size(); ++i) {
+    if (sub_pair_counts[i] > 0)
+      (*fv)(i) = sub_pair_counts[i];
+  }
 
   if (_normalize) {
-    double normalization = x.getSize();
+    const double normalization = x.getSize();
     assert(normalization > 0);
-    fv->timesEquals(1.0 / normalization);
+    (*fv) /= normalization;
   }
 
   return fv;

@@ -8,11 +8,11 @@
  */
 
 #include "EmOptimizer.h"
-#include "FeatureVector.h"
 #include "Model.h"
 #include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
@@ -21,6 +21,8 @@
 #include <limits>
 #include <stdio.h>
 #include <stdlib.h>
+
+using namespace boost;
 using namespace std;
 
 EmOptimizer::EmOptimizer(TrainingObjective& objective,

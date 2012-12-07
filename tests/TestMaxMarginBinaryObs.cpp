@@ -8,6 +8,7 @@
 #include "KlementievRothWordFeatureGen.h"
 #include "MaxMarginBinaryObs.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WordPairReader.h"
 #include <boost/shared_ptr.hpp>
@@ -63,14 +64,14 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
   
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.96922619047, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.0125, (double)gradFv.getValueAtLocation(0), 1e-6);
-  BOOST_CHECK_CLOSE(-0.0166666666, (double)gradFv.getValueAtLocation(1), 1e-6);
-  BOOST_CHECK_CLOSE(-0.0011904761, (double)gradFv.getValueAtLocation(280),1e-4);
-  BOOST_CHECK_CLOSE(0.0125, (double)gradFv.getValueAtLocation(362), 1e-4);
+  BOOST_CHECK_CLOSE(-0.0125, gradFv[0], 1e-6);
+  BOOST_CHECK_CLOSE(-0.0166666666, gradFv[1], 1e-6);
+  BOOST_CHECK_CLOSE(-0.0011904761, gradFv[280],1e-4);
+  BOOST_CHECK_CLOSE(0.0125, gradFv[362], 1e-4);
   
   BmrmOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

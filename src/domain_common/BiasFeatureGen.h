@@ -10,16 +10,14 @@
 #ifndef _BIASFEATUREGEN_H
 #define _BIASFEATUREGEN_H
 
-#include "Alphabet.h"
-#include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
-using std::string;
 
+class Alphabet;
 class Pattern;
-class RealWeight;
 
 
 class BiasFeatureGen : public ObservedFeatureGen {
@@ -28,17 +26,16 @@ class BiasFeatureGen : public ObservedFeatureGen {
   
     BiasFeatureGen(boost::shared_ptr<Alphabet> alphabet, bool normalize = true);
     
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-        const Label y);
+    virtual SparseRealVec* getFeatures(const Pattern& x, const Label y);
     
     virtual int processOptions(int argc, char** argv);
     
-    static const string& name() {
-      static const string _name = "Bias";
+    static const std::string& name() {
+      static const std::string _name = "Bias";
       return _name;
     }
     
-    static const string kPrefix;
+    static const std::string kPrefix;
 
   private:
   

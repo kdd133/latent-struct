@@ -14,11 +14,11 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 class Pattern;
 class RealWeight;
@@ -31,13 +31,12 @@ class KlementievRothSentenceFeatureGen : public ObservedFeatureGen {
     KlementievRothSentenceFeatureGen(boost::shared_ptr<Alphabet> alphabet,
       bool normalize = true);
     
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      const Label y);
+    virtual SparseRealVec* getFeatures(const Pattern& x, const Label y);
         
     virtual int processOptions(int argc, char** argv);
     
-    static const string& name() {
-      static const string _name = "KRSentence";
+    static const std::string& name() {
+      static const std::string _name = "KRSentence";
       return _name;
     }
 
@@ -51,8 +50,8 @@ class KlementievRothSentenceFeatureGen : public ObservedFeatureGen {
     
     bool _addBias;
     
-    static void appendFeature(const int fi, const vector<string>* s,
-        size_t i, size_t k, size_t end, vector<string>& subs,
+    static void appendFeature(const int fi, const std::vector<std::string>* s,
+        size_t i, size_t k, size_t end, std::vector<std::string>& subs,
         const boost::char_separator<char>& sep);
 };
 

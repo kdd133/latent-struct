@@ -10,43 +10,31 @@
 #ifndef _FEATUREVECTOR_H
 #define _FEATUREVECTOR_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "Alphabet.h"
 #include "LogWeight.h"
 #include "RealWeight.h"
+#include "Ublas.h"
 #include <algorithm>
 #include <assert.h>
-#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include <boost/numeric/ublas/vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <ostream>
 #include <set>
-#include <stdexcept>
 #include <tr1/unordered_map>
-using boost::numeric::ublas::mapped_matrix;
-using boost::numeric::ublas::matrix;
-using boost::shared_array;
-using boost::shared_ptr;
-using namespace std;
-using tr1::unordered_map;
 
 // Tell the compiler that the friend function is a specialization of the
 // template. (see http://goo.gl/zi2yv)
 template <typename Weight> class FeatureVector;
 template <typename Weight>
-ostream& operator<<(ostream& out, const FeatureVector<Weight>& fv);
+std::ostream& operator<<(std::ostream& out, const FeatureVector<Weight>& fv);
 
 template <typename Weight>
 class FeatureVector {
 
   public:
   
-    FeatureVector(shared_array<int> indices, shared_array<Weight> values,
-        int entries, bool copy = true);
+    FeatureVector(boost::shared_array<int> indices,
+        boost::shared_array<Weight> values, int entries, bool copy = true);
     
     // Creates (and sets to zero) a dense, real-valued vector.
     FeatureVector(const int length, bool allocateIndices = false);
@@ -55,18 +43,20 @@ class FeatureVector {
     FeatureVector();
     bool reinit();
     
-    FeatureVector(const boost::numeric::ublas::vector<LogWeight>& vec);
+    FeatureVector(const boost::numeric::ublas::vector<Weight>& vec);
     
     // Creates a sparse, binary-valued vector with given indices set to one.
-    FeatureVector(const set<int>& indices);
-    bool reinit(const set<int>& indices);
+    FeatureVector(const std::set<int>& indices);
+    bool reinit(const std::set<int>& indices);
     
     // Creates a sparse, real-valued vector based on the given feature counts.
-    FeatureVector(const unordered_map<int,Weight>& featureCounts);
-    bool reinit(const unordered_map<int,Weight>& featureCounts);
+    FeatureVector(const std::tr1::unordered_map<int,Weight>& featureCounts);
+    bool reinit(const std::tr1::unordered_map<int,Weight>& featureCounts);
     
     // Copy constructor (performs a deep copy).
     FeatureVector(const FeatureVector& fv);
+    
+    void toSparseVector(boost::numeric::ublas::compressed_vector<Weight>& dest) const;
  
     int getIndexAtLocation(int location) const;
     
@@ -74,12 +64,12 @@ class FeatureVector {
     
     Weight getValueAtIndex(int location) const;
         
-    void addTo(shared_array<Weight>& denseValues, int length,
+    void addTo(boost::shared_array<Weight>& denseValues, int length,
         Weight scale = Weight(1)) const;
     
     void addTo(FeatureVector& fv, Weight scale = Weight(1)) const;
     
-    void addTo(unordered_map<int,Weight>& featureCounts,
+    void addTo(std::tr1::unordered_map<int,Weight>& featureCounts,
         Weight scale = Weight(1)) const;
     
     // Interpret dense as real weights.
@@ -107,17 +97,18 @@ class FeatureVector {
     // entries, reallocate to eliminate the wasted space.
     void pack();
     
-    friend ostream& operator<< <>(ostream& out, const FeatureVector& fv);
+    friend std::ostream& operator<< <>(std::ostream& out,
+        const FeatureVector& fv);
     
     template<typename A, typename B>
     friend FeatureVector<B> fvConvert(const FeatureVector<A>& source,
-        shared_array<B> valuesStorage, int valuesLen);
+        boost::shared_array<B> valuesStorage, int valuesLen);
 
   private:
   
-    shared_array<int> _indices;
+    boost::shared_array<int> _indices;
     
-    shared_array<Weight> _values;
+    boost::shared_array<Weight> _values;
     
     int _entries; // the number of entries in the vector (== length if dense)
     
@@ -135,8 +126,8 @@ class FeatureVector {
 };
 
 template <typename Weight>
-FeatureVector<Weight>::FeatureVector(shared_array<int> indices,
-    shared_array<Weight> values, int entries, bool copy) :
+FeatureVector<Weight>::FeatureVector(boost::shared_array<int> indices,
+    boost::shared_array<Weight> values, int entries, bool copy) :
   _indices(indices), _values(values), _entries(entries), _length(0),
     _scaleFactor(Weight(1)), _allocatedEntries(entries) {
   if (isDense()) { // dense vector
@@ -180,7 +171,7 @@ FeatureVector<Weight>::FeatureVector(const int length, bool allocateIndices) :
 
 template <typename Weight>
 FeatureVector<Weight>::FeatureVector(
-    const boost::numeric::ublas::vector<LogWeight>& vec) :
+    const boost::numeric::ublas::vector<Weight>& vec) :
   _indices(0), _allocatedEntries(0) {
   _values.reset(new Weight[vec.size()]);
   for (size_t i = 0; i < vec.size(); ++i)
@@ -189,7 +180,7 @@ FeatureVector<Weight>::FeatureVector(
 }
 
 template <typename Weight>
-FeatureVector<Weight>::FeatureVector(const set<int>& indicesList) :
+FeatureVector<Weight>::FeatureVector(const std::set<int>& indicesList) :
     _indices(0), _values(0), _entries(indicesList.size()),
     _allocatedEntries(_entries) {
   if (_entries == 0)
@@ -199,7 +190,7 @@ FeatureVector<Weight>::FeatureVector(const set<int>& indicesList) :
 }
 
 template <typename Weight>
-bool FeatureVector<Weight>::reinit(const set<int>& indicesList) {
+bool FeatureVector<Weight>::reinit(const std::set<int>& indicesList) {
   if ((int)indicesList.size() > _allocatedEntries)
     return false;
   reinit(); // set this to a default zero vector
@@ -207,7 +198,7 @@ bool FeatureVector<Weight>::reinit(const set<int>& indicesList) {
   if (_entries == 0)
     return true;
   int i = 0;
-  set<int>::const_iterator it = indicesList.begin();
+  std::set<int>::const_iterator it = indicesList.begin();
   for (; it != indicesList.end(); ++it)
     _indices[i++] = *it;
   updateLength();
@@ -229,7 +220,7 @@ inline bool FeatureVector<Weight>::reinit() {
 }
 
 template <typename Weight>
-FeatureVector<Weight>::FeatureVector(const unordered_map<int,Weight>&
+FeatureVector<Weight>::FeatureVector(const std::tr1::unordered_map<int,Weight>&
     featureCounts) :
     _indices(0), _values(0), _entries(featureCounts.size()),
     _allocatedEntries(_entries) {
@@ -241,7 +232,7 @@ FeatureVector<Weight>::FeatureVector(const unordered_map<int,Weight>&
 }
 
 template <typename Weight>
-bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
+bool FeatureVector<Weight>::reinit(const std::tr1::unordered_map<int,Weight>&
     featureCounts) {
   if ((int)featureCounts.size() > _allocatedEntries)
     return false;
@@ -252,7 +243,8 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
   if (_entries == 0)
     return true;
   int i = 0;
-  typename unordered_map<int,Weight>::const_iterator it = featureCounts.begin();
+  typename std::tr1::unordered_map<int,Weight>::const_iterator it =
+      featureCounts.begin();
   for (; it != featureCounts.end(); ++it) {
     assert(it->first >= 0);
     _indices[i] = it->first;
@@ -261,6 +253,18 @@ bool FeatureVector<Weight>::reinit(const unordered_map<int,Weight>&
   }
   updateLength();
   return true;
+}
+
+template <typename Weight>
+void FeatureVector<Weight>::toSparseVector(
+    boost::numeric::ublas::compressed_vector<Weight>& dest) const {
+  const int d = getLength();
+  dest = boost::numeric::ublas::compressed_vector<Weight>(d);
+  for (int i = 0; i < d; ++i) {
+    int index = getIndexAtLocation(i);
+    LogWeight value = getValueAtLocation(i);
+    dest(index) = value;
+  }
 }
 
 template <typename Weight>
@@ -350,8 +354,8 @@ Weight FeatureVector<Weight>::getValueAtIndex(int index) const {
 
 // adapted from Mallet's SparseVector class
 template <typename Weight>
-void FeatureVector<Weight>::addTo(shared_array<Weight>& denseValues, int len,
-    Weight scale) const {
+void FeatureVector<Weight>::addTo(boost::shared_array<Weight>& denseValues,
+    int len, Weight scale) const {
   assert(len >= _length);
   if (isDense()) {
     for (int i = 0; i < _entries; i++)
@@ -369,8 +373,8 @@ void FeatureVector<Weight>::addTo(shared_array<Weight>& denseValues, int len,
 }
 
 template <typename Weight>
-void FeatureVector<Weight>::addTo(unordered_map<int,Weight>& featureCounts,
-    Weight scale) const {
+void FeatureVector<Weight>::addTo(std::tr1::unordered_map<int,Weight>&
+    featureCounts, Weight scale) const {
   if (_entries == 0)
     return;
   assert(!isDense()); // pointless to add a dense vector to a sparse vector
@@ -401,7 +405,7 @@ void FeatureVector<Weight>::addTo(FeatureVector<Weight>& fv,
     // require the destination to be a dense FeatureVector.
     assert(isDense());
     
-    shared_array<Weight> oldValues;
+    boost::shared_array<Weight> oldValues;
     if (fv._length > 0)
       oldValues = fv._values;
     fv._values.reset(new Weight[_length]);
@@ -429,8 +433,8 @@ void FeatureVector<Weight>::plusEquals(const double* dense, int len,
 template<>
 inline void FeatureVector<LogWeight>::plusEquals(const double* dense, int len,
     double scale) {
-  throw logic_error("This function interprets the double* as real weights, and \
-cannot be used if the underlying FeatureVector uses LogWeight.");
+  throw std::logic_error("This function interprets the double* as real weights,\
+ and cannot be used if the underlying FeatureVector uses LogWeight.");
 }
 
 template <typename Weight>
@@ -493,7 +497,8 @@ void FeatureVector<Weight>::zero() {
 }
 
 template <typename Weight>
-ostream& operator<<(ostream& out, const FeatureVector<Weight>& fv) {
+std::ostream& operator<<(std::ostream& out, const FeatureVector<Weight>& fv) {
+  using namespace std;
   if (fv.isDense()) {
     bool allZero = true;
     for (int i = 0; i < fv._entries; i++) {
@@ -519,7 +524,7 @@ ostream& operator<<(ostream& out, const FeatureVector<Weight>& fv) {
 
 template<typename A, typename B>
 FeatureVector<B> fvConvert(const FeatureVector<A>& source,
-    shared_array<B> valuesStorage, int valuesLen) {
+    boost::shared_array<B> valuesStorage, int valuesLen) {
   const bool copy = valuesStorage ? false : true;
   assert(!copy || valuesLen > 0);
   FeatureVector<B> fv;

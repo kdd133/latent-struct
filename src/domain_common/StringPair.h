@@ -13,7 +13,6 @@
 #include <boost/foreach.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 #include "Pattern.h"
 
@@ -21,38 +20,38 @@ using namespace std;
 // for accessing them.
 class StringPair : public Pattern {
   public:
-    StringPair(vector<string> source, vector<string> target) :
+    StringPair(std::vector<std::string> source, std::vector<std::string> target) :
       _source(source), _target(target) {}
       
     // Assume the source and target strings are arrays of characters (i.e.,
     // there are no "phrase-like" characters that span more than one position).
-    StringPair(string source, string target) {
-      for (size_t i = 0; i < source.size(); ++i)
+    StringPair(std::string source, std::string target) {
+      for (std::size_t i = 0; i < source.size(); ++i)
         _source.push_back(source.substr(i, 1));
-      for (size_t i = 0; i < target.size(); ++i)
+      for (std::size_t i = 0; i < target.size(); ++i)
         _target.push_back(target.substr(i, 1));
     }
     
-    const vector<string>& getSource() const;
+    const std::vector<std::string>& getSource() const;
 
-    const vector<string>& getTarget() const;
+    const std::vector<std::string>& getTarget() const;
     
     // Returns the length of the longer string.
     virtual int getSize() const;
 
 
   private:
-    vector<string> _source;
+    std::vector<std::string> _source;
 
-    vector<string> _target;
+    std::vector<std::string> _target;
 
 };
 
-inline const vector<string>& StringPair::getSource() const {
+inline const std::vector<std::string>& StringPair::getSource() const {
   return _source;
 }
 
-inline const vector<string>& StringPair::getTarget() const {
+inline const std::vector<std::string>& StringPair::getTarget() const {
   return _target;
 }
 

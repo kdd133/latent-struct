@@ -12,13 +12,15 @@
 #include <boost/regex.hpp>
 #include <string>
 #include <vector>
+
 using namespace std;
 
 OpInsert::OpInsert(int opId, const StateType* defaultDestinationState,
     string name, int phraseLengthTarget) :
     EditOperation(opId, name, defaultDestinationState),
     _phraseLengthTarget(phraseLengthTarget),
-    _conditionEnabled(false) {
+    _conditionEnabled(false),
+    _acceptMatching(false) {
 }
 
 void OpInsert::setCondition(string tokenRegexStr, bool acceptMatching) {

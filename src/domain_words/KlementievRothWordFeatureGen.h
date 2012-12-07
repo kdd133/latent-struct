@@ -14,11 +14,10 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include <boost/regex.hpp>
 #include <string>
 #include <vector>
-using boost::regex;
-using namespace std;
 
 class Pattern;
 class RealWeight;
@@ -31,18 +30,17 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     KlementievRothWordFeatureGen(boost::shared_ptr<Alphabet> alphabet,
       bool normalize = true);
     
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-      const Label y);
+    virtual SparseRealVec* getFeatures(const Pattern& x, const Label y);
         
     virtual int processOptions(int argc, char** argv);
     
-    static const string& name() {
-      static const string _name = "KRWord";
+    static const std::string& name() {
+      static const std::string _name = "KRWord";
       return _name;
     }
 
-    static const string CHAR_JOINER;
-    static const string SUB_JOINER;
+    static const std::string CHAR_JOINER;
+    static const std::string SUB_JOINER;
 
   private:
   
@@ -56,12 +54,12 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     
     bool _regexEnabled;
     
-    regex _regVowel;
+    boost::regex _regVowel;
   
-    regex _regConsonant;
+    boost::regex _regConsonant;
     
-    static void appendSubstrings(const vector<string>* s, size_t i, size_t k,
-      size_t end, vector<string>& subs);
+    static void appendSubstrings(const std::vector<std::string>* s, size_t i,
+      size_t k, size_t end, std::vector<std::string>& subs);
 };
 
 #endif

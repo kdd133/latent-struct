@@ -13,7 +13,6 @@
 #include <assert.h>
 #include <cmath>
 #include <ostream>
-using namespace std;
 
 LogWeight::LogWeight(double value, bool valueIsLog) {
   if (valueIsLog)
@@ -99,7 +98,7 @@ LogWeight& LogWeight::operator/=(const LogWeight& w) {
   return (*this);
 }
 
-ostream& operator<<(ostream& out, const LogWeight& w) {
+std::ostream& operator<<(std::ostream& out, const LogWeight& w) {
   return out << w._val;
 }
 

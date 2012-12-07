@@ -15,10 +15,10 @@
 #include "FeatureVector.h"
 #include "Label.h"
 #include "StateType.h"
+#include "Ublas.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
-using namespace std;
 
 class EditOperation;
 class Pattern;
@@ -31,9 +31,9 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
     EmptyAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet) :
       AlignmentFeatureGen(alphabet) {}
     
-    virtual FeatureVector<RealWeight>* getFeatures(const Pattern& x,
-        Label label, int i, int j, const EditOperation& op,
-        const vector<AlignmentPart>& editHistory) {
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
+        int j, const EditOperation& op,
+        const std::vector<AlignmentPart>& editHistory) {
       return 0;
     }
       
@@ -43,12 +43,12 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
       return 0;
     }
     
-    virtual double getDefaultFeatureWeight(const string& feature) const {
+    virtual double getDefaultFeatureWeight(const std::string& feature) const {
       return 0.0;
     }
     
-    static const string& name() {
-      static const string _name = "Empty";
+    static const std::string& name() {
+      static const std::string _name = "Empty";
       return _name;
     }
 

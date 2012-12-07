@@ -12,18 +12,18 @@
 #define BOOST_UBLAS_TYPE_CHECK 0
 
 #include "BmrmOptimizer.h"
-#include "FeatureVector.h"
 #include "Model.h"
 #include "Optimizer.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
 //#include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_expression.hpp>
+#include <boost/numeric/ublas/vector.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/timer/timer.hpp>
@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <string>
 #include <uQuadProg++.hh>
+
 using namespace std;
 
 BmrmOptimizer::BmrmOptimizer(TrainingObjective& objective) :
@@ -77,7 +78,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
   ublas::matrix<double> G(1, 1);
   ublas::matrix<double> copyG(1, 1);
   ublas::vector<double> wTemp(d);
-  FeatureVector<RealWeight> grad_t(d);
+  RealVec grad_t(d);
   double Remp;
   
   // Since this is (presumably) a convex objective, the starting point should
@@ -102,7 +103,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     // a ptr_vector of column vectors.
     ublas::vector<double>* g_t = new ublas::vector<double>(d);
     for (size_t i = 0; i < d; i++)
-      (*g_t)(i) = grad_t.getValueAtLocation(i);
+      (*g_t)(i) = grad_t(i);
     grads.push_back(g_t);
     
     const size_t bs = grads.size(); // The current bundle size.

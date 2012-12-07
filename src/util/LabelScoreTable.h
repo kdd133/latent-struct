@@ -18,11 +18,11 @@ class LabelScoreTable {
   public:
   
     // Note: t is the number of examples, k is the number of classes.
-    LabelScoreTable(size_t t, size_t k);
+    LabelScoreTable(std::size_t t, std::size_t k);
     
-    void setScore(size_t i, size_t y, double score);
+    void setScore(std::size_t i, std::size_t y, double score);
     
-    double getScore(size_t i, size_t y);
+    double getScore(std::size_t i, std::size_t y);
 
   private:
     

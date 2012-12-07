@@ -7,10 +7,6 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "AlignmentHypergraph.h"
 #include "AlignmentPart.h"
 #include "FeatureGenConstants.h"
@@ -23,14 +19,9 @@
 #include "RingInfo.h"
 #include "StateType.h"
 #include "StringPair.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/numeric/ublas/matrix_expression.hpp>
-#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/vector_sparse.hpp>
-#include <boost/numeric/ublas/vector.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
@@ -38,8 +29,9 @@
 #include <fstream>
 #include <stack>
 #include <vector>
-using namespace boost;
+
 using namespace std;
+using namespace boost;
 
 //#define USE_EXP_SEMI // uncomment to use RingExpectation where possible
 
@@ -94,24 +86,17 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
   // If we have both latent and observed features, we put the observed ones
   // on a "pre-start" arc that every path through the fst must include.
   if (includeObservedFeaturesArc) {
-    FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
+    SparseRealVec* fv = _fgenObs->getFeatures(pair, label);
     assert(fv);
-    // Note: Even if includeObsArc=true, we omit the observed feature vector in
-    // the event that no observed features actually fire.
-    if (fv->getLength() > 0) {
-      const StateId preStartStateId = addNode();
-      addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
-          startStateId, fv, w);
-      startStateId = preStartStateId;
-      _root = &_nodes[_nodes.size()-1];
-    }
-    else
-      delete fv;
+    const StateId preStartStateId = addNode();
+    addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
+        startStateId, fv, w);
+    startStateId = preStartStateId;
+    _root = &_nodes[_nodes.size()-1];
   }
   
   if (includeStartArc) {
-    FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, 0, 0, noOp,
-        history);
+    SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, noOp, history);
     const StateId preStartStateId = addNode();
     addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
         startStateId, fv, w);
@@ -126,7 +111,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
       
 void AlignmentHypergraph::rescore(const WeightVector& w) {
   BOOST_FOREACH(Hyperedge edge, _edges) {
-    const LogWeight newWeight(exp(w.innerProd(edge.getFeatureVector())));
+    const LogWeight newWeight(exp(w.innerProd(*edge.getFeatureVector())));
     edge.setWeight(newWeight);
   }
 }
@@ -248,12 +233,6 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
 
 AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
     const Ring ring) {
-  using boost::numeric::ublas::compressed_matrix;
-  using boost::numeric::ublas::compressed_vector;
-  using boost::numeric::ublas::matrix;
-  using boost::numeric::ublas::vector;
-  typedef compressed_matrix<LogWeight> sparse_matrix;
-  typedef compressed_vector<LogWeight> sparse_vector;
 
   // Run inside() and outside().
   shared_array<RingInfo> betas = inside(ring);
@@ -261,15 +240,14 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
     
   const int d = _fgen->getAlphabet()->size();
   shared_array<LogWeight> array(new LogWeight[d]);
-  vector<LogWeight> rBar(d);
-  shared_ptr<matrix<LogWeight> > tBar_(new matrix<LogWeight>(d, d));
-  matrix<LogWeight>& tBar = *tBar_;
+  LogVec rBar(d);
+  LogMat tBar(d, d);
   
   BOOST_FOREACH(const Hypernode& v, _nodes) {
     BOOST_FOREACH(const Hyperedge* e, v.getEdges()) {
       assert(e->getFeatureVector());
       // If a zero vector is encountered, there is no need to accumulate.
-      if (e->getFeatureVector()->getLength() == 0)
+      if (e->getFeatureVector()->size() == 0)
         continue;
         
       RingInfo keBar(alphas[v.getId()]);      
@@ -277,43 +255,29 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         keBar.collectProd(betas[u->getId()], ring);
 
       const LogWeight pe = e->getWeight();
-      const FeatureVector<LogWeight> fv_ = fvConvert(*e->getFeatureVector(),
-          array, d);      
+      SparseLogVec re = *e->getFeatureVector();
       const LogWeight keBarP = keBar.score();
-      
-      sparse_vector re(d);
-      for (int i = 0; i < fv_.getNumEntries(); ++i) {
-        int index = fv_.getIndexAtLocation(i);
-        LogWeight value = fv_.getValueAtLocation(i);
-        re(index) = value;
-      }
       
       if (ring == RingLog || ring == RingViterbi) {
         // Compute: xHat = xHat + keBar*xe
         //    where xe = pe*re
-        sparse_vector& pe_re = re;
+        SparseLogVec& pe_re = re;
         pe_re *= pe * keBarP;
         rBar += pe_re;
       }
       else {
         assert(ring == RingExpectation);
-        assert(keBar.fv());
         
-        sparse_vector& se = re; // In our applications, we have re == se
+        SparseLogVec& se = re; // In our applications, we have re == se
         
-        sparse_matrix pe_re_se = outer_prod(re, se);
+        SparseLogMat pe_re_se = outer_prod(re, se);
         pe_re_se *= pe;
         
-        sparse_vector keBarR(d);
-        for (int i = 0; i < keBar.fv()->getNumEntries(); ++i) {
-          int index = keBar.fv()->getIndexAtLocation(i);
-          LogWeight value = keBar.fv()->getValueAtLocation(i);
-          keBarR(index) = value;
-        }
+        const SparseLogVec& keBarR = keBar.fv();
         
-        sparse_vector& pe_se = se;
+        SparseLogVec& pe_se = se;
         pe_se *= pe;
-        const sparse_matrix pe_se_keBarR = outer_prod(pe_se, keBarR);
+        const SparseLogMat pe_se_keBarR = outer_prod(pe_se, keBarR);
         
         pe_se *= keBarP;    // = keBarP * pe_se
         pe_re_se *= keBarP; // = keBarP * pe_re_se
@@ -326,12 +290,11 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
   
   InsideOutsideResult result;
   result.Z = betas[_root->getId()].score();
-  result.rBar.reset(new FeatureVector<LogWeight>(rBar));
+  result.rBar = rBar;
   if (ring == RingExpectation) {
-    assert(betas[_root->getId()].fv());
-    result.sBar.reset(new FeatureVector<LogWeight>(
-        *betas[_root->getId()].fv()));
-    result.tBar = tBar_;
+    assert(betas[_root->getId()].fv().size() > 0);
+    result.sBar = betas[_root->getId()].fv();
+    result.tBar = tBar;
   }
   
   return result;
@@ -342,30 +305,21 @@ LogWeight AlignmentHypergraph::logPartition() {
   return betas[_root->getId()].score();
 }
 
-LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
-  InsideOutsideResult inOut = insideOutside(RingLog);
-  
-  // TODO: We shouldn't have to do all this just to make an assignment to fv.  
-  tr1::unordered_map<int,LogWeight> temp;
-  const shared_ptr<FeatureVector<LogWeight> > expFv = inOut.rBar;
-  for (int i = 0; i < expFv->getNumEntries(); ++i)
-    temp[expFv->getIndexAtLocation(i)] = expFv->getValueAtLocation(i);
-  fv.reinit(temp);
-  
+LogWeight AlignmentHypergraph::logExpectedFeaturesUnnorm(LogVec& fv) {
+  InsideOutsideResult inOut = insideOutside(RingLog);  
+  fv = inOut.rBar;
   return inOut.Z;
 }
 
-LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(
-    shared_ptr<matrix<LogWeight> >& fm,
-    shared_ptr<FeatureVector<LogWeight> >& fv) {
+LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(LogMat& fm,
+    LogVec& fv) {
   InsideOutsideResult inOut = insideOutside(RingExpectation);
   fv = inOut.sBar;
   fm = inOut.tBar;
   return inOut.Z;
 }
 
-RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,
+double AlignmentHypergraph::maxFeatureVector(SparseRealVec& fv,
     bool getCostOnly) {  
 #if 0
   // We save and then restore _betas (which will be overwritten by the call to
@@ -381,14 +335,13 @@ RealWeight AlignmentHypergraph::maxFeatureVector(FeatureVector<RealWeight>& fv,
   list<const Hyperedge*> bestPath;
   const RealWeight viterbiScore = viterbi(bestPath);
   if (!getCostOnly) {
-    tr1::unordered_map<int, RealWeight> sparse;
+    fv.clear();
+    fv.resize(_fgen->getAlphabet()->size());
+    SparseRealVec temp(fv.size());
     BOOST_FOREACH(const Hyperedge* e, bestPath) {
       assert(e->getChildren().size() == 1); // Only works for graphs at this point
-      const FeatureVector<RealWeight>* edgeFv = e->getFeatureVector();
-      assert(edgeFv);
-      edgeFv->addTo(sparse);
+      fv += ublas_util::convertVec(*e->getFeatureVector(), temp);
     }
-    fv.reinit(sparse);
   }
 #endif
   return viterbiScore;
@@ -502,15 +455,14 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
       AlignmentPart part = {noOp.getName(), FeatureGenConstants::EPSILON,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
-      FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, i, j,
-          noOp, history);
+      SparseRealVec* fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           _goal->getId(), fv, w);
       history.pop_back();
     }
     else {
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          _goal->getId(), new FeatureVector<RealWeight>(), w);
+          _goal->getId(), new SparseRealVec(), w);
     }
     return;
   }
@@ -558,8 +510,8 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
       // Append the state and the consumed strings to the alignment history.
       AlignmentPart part = {op->getName(), sourceConsumed, targetConsumed};
       history.push_back(part);
-      FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
-          jNew, *op, history);
+      SparseRealVec* fv = _fgen->getFeatures(pair, label, iNew, jNew, *op,
+          history);
       addEdge(op->getId(), destStateType->getId(), sourceStateId, destStateId,
           fv, w);
       applyOperations(w, pair, label, history, destStateType, iNew, jNew);
@@ -575,18 +527,25 @@ int AlignmentHypergraph::addNode() {
 }
 
 void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
-    const StateId sourceId, const StateId destId, FeatureVector<RealWeight>* fv,
+    const StateId sourceId, const StateId destId, SparseRealVec* fv,
     const WeightVector& w) {
   assert(fv);
   assert(sourceId >= 0);
 //  Arc arc(opId, destStateTypeId, (double)-w.innerProd(fv), destId, fv);
+
   Hypernode& parent = _nodes[sourceId];
   Hypernode* onlyChild = &_nodes[destId]; 
   list<const Hypernode*> children;
   children.push_back(onlyChild);
+  
   const int edgeId = _edges.size();
-  const LogWeight edgeWeight(exp(w.innerProd(fv)));
-  Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, fv);
+  const LogWeight edgeWeight(exp(w.innerProd(*fv)));
+  SparseLogVec* logFv = new SparseLogVec(fv->size());
+  ublas_util::convertVec(*fv, *logFv);
+  delete fv;
+  
+  Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, logFv);
+  
   parent.addEdge(edge);
   _edges.push_back(edge);
 }

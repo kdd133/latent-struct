@@ -10,20 +10,14 @@
 #ifndef _MODEL_H
 #define _MODEL_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "AlignmentFeatureGen.h"
 #include "FeatureVector.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
+#include "Ublas.h"
 #include "WeightVector.h"
-#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iostream>
-using boost::numeric::ublas::matrix;
-using boost::shared_ptr;
 
 class InputReader;
 class LogWeight;
@@ -34,8 +28,8 @@ class Model {
 
   public:
   
-    Model(shared_ptr<AlignmentFeatureGen> fgenAlign,
-      shared_ptr<ObservedFeatureGen> fgenObserved);
+    Model(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
+      boost::shared_ptr<ObservedFeatureGen> fgenObserved);
   
     virtual ~Model() {}
     
@@ -51,22 +45,20 @@ class Model {
     virtual RealWeight viterbiScore(const WeightVector& w,
       const Pattern& pattern, const Label label) = 0;
 
-    virtual RealWeight maxFeatures(const WeightVector& w,
-      FeatureVector<RealWeight>& fv, const Pattern& pattern, const Label label,
+    virtual RealWeight maxFeatures(const WeightVector& w, SparseRealVec& fv,
+      const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true) = 0;
     
     // Returns total mass for this Pattern and Label.
-    virtual LogWeight expectedFeatures(const WeightVector& w,
-      FeatureVector<LogWeight>& fv, const Pattern& pattern, const Label label,
-      bool normalize = true) = 0;
-      
-    virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<matrix<LogWeight> >& fm,
-      shared_ptr<FeatureVector<LogWeight> >& fv,
+    virtual LogWeight expectedFeatures(const WeightVector& w, LogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
+    virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
+      LogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
+      bool normalize = true) = 0;
+      
     // Returns true of the caller assumes ownership of the FeatureVector.
-    virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
+    virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns) = 0;
       
     virtual void printAlignment(std::ostream& out, const WeightVector& w,
@@ -78,18 +70,18 @@ class Model {
     
     bool getCacheEnabled() const;
     
-    shared_ptr<ObservedFeatureGen> getFgenObserved() const;
+    boost::shared_ptr<ObservedFeatureGen> getFgenObserved() const;
     
-    shared_ptr<AlignmentFeatureGen> getFgenLatent() const;
+    boost::shared_ptr<AlignmentFeatureGen> getFgenLatent() const;
     
 
   protected:
   
     // The alignment feature generator.
-    shared_ptr<AlignmentFeatureGen> _fgenAlign;
+    boost::shared_ptr<AlignmentFeatureGen> _fgenAlign;
     
     // The observed feature generator.
-    shared_ptr<ObservedFeatureGen> _fgenObserved;
+    boost::shared_ptr<ObservedFeatureGen> _fgenObserved;
     
     // Whether or not to cache transducers in memory during training.
     bool _cacheFsts;
@@ -102,8 +94,8 @@ class Model {
     Model(const Model& model);
 };
 
-inline Model::Model(shared_ptr<AlignmentFeatureGen> fgenAlign,
-    shared_ptr<ObservedFeatureGen> fgenObserved) :
+inline Model::Model(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
+    boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
     _fgenAlign(fgenAlign), _fgenObserved(fgenObserved), _cacheFsts(false) {
   assert(_fgenAlign != 0);
   assert(_fgenObserved != 0);
@@ -117,11 +109,11 @@ inline bool Model::getCacheEnabled() const {
   return _cacheFsts;
 }
 
-inline shared_ptr<ObservedFeatureGen> Model::getFgenObserved() const {
+inline boost::shared_ptr<ObservedFeatureGen> Model::getFgenObserved() const {
   return _fgenObserved;
 }
 
-inline shared_ptr<AlignmentFeatureGen> Model::getFgenLatent() const {
+inline boost::shared_ptr<AlignmentFeatureGen> Model::getFgenLatent() const {
   return _fgenAlign;
 }
 

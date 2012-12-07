@@ -10,10 +10,6 @@
 #ifndef _STRINGEDITMODEL_H
 #define _STRINGEDITMODEL_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "AlignmentFeatureGen.h"
 #include "FeatureVector.h"
 #include "InputReader.h"
@@ -33,13 +29,13 @@
 #include "StdFeatArc.h"
 #include "StringEditModel.h"
 #include "StringPair.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <algorithm>
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_array.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -47,18 +43,16 @@
 #include <boost/shared_ptr.hpp>
 #include <iostream>
 #include <list>
+#include <map>
 #include <string>
-using boost::numeric::ublas::matrix;
-using namespace boost;
-using namespace std;
 
 template <typename Graph>
 class StringEditModel : public Model {
 
   public:
   
-    StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
-      shared_ptr<ObservedFeatureGen> fgenObserved);
+    StringEditModel(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
+      boost::shared_ptr<ObservedFeatureGen> fgenObserved);
     
     ~StringEditModel() {};
     
@@ -73,23 +67,21 @@ class StringEditModel : public Model {
     virtual RealWeight viterbiScore(const WeightVector& w,
       const Pattern& pattern, const Label label);
   
-    virtual RealWeight maxFeatures(const WeightVector& w,
-      FeatureVector<RealWeight>& fv, const Pattern& pattern, const Label label,
+    virtual RealWeight maxFeatures(const WeightVector& w, SparseRealVec& fv,
+      const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true);
     
-    virtual LogWeight expectedFeatures(const WeightVector& w,
-      FeatureVector<LogWeight>& fv, const Pattern& pattern, const Label label,
-      bool normalize = true);
+    virtual LogWeight expectedFeatures(const WeightVector& w, LogVec& fv,
+      const Pattern& pattern, const Label label, bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      shared_ptr<matrix<LogWeight> >& fm,
-      shared_ptr<FeatureVector<LogWeight> >& fv,
-      const Pattern& pattern, const Label label, bool normalize = true);
+      LogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
+      bool normalize = true);
       
-    virtual FeatureVector<RealWeight>* observedFeatures(const Pattern& pattern,
+    virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
       
-    virtual void printAlignment(ostream& out, const WeightVector& w,
+    virtual void printAlignment(std::ostream& out, const WeightVector& w,
       const Pattern& pattern, const Label label);
     
     static const string& name() {
@@ -99,7 +91,7 @@ class StringEditModel : public Model {
     
     virtual void emptyCache();
     
-    typedef pair<size_t, Label> ExampleId;
+    typedef std::pair<size_t, Label> ExampleId;
 
 
   private:
@@ -122,10 +114,10 @@ class StringEditModel : public Model {
     int _order;
     
     // A list of state types that comprise the nodes in a graph.
-    ptr_vector<StateType> _states;
+    boost::ptr_vector<StateType> _states;
     
     // A list of the edit operations that are in use.
-    ptr_vector<EditOperation> _ops;
+    boost::ptr_vector<EditOperation> _ops;
     
     // If true, do not fire any features for arc connecting to the final state.
     bool _noFinalArcFeats;
@@ -135,22 +127,15 @@ class StringEditModel : public Model {
     bool _includeStartArc;
 
     // A cache for Fsts that include an arc for the observed features. 
-    ptr_map<ExampleId, Graph> _fstCache;
+    boost::ptr_map<ExampleId, Graph> _fstCache;
     
     // A cache for Fsts that omit the arc for the observed features.
-    ptr_map<ExampleId, Graph> _fstCacheNoObs;
+    boost::ptr_map<ExampleId, Graph> _fstCacheNoObs;
     
     // A cache for observed feature vectors.
-    ptr_map<ExampleId, FeatureVector<RealWeight> > _fvCacheObs;
+    boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
-    // For the sake of efficiency, we pass a buffer to the Graph that is used
-    // for temporary storage when computing logExpectedFeaturesUnnorm().
-    // The callee allocates and otherwise manages the buffer; the reason it is
-    // a member variable here is that we only require one buffer per thread --
-    // not one per Transducer -- and we currently use one thread per Model.
-    shared_array<LogWeight> _buffer;
-    
-    Graph* getGraph(ptr_map<ExampleId, Graph>& cache, const WeightVector& w,
+    Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache, const WeightVector& w,
         const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
         
@@ -165,8 +150,8 @@ class StringEditModel : public Model {
 };
 
 template <typename Graph>
-StringEditModel<Graph>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlign,
-    shared_ptr<ObservedFeatureGen> fgenObserved) :
+StringEditModel<Graph>::StringEditModel(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
+    boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
     _noFinalArcFeats(false), _includeStartArc(false) {
@@ -174,6 +159,9 @@ StringEditModel<Graph>::StringEditModel(shared_ptr<AlignmentFeatureGen> fgenAlig
 
 template <typename Graph>
 void StringEditModel<Graph>::addZeroOrderStates() {
+  using boost::lexical_cast;
+  using std::string;
+  
   _states.push_back(new StateType(0, "sta"));
   StateType& start = _states.front();
   
@@ -220,6 +208,9 @@ void StringEditModel<Graph>::addZeroOrderStates() {
 
 template <typename Graph>
 void StringEditModel<Graph>::addFirstOrderStates() {
+  using namespace boost;
+  using std::string;
+  
   //// Add states ////
   
   StateType* start = new StateType(_states.size(), "sta");
@@ -245,7 +236,7 @@ void StringEditModel<Graph>::addFirstOrderStates() {
   if (_useMatch) {
     // We can't possibly match phrases of different lengths, so the smaller of
     // the two maximum phrase lengths equals the longest possible match length.
-    const int maxMatchLength = min(_maxSourcePhraseLength,
+    const int maxMatchLength = std::min(_maxSourcePhraseLength,
         _maxTargetPhraseLength);
     mat.resize(maxMatchLength + 1); // We'll skip entry 0
     for (int s = 1; s <= maxMatchLength; s++) {
@@ -279,6 +270,9 @@ void StringEditModel<Graph>::addFirstOrderStates() {
   //// Add edit operations ////
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    using boost::lexical_cast;
+    using std::string;
+    
     string opName = "Del" + lexical_cast<string>(s);
     EditOperation* op = new OpDelete(_ops.size(), del[s], opName, s);
     _ops.push_back(op);
@@ -300,6 +294,9 @@ void StringEditModel<Graph>::addFirstOrderStates() {
   }
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
+    using boost::lexical_cast;
+    using std::string;
+    
     const string sStr = lexical_cast<string>(s);
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
@@ -335,6 +332,9 @@ void StringEditModel<Graph>::addFirstOrderStates() {
 
 template <typename Graph>
 void StringEditModel<Graph>::addSecondOrderStates() {
+  using namespace boost;
+  using std::string;
+  
   // FIXME: Longer phrase lengths are not actually supported here yet, since we
   // have more operations than states; this means the history can be ambiguous.
   assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
@@ -451,7 +451,7 @@ void StringEditModel<Graph>::addSecondOrderStates() {
   if (_useMatch) {
     opBaseName = "Mat";
     // We can't possibly match 1-2, 2-1, etc.
-    const int maxMatchLength = min(_maxSourcePhraseLength,
+    const int maxMatchLength = std::min(_maxSourcePhraseLength,
         _maxTargetPhraseLength);
     BOOST_FOREACH(const StateType& dest, _states) {
       // Nothing transitions to the single start state.
@@ -561,7 +561,7 @@ template <typename Graph>
 RealWeight StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  FeatureVector<RealWeight> fv;
+  SparseRealVec fv;
   const RealWeight maxScore = graph->maxFeatureVector(fv, true);
   graph->clearDynProgVariables();
   return maxScore;
@@ -569,50 +569,49 @@ RealWeight StringEditModel<Graph>::viterbiScore(const WeightVector& w,
 
 template <typename Graph>
 RealWeight StringEditModel<Graph>::maxFeatures(const WeightVector& w,
-    FeatureVector<RealWeight>& fv, const Pattern& x, const Label y,
-    bool includeObsFeats) {
+    SparseRealVec& fv, const Pattern& x, const Label y, bool includeObsFeats) {
   Graph* graph = 0;
   if (includeObsFeats)
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
-  const RealWeight maxScore = graph->maxFeatureVector(fv);
+  const double maxScore = graph->maxFeatureVector(fv);
   graph->clearDynProgVariables();
   return maxScore;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
-    FeatureVector<LogWeight>& fv, const Pattern& x, const Label y,
+    LogVec& fv, const Pattern& x, const Label y,
     bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv, _buffer);
+  const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv);
   graph->clearDynProgVariables();
   if (normalize)
-    fv.timesEquals(-logZ);
+    fv *= -logZ;
   return logZ;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, shared_ptr<matrix<LogWeight> >& fm,
-      shared_ptr<FeatureVector<LogWeight> >& fv, const Pattern& x, const Label y,
+      const WeightVector& w, LogMat& fm,
+      LogVec& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeatureCooccurrences(fm, fv);
   graph->clearDynProgVariables();
-  assert(fm);
-  assert(fv);
   if (normalize) {
-    fv->timesEquals(-logZ);
-    *fm *= -logZ;
+    fv *= -logZ;
+    fm *= -logZ;
   }
   return logZ;
 }
 
 template <typename Graph>
-void StringEditModel<Graph>::printAlignment(ostream& out, const WeightVector& w,
+void StringEditModel<Graph>::printAlignment(std::ostream& out, const WeightVector& w,
     const Pattern& x, const Label y) {
+  using namespace std;
+  
   Graph* graph = getGraph(_fstCache, w, x, y);
   assert(graph);
   
@@ -696,13 +695,13 @@ void StringEditModel<Graph>::emptyCache() {
 }
 
 template <typename Graph>
-Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
+Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
     const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   assert(_states.size() > 0);
   Graph* graph = 0;
   if (_cacheFsts) {
-    ExampleId id = make_pair(x.getId(), y);
-    typename ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
+    ExampleId id = std::make_pair(x.getId(), y);
+    typename boost::ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
     if (it == cache.end()) {
       graph = new Graph(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
       assert(graph);
@@ -719,7 +718,7 @@ Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
   else {
     if (cache.size() == 0) {
       // Initialize a "reusable" graph.
-      ExampleId id = make_pair(0, 0);
+      ExampleId id = std::make_pair(0, 0);
       cache.insert(id, new Graph(_states, _fgenAlign, _fgenObserved,
           !_noFinalArcFeats));
     }
@@ -733,13 +732,13 @@ Graph* StringEditModel<Graph>::getGraph(ptr_map<ExampleId, Graph>& cache,
 }
 
 template <typename Graph>
-FeatureVector<RealWeight>* StringEditModel<Graph>::observedFeatures(
-    const Pattern& x, const Label y, bool& callerOwns) {
+SparseRealVec* StringEditModel<Graph>::observedFeatures(const Pattern& x,
+    const Label y, bool& callerOwns) {
   callerOwns = !_cacheFsts;
-  FeatureVector<RealWeight>* fv = 0;
+  SparseRealVec* fv = 0;
   if (_cacheFsts) {
-    ExampleId id = make_pair(x.getId(), y);
-    typename ptr_map<ExampleId, FeatureVector<RealWeight> >::iterator it =
+    ExampleId id = std::make_pair(x.getId(), y);
+    typename boost::ptr_map<ExampleId, SparseRealVec>::iterator it =
         _fvCacheObs.find(id);
     if (it == _fvCacheObs.end()) {
       fv = _fgenObserved->getFeatures(x, y);

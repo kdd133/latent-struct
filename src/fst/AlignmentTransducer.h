@@ -10,10 +10,6 @@
 #ifndef _ALIGNMENTTRANSDUCER_H
 #define _ALIGNMENTTRANSDUCER_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
 #include "EditOperation.h"
@@ -29,11 +25,11 @@
 #include "StateType.h"
 #include "StdFeatArc.h"
 #include "StringPair.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/multi_array.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
@@ -47,11 +43,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <tr1/unordered_map>
 #include <vector>
+
 using namespace boost;
 using namespace std;
-
 
 //A transducer that takes two strings as input, and outputs an alignment of the
 //two strings.
@@ -71,37 +66,34 @@ class AlignmentTransducer : public Graph {
                         
     virtual ~AlignmentTransducer();
                         
-    void build(const WeightVector& w, const Pattern& x, Label label,
+    virtual void build(const WeightVector& w, const Pattern& x, Label label,
       bool includeStartArc, bool includeObservedFeaturesArc);
       
-    void rescore(const WeightVector& w);
+    virtual void rescore(const WeightVector& w);
 
-    LogWeight logPartition();
+    virtual LogWeight logPartition();
 
     // Note: Assumes fv has been zeroed out.
-    LogWeight logExpectedFeaturesUnnorm(FeatureVector<LogWeight>& fv,
-        shared_array<LogWeight> buffer);
+    virtual LogWeight logExpectedFeaturesUnnorm(LogVec& fv);
         
-    LogWeight logExpectedFeatureCooccurrences(
-        shared_ptr<matrix<LogWeight> >& fm,
-        shared_ptr<FeatureVector<LogWeight> >& fv);
+    virtual LogWeight logExpectedFeatureCooccurrences(LogMat& fm, LogVec& fv);
 
     // Note: Assumes fv has been zeroed out.
-    RealWeight maxFeatureVector(FeatureVector<RealWeight>& fv,
+    virtual double maxFeatureVector(SparseRealVec& fv,
         bool getCostOnly = false);
         
     // Returns the sequence of edit operations that constitute the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
     // be applied in sequential order to reconstruct the optimal alignment.
-    void maxAlignment(list<int>& opIds) const;
+    virtual void maxAlignment(list<int>& opIds) const;
     
-    void toGraphviz(const string& fname) const;
+    virtual void toGraphviz(const string& fname) const;
     
-    int numArcs() { return _numArcs; }
+    virtual int numArcs() { return _numArcs; }
     
-    void clearDynProgVariables();
+    virtual void clearDynProgVariables();
     
-    void clearBuildVariables();
+    virtual void clearBuildVariables();
 
 
   private:
@@ -115,7 +107,7 @@ class AlignmentTransducer : public Graph {
     
     void addArc(const int opId, const int destStateTypeId,
         const StateId sourceId, const StateId destId,
-        FeatureVector<RealWeight>* fv, const WeightVector& w);
+        SparseRealVec* fv, const WeightVector& w);
         
     void clear();
     
@@ -127,7 +119,7 @@ class AlignmentTransducer : public Graph {
 
     fst::VectorFst<Arc>* _fst;
     
-    list<const FeatureVector<RealWeight>*> _fvecs;
+    list<const SparseRealVec*> _fvecs;
     
     vector<ArcWeight> _alphas;
     
@@ -167,7 +159,7 @@ AlignmentTransducer<Arc>::~AlignmentTransducer() {
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::clear() {    
-  BOOST_FOREACH(const FeatureVector<RealWeight>* fv, _fvecs) {
+  BOOST_FOREACH(const SparseRealVec* fv, _fvecs) {
     if (fv != 0)
       delete fv;
   }
@@ -193,6 +185,7 @@ inline void AlignmentTransducer<Arc>::clearBuildVariables() {
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
+  using namespace std;
   // Build lookup tables for state names and edit operation names.
   tr1::unordered_map<int, string> stateNames;
   tr1::unordered_map<int, string> opNames;
@@ -266,24 +259,17 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   // If we have both latent and observed features, we put the observed ones
   // on a "pre-start" arc that every path through the fst must include.
   if (obsArc) {
-    FeatureVector<RealWeight>* fv = _fgenObs->getFeatures(pair, label);
+    SparseRealVec* fv = _fgenObs->getFeatures(pair, label);
     assert(fv);
-    // Note: Even if includeObsArc=true, we omit the observed feature vector in
-    // the event that no observed features actually fire.
-    if (fv->getLength() > 0) {
-      const StateId preStartStateId = _fst->AddState();
-      addArc(noOp.getId(), startFinishStateType.getId(), preStartStateId,
-          startStateId, fv, w);
-      startStateId = preStartStateId;
-    }
-    else
-      delete fv;
+    const StateId preStartStateId = _fst->AddState();
+    addArc(noOp.getId(), startFinishStateType.getId(), preStartStateId,
+        startStateId, fv, w);
+    startStateId = preStartStateId;
   }
   _fst->SetStart(startStateId);
   
   if (startArc) {
-    FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, 0, 0, noOp,
-        history);
+    SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, noOp, history);
     const StateId preStartStateId = _fst->AddState();
     addArc(noOp.getId(), startFinishStateType.getId(), preStartStateId,
         startStateId, fv, w);
@@ -315,7 +301,7 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
     // state and the finish state.
     const StateType& startFinishStateType = _stateTypes.front();
     assert(startFinishStateType.getName() == "sta");
-    FeatureVector<RealWeight>* fv = 0;
+    SparseRealVec* fv = 0;
     OpNone noOp;
     if (_includeFinalFeats) {
       // The OpNone doesn't consume any of the strings, hence the epsilons below.
@@ -379,8 +365,8 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
       // Append the state and the consumed strings to the alignment history.
       AlignmentPart part = {op->getName(), sourceConsumed, targetConsumed};
       history.push_back(part);
-      FeatureVector<RealWeight>* fv = _fgen->getFeatures(pair, label, iNew,
-          jNew, *op, history);
+      SparseRealVec* fv = _fgen->getFeatures(pair, label, iNew, jNew, *op,
+          history);
       addArc(op->getId(), destStateType->getId(), sourceStateId, destStateId,
           fv, w);
       applyOperations(w, pair, label, history, destStateType, iNew, jNew);
@@ -392,10 +378,10 @@ void AlignmentTransducer<Arc>::applyOperations(const WeightVector& w,
 template<typename Arc>
 inline void AlignmentTransducer<Arc>::addArc(const int opId,
     const int destStateTypeId, const StateId sourceId, const StateId destId,
-    FeatureVector<RealWeight>* fv, const WeightVector& w) {
+    SparseRealVec* fv, const WeightVector& w) {
   // Note that we negate the innerProd so that the dynamic programming
   // routines (e.g., ShortestPath) will return max instead of min.
-  Arc arc(opId, destStateTypeId, (double)-w.innerProd(fv), destId, fv);
+  Arc arc(opId, destStateTypeId, (double)-w.innerProd(*fv), destId, fv);
   assert(sourceId >= 0);
   _fst->AddArc(sourceId, arc);
   if (fv)
@@ -424,10 +410,9 @@ LogWeight AlignmentTransducer<Arc>::logPartition() {
 }
 
 template<typename Arc>
-LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv, shared_array<LogWeight> logArray) {
+LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(LogVec& fv) {
   assert(_fst);
-  assert(!fv.isDense());
+  assert(fv.size() == _fgen->getAlphabet()->size());
   
   if (_alphas.size() == 0) {
     fst::ShortestDistance(*_fst, &_alphas);
@@ -438,19 +423,9 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
   const LogWeight logZ = logPartition(); // fills in _betas if necessary
   assert(_alphas.size() > 0 && _betas.size() == _alphas.size());
   
-  // FIXME: We're assuming d doesn't change between calls, but we don't actually
-  // verify this. In fact, this whole buffer business is ugly and should be done
-  // away with if possible.
-  const int d = _fgen->getAlphabet()->size();
-  if (!logArray) {
-    // The alphabet is shared between the two f-gens (see latent_struct.cpp)
-    assert(d == _fgenObs->getAlphabet()->size());
-    logArray.reset(new LogWeight[d]);
-  }
-  assert(logArray);
+  SparseLogVec temp(fv.size());
   
-  tr1::unordered_map<int,LogWeight> sparse;
-  
+  fv.clear();
   fst::StateIterator< fst::VectorFst<Arc> > sIt(*_fst);
   for (; !sIt.Done(); sIt.Next()) {
     const StateId prevstate = sIt.Value();
@@ -462,35 +437,31 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeaturesUnnorm(
       LogWeight weight(-arc.weight.Value(), true);
       weight *= LogWeight(-_alphas[prevstate].Value(), true);
       weight *= LogWeight(-_betas[arc.nextstate].Value(), true);
-      fvConvert(*arc.fv, logArray, d).addTo(sparse, weight);
+      fv += (ublas_util::convertVec(*arc.fv, temp) * weight);
     }
   }
-  fv.reinit(sparse);
   return logZ;
 }
 
 template<typename Arc>
-LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(
-    shared_ptr<matrix<LogWeight> >& fm,
-    shared_ptr<FeatureVector<LogWeight> >& fv) {
+LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(LogMat& fm,
+    LogVec& fv) {
   assert(0); // Not implemented.
 }
 
 template<typename Arc>
-RealWeight AlignmentTransducer<Arc>::maxFeatureVector(
-    FeatureVector<RealWeight>& fv, bool getCostOnly) {
+double AlignmentTransducer<Arc>::maxFeatureVector(SparseRealVec& fv,
+    bool getCostOnly) {
   assert(_fst);
-  assert(getCostOnly || !fv.isDense());
   
   fst::VectorFst<Arc> viterbiFst;
   fst::ShortestPath(*_fst, &viterbiFst);
   
-  tr1::unordered_map<int, RealWeight> sparse;
-
   // ShortestPath builds an fst in reverse order, assigning id 0 to the Final
   // state, and then incrementing the id for each state along the path. So, if
   // we start at the Start state, the ids will decrease until we reach 0, at
   // which point we are done.
+  fv.clear();
   assert(viterbiFst.Start() != 0);
   double cost = 0;
   fst::StateIterator<fst::VectorFst<Arc> > sIt(viterbiFst);
@@ -500,15 +471,13 @@ RealWeight AlignmentTransducer<Arc>::maxFeatureVector(
       const Arc& arc = aIt.Value();
       // Avoid performing the vector additions if we only want to know the cost.
       if (arc.fv && !getCostOnly)
-        arc.fv->addTo(sparse);
+        fv += *arc.fv;
       cost += arc.weight.Value();    
       // There should be at most one outgoing arc per state in the Viterbi fst.
       aIt.Next();
       assert(aIt.Done());
     }
   }
-  if (!getCostOnly)
-    fv.reinit(sparse);
   return RealWeight(-cost); // the arc weights were negated in build()
 }
 
@@ -544,7 +513,7 @@ void AlignmentTransducer<Arc>::rescore(const WeightVector& w) {
       Arc arcCopy = ait.Value();
       if (!arcCopy.fv)
         continue; // no need to rescore a zero vector
-      arcCopy.weight = (double)-w.innerProd(arcCopy.fv); // Note: negating score
+      arcCopy.weight = (double)-w.innerProd(*arcCopy.fv); // Note: negating score
       ait.SetValue(arcCopy);
     }
   }
@@ -562,14 +531,13 @@ AlignmentTransducer<StdFeatArc>::logPartition() {
 }
 
 template<> inline LogWeight
-AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(
-    FeatureVector<LogWeight>& fv, shared_array<LogWeight> buffer) {
+AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(LogVec& fv) {
   throw logic_error("Can't compute expectations in the Tropical semiring.");
 }
 
-template<> inline RealWeight
-AlignmentTransducer<LogFeatArc>::maxFeatureVector(
-    FeatureVector<RealWeight>& fv, bool getCostOnly) {
+template<> inline double
+AlignmentTransducer<LogFeatArc>::maxFeatureVector(SparseRealVec& fv,
+    bool getCostOnly) {
   throw logic_error("Can't run Viterbi in the Log semiring.");
 }
 

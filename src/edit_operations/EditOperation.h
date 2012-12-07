@@ -13,7 +13,6 @@
 
 #include <string>
 #include <vector>
-using namespace std;
 
 class StateType;
 
@@ -21,13 +20,14 @@ class EditOperation {
 
   public:
   
-    EditOperation(int id, string name, const StateType* defaultDestState = 0)
-      : _id(id), _name(name), _defaultDestinationState(defaultDestState) {}
+    EditOperation(int id, std::string name,
+      const StateType* defaultDestState = 0) : _id(id), _name(name),
+      _defaultDestinationState(defaultDestState) {}
     
     virtual ~EditOperation() {}
     
-    virtual const StateType* apply(const vector<string>& source,
-                                   const vector<string>& target,
+    virtual const StateType* apply(const std::vector<std::string>& source,
+                                   const std::vector<std::string>& target,
                                    const StateType* prevStateType,
                                    const int i,
                                    const int j,
@@ -39,7 +39,7 @@ class EditOperation {
     }
     
     //Returns the name that uniquely identifies this edit operation.
-    const string& getName() const {
+    const std::string& getName() const {
       return _name;
     }
     
@@ -51,7 +51,7 @@ class EditOperation {
   
     int _id;
     
-    string _name;
+    std::string _name;
     
     const StateType* _defaultDestinationState;
 };

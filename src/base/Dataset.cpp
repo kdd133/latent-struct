@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <list>
 #include <vector>
+
 using namespace std;
 
 Dataset::Dataset(size_t partitions) : _numPartitions(partitions) {

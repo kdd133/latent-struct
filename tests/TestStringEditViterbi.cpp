@@ -8,6 +8,7 @@
 #include "Model.h"
 #include "RealWeight.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "WordAlignmentFeatureGen.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
@@ -91,9 +92,8 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
   BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
   
-  FeatureVector<RealWeight> fv(d, true);
-  BOOST_REQUIRE(!fv.isDense());
-  RealWeight maxScore = model->maxFeatures(W, fv, *pair, label, true);
+  SparseRealVec fv(d);
+  double maxScore = model->maxFeatures(W, fv, *pair, label, true);
   BOOST_CHECK_CLOSE((double)maxScore, (double)viterbiScore, 1e-8);
   
   const int iMat = alphabet->lookup("0_S:Mat11");
@@ -102,11 +102,11 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that values in the max-scoring feature vector are correct.  
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iIns), 3, 1e-4);
-  BOOST_CHECK_SMALL((double)fv.getValueAtIndex(iDel), 1e-4);
-  BOOST_CHECK_SMALL((double)fv.getValueAtIndex(iSub), 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iMat), 6, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv.getValueAtIndex(iBias), 1, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iIns], 3, 1e-4);
+  BOOST_CHECK_SMALL((double)fv[iDel], 1e-4);
+  BOOST_CHECK_SMALL((double)fv[iSub], 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iMat], 6, 1e-4);
+  BOOST_CHECK_CLOSE((double)fv[iBias], 1, 1e-4);
   
   // Check that the max-scoring alignment is correct.
   stringstream alignmentStr;

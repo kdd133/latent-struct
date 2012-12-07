@@ -7,12 +7,14 @@
 #include "LbfgsOptimizer.h"
 #include "LogLinearMulti.h"
 #include "StringEditModel.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
+
 using namespace boost;
 
 
@@ -69,22 +71,18 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
   
-  FeatureVector<RealWeight> gradFv(d);
+  RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, (double)gradFv.getValueAtLocation(0), 1e-8);
-  BOOST_CHECK_CLOSE(0.71278741450, (double)gradFv.getValueAtLocation(1), 1e-8);
-  BOOST_CHECK_CLOSE(0.69725812519, (double)gradFv.getValueAtLocation(2), 1e-8);
-  BOOST_CHECK_CLOSE(0.30803476795, (double)gradFv.getValueAtLocation(3), 1e-8);
-  BOOST_CHECK_CLOSE((double)-gradFv.getValueAtLocation(0),
-      (double)gradFv.getValueAtLocation(4), 1e-8);
-  BOOST_CHECK_CLOSE((double)-gradFv.getValueAtLocation(1),
-      (double)gradFv.getValueAtLocation(5), 1e-8);
-  BOOST_CHECK_CLOSE((double)-gradFv.getValueAtLocation(2),
-      (double)gradFv.getValueAtLocation(6), 1e-8);
-  BOOST_CHECK_CLOSE((double)-gradFv.getValueAtLocation(3),
-      (double)gradFv.getValueAtLocation(7), 1e-8);
+  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.71278741450, gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.69725812519, gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.30803476795, gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv[0], gradFv[4], 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv[1], gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv[2], gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(-gradFv[3], gradFv[7], 1e-8);
   
   LbfgsOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

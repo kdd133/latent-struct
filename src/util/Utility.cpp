@@ -9,13 +9,13 @@
 
 #include "AlignmentFeatureGen.h"
 #include "Dataset.h"
-#include "FeatureVector.h"
 #include "InputReader.h"
 #include "LabelScoreTable.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "RealWeight.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
@@ -24,6 +24,8 @@
 #include <fstream>
 #include <limits>
 #include <string>
+
+using namespace boost;
 using namespace std;
 
 const double Utility::log1PlusTiny = 1e-4;
@@ -51,10 +53,12 @@ bool Utility::loadDataset(const InputReader& reader, string fileName,
 
 // Add L2 regularization.
 void Utility::addRegularizationL2(const WeightVector& W, const double beta,
-    double& fval, FeatureVector<RealWeight>& grad) {
+    double& fval, RealVec& grad) {
   assert(beta > 0.0);
+  assert(W.getDim() == grad.size());
   fval += beta/2 * W.squaredL2Norm();
-  grad.plusEquals(W.getWeights(), W.getDim(), beta); // add beta*W to gradient
+  for (size_t i = 0; i < W.getDim(); ++i)
+    grad(i) += W.getWeight(i) * beta; // add beta*W to gradient
 }
 
 void Utility::evaluate(const vector<WeightVector>& weightVectors,

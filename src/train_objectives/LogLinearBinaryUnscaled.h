@@ -10,26 +10,27 @@
 #ifndef _LOGLINEARBINARYUNSCALED_H
 #define _LOGLINEARBINARYUNSCALED_H
 
-#include "FeatureVector.h"
 #include "TrainingObjective.h"
+#include "Ublas.h"
+#include <string>
+#include <vector>
 
 class Dataset;
 class Model;
-class RealWeight;
 
 class LogLinearBinaryUnscaled : public TrainingObjective {
 
   public:
   
     LogLinearBinaryUnscaled(const Dataset& dataset,
-      const vector<Model*>& models) : TrainingObjective(dataset, models) {}
+      const std::vector<Model*>& models) : TrainingObjective(dataset, models) {}
     
     virtual ~LogLinearBinaryUnscaled() {}
     
     virtual bool isBinary() const { return true; }
 
-    static const string& name() {
-      static const string _name = "LogLinearBinaryUnscaled";
+    static const std::string& name() {
+      static const std::string _name = "LogLinearBinaryUnscaled";
       return _name;
     }
     
@@ -37,7 +38,7 @@ class LogLinearBinaryUnscaled : public TrainingObjective {
   
     virtual void valueAndGradientPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label k, double& funcVal, FeatureVector<RealWeight>& gradFv);
+      const Label k, double& funcVal, RealVec& gradFv);
       
     virtual void predictPart(const WeightVector& w, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

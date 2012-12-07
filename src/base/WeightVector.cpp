@@ -8,14 +8,16 @@
  */
 
 #include "FeatureVector.h"
+#include "Ublas.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/tokenizer.hpp>
+#include <cmath>
 #include <fstream>
+
 using namespace boost;
-using namespace std;
 
 WeightVector::WeightVector(int dim) : _weights(0) {
   reAlloc(dim);
@@ -48,6 +50,36 @@ double WeightVector::innerProd(const FeatureVector<RealWeight>& fv) const {
     assert(index >= 0 && index < _dim);
     prod += (double)fv.getValueAtLocation(i) * _weights[index];
   }
+  return prod;
+}
+
+double WeightVector::innerProd(const SparseLogVec& fv) const {
+  if (_dim == 0)
+    return 0.0;
+  double prod = 0;
+  SparseLogVec::const_iterator it;
+  for (it = fv.begin(); it != fv.end(); ++it)
+    prod += exp(*it) * _weights[it.index()];
+  return prod;
+}
+
+double WeightVector::innerProd(const SparseRealVec& fv) const {
+  if (_dim == 0)
+    return 0.0;
+  double prod = 0;
+  SparseRealVec::const_iterator it;
+  for (it = fv.begin(); it != fv.end(); ++it)
+    prod += (*it) * _weights[it.index()];
+  return prod;
+}
+
+double WeightVector::innerProd(const RealVec& fv) const {
+  assert(fv.size() == _dim);
+  if (_dim == 0)
+    return 0.0;
+  double prod = 0;
+  for (size_t i = 0; i < fv.size(); ++i)
+    prod += fv(i) * _weights[i];
   return prod;
 }
 
@@ -108,7 +140,8 @@ void WeightVector::setWeights(const double* newWeights, int len) {
   }
 }
 
-bool WeightVector::read(const string& fname, int dim) {
+bool WeightVector::read(const std::string& fname, int dim) {
+  using namespace std;
   reAlloc(dim);
   ifstream fin(fname.c_str(), ifstream::in);
   if (!fin.good())
@@ -127,7 +160,8 @@ bool WeightVector::read(const string& fname, int dim) {
   return true;
 }
 
-bool WeightVector::write(const string& fname) const {
+bool WeightVector::write(const std::string& fname) const {
+  using namespace std;
   ofstream fout(fname.c_str());
   if (!fout.good())
     return false;
