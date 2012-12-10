@@ -17,6 +17,7 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -55,9 +56,9 @@ void MaxMarginBinary::valueAndGradientPart(const WeightVector& w, Model& model,
       bool own = false;
       SparseRealVec* phiObs = model.observedFeatures(xi, ypos, own);
       assert(phiObs);
-      z = yi * (w.innerProd(*phiObs) + w.innerProd(*_imputedFvs[i]));
+      z = yi * (w.innerProd(*phiObs) + w.innerProd(_imputedFvs[i]));
       if (z < 1) {
-        gradFv += -yi * (*_imputedFvs[i]);
+        gradFv += -yi * (_imputedFvs[i]);
         gradFv += -yi * (*phiObs);
       }
       if (own) delete phiObs;
@@ -76,7 +77,7 @@ void MaxMarginBinary::setLatentFeatureVectorsPart(const WeightVector& w,
       const size_t i = xi.getId();
       // The last argument in the call to maxFeatures is false because we do
       // not want to fix the observed features when computing the objective.
-      model.maxFeatures(w, *_imputedFvs[i], xi, yi, false);
+      model.maxFeatures(w, _imputedFvs[i], xi, yi, false);
     }
   }
 }
@@ -95,14 +96,14 @@ void MaxMarginBinary::initLatentFeatureVectors(const WeightVector& w) {
   }
   
   for (size_t i = 0; i < maxId; i++)
-    _imputedFvs.push_back(0);
+    _imputedFvs.push_back(new SparseRealVec());
   
   const Label ypos = TrainingObjective::kPositive;
   const int d = w.getDim();
   BOOST_FOREACH(const Example& ex, _dataset.getExamples()) {
     const size_t id = ex.x()->getId();
     if (ex.y() == ypos)
-      _imputedFvs[id] = new SparseRealVec(d);
+      _imputedFvs[id].resize(d);
   }
 }
 
@@ -112,11 +113,7 @@ void MaxMarginBinary::clearLatentFeatureVectors() {
 }
 
 MaxMarginBinary::~MaxMarginBinary() {
-  if (_imputedFvs.size() > 0) {
-    for (size_t i = 0; i < _imputedFvs.size(); i++)
-      delete _imputedFvs[i];
-    _imputedFvs.clear();
-  }
+  _imputedFvs.clear();
 }
 
 void MaxMarginBinary::predictPart(const WeightVector& w, Model& model,

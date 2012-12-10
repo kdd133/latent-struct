@@ -12,8 +12,9 @@
 
 #include "TrainingObjective.h"
 #include "Ublas.h"
-#include <vector>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <string>
+#include <vector>
 
 class Dataset;
 class Model;
@@ -51,7 +52,7 @@ class MaxMarginBinary : public TrainingObjective {
     
     virtual void clearLatentFeatureVectors();
   
-    std::vector<SparseRealVec*> _imputedFvs;
+    boost::ptr_vector<SparseRealVec> _imputedFvs;
 };
 
 #endif
