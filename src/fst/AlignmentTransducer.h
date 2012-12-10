@@ -44,9 +44,6 @@
 #include <string>
 #include <vector>
 
-using namespace boost;
-using namespace std;
-
 //A transducer that takes two strings as input, and outputs an alignment of the
 //two strings.
 template<typename Arc>
@@ -54,13 +51,13 @@ class AlignmentTransducer : public Graph {
   public:
     typedef typename Arc::StateId StateId;
     typedef typename Arc::Weight ArcWeight;
-    typedef multi_array<StateId, 3> StateIdTable;
+    typedef boost::multi_array<StateId, 3> StateIdTable;
     
     // The first StateType in the list will be used as the start state and as
     // the finish state.
-    AlignmentTransducer(const ptr_vector<StateType>& stateTypes,
-        shared_ptr<AlignmentFeatureGen> fgen,
-        shared_ptr<ObservedFeatureGen> fgenObs,
+    AlignmentTransducer(const boost::ptr_vector<StateType>& stateTypes,
+        boost::shared_ptr<AlignmentFeatureGen> fgen,
+        boost::shared_ptr<ObservedFeatureGen> fgenObs,
         bool includeFinalFeats = true);
                         
     virtual ~AlignmentTransducer();
@@ -84,7 +81,7 @@ class AlignmentTransducer : public Graph {
     // Returns the sequence of edit operations that constitute the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
     // be applied in sequential order to reconstruct the optimal alignment.
-    virtual void maxAlignment(list<int>& opIds) const;
+    virtual void maxAlignment(std::list<int>& opIds) const;
     
     virtual void toGraphviz(const string& fname) const;
     
@@ -110,15 +107,15 @@ class AlignmentTransducer : public Graph {
         
     void clear();
     
-    const ptr_vector<StateType>& _stateTypes;
+    const boost::ptr_vector<StateType>& _stateTypes;
     
-    shared_ptr<AlignmentFeatureGen> _fgen;
+    boost::shared_ptr<AlignmentFeatureGen> _fgen;
     
-    shared_ptr<ObservedFeatureGen> _fgenObs;
+    boost::shared_ptr<ObservedFeatureGen> _fgenObs;
 
     fst::VectorFst<Arc>* _fst;
     
-    list<const SparseRealVec*> _fvecs;
+    std::list<const SparseRealVec*> _fvecs;
     
     vector<ArcWeight> _alphas;
     
@@ -143,9 +140,9 @@ class AlignmentTransducer : public Graph {
 
 template<typename Arc>
 AlignmentTransducer<Arc>::AlignmentTransducer(
-    const ptr_vector<StateType>& stateTypes,
-    shared_ptr<AlignmentFeatureGen> fgen,
-    shared_ptr<ObservedFeatureGen> fgenObs,
+    const boost::ptr_vector<StateType>& stateTypes,
+    boost::shared_ptr<AlignmentFeatureGen> fgen,
+    boost::shared_ptr<ObservedFeatureGen> fgenObs,
     bool includeFinalFeats) :
     _stateTypes(stateTypes), _fgen(fgen), _fgenObs(fgenObs), _fst(0),
     _numArcs(0), _includeFinalFeats(includeFinalFeats) {
@@ -179,18 +176,18 @@ inline void AlignmentTransducer<Arc>::clearDynProgVariables() {
 
 template<typename Arc>
 inline void AlignmentTransducer<Arc>::clearBuildVariables() {
-  _stateIdTable.resize(extents[0][0][0]);
+  _stateIdTable.resize(boost::extents[0][0][0]);
 }
 
 template<typename Arc>
 void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
   using namespace std;
-  using boost::unordered_map;
+  
   // Build lookup tables for state names and edit operation names.
-  unordered_map<int, string> stateNames;
-  unordered_map<int, string> opNames;
+  boost::unordered_map<int, string> stateNames;
+  boost::unordered_map<int, string> opNames;
   typedef unordered_map<int, string>::value_type PairType;  
-  ptr_vector<StateType>::const_iterator st;
+  boost::ptr_vector<StateType>::const_iterator st;
   for (st = _stateTypes.begin(); st != _stateTypes.end(); ++st) {
     stateNames.insert(PairType(st->getId(), st->getName()));
     BOOST_FOREACH(const EditOperation* op, st->getValidOperations())
@@ -241,7 +238,7 @@ void AlignmentTransducer<Arc>::build(const WeightVector& w,
   if (_stateIdTable.shape()[0] < s.size()+1 ||
       _stateIdTable.shape()[1] < t.size()+1) {
     _stateIdTable.resize(
-        extents[s.size()+1][t.size()+1][_stateTypes.size()]);
+        boost::extents[s.size()+1][t.size()+1][_stateTypes.size()]);
   }
   for (size_t i = 0; i <= s.size(); i++)
     for (size_t j = 0; j <= t.size(); j++)
@@ -483,7 +480,7 @@ double AlignmentTransducer<Arc>::maxFeatureVector(SparseRealVec& fv,
 }
 
 template<typename Arc>
-void AlignmentTransducer<Arc>::maxAlignment(list<int>& opIds) const {
+void AlignmentTransducer<Arc>::maxAlignment(std::list<int>& opIds) const {
   assert(_fst);
   opIds.clear();
   
@@ -527,19 +524,19 @@ void AlignmentTransducer<Arc>::rescore(const WeightVector& w) {
 
 template<> inline LogWeight
 AlignmentTransducer<StdFeatArc>::logPartition() {
-  throw logic_error(
+  throw std::logic_error(
       "Can't compute the partition function in the Tropical semiring.");
 }
 
 template<> inline LogWeight
 AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(LogVec& fv) {
-  throw logic_error("Can't compute expectations in the Tropical semiring.");
+  throw std::logic_error("Can't compute expectations in the Tropical semiring.");
 }
 
 template<> inline double
 AlignmentTransducer<LogFeatArc>::maxFeatureVector(SparseRealVec& fv,
     bool getCostOnly) {
-  throw logic_error("Can't run Viterbi in the Log semiring.");
+  throw std::logic_error("Can't run Viterbi in the Log semiring.");
 }
 
 #endif

@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   BOOST_CHECK_CLOSE((double)fv[iBias], 1, 1e-4);
   
   // Check that the max-scoring alignment is correct.
-  stringstream alignmentStr;
+  std::stringstream alignmentStr;
   model->printAlignment(alignmentStr, W, *pair, label);
   const string alignment = alignmentStr.str();
   string correctAlignment =
