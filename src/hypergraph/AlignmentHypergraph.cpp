@@ -179,6 +179,8 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
   const size_t d = _fgen->getAlphabet()->size();
   
   shared_array<RingInfo> betas(new RingInfo[_nodes.size()]);
+  for (size_t i = 0; i < _nodes.size(); ++i)
+    betas[i] = RingInfo::zero(ring, d);
   
   // The beta value for the "root" node (i.e., the goal node in this case, since
   // we are working in reverse) is one by construction.
@@ -194,11 +196,11 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
     
     // For each incoming edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
-      RingInfo k(*e, ring);
+      RingInfo k(ring, *e);
       // For each antecedent node...
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        k.collectProd(betas[u->getId()], ring);
-      betas[parentId].collectSum(k, ring);
+        k.collectProd(betas[u->getId()]);
+      betas[parentId].collectSum(k);
     }
   }
   return betas;
@@ -223,14 +225,14 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
     // For each outgoing edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
       BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
-        RingInfo score(*e, ring); // Initialize to the score of the edge
+        RingInfo score(ring, *e); // Initialize to the score of the edge
         // Incorporate the product of the sibling beta scores
         BOOST_FOREACH(const Hypernode* w, e->getChildren()) {
           if (w != u)
-            score.collectProd(betas[w->getId()], ring);
+            score.collectProd(betas[w->getId()]);
         }
-        score.collectProd(alphas[v->getId()], ring);
-        alphas[u->getId()].collectSum(score, ring);
+        score.collectProd(alphas[v->getId()]);
+        alphas[u->getId()].collectSum(score);
       }
     }
   }
@@ -258,7 +260,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         
       RingInfo keBar(alphas[v.getId()]);      
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        keBar.collectProd(betas[u->getId()], ring);
+        keBar.collectProd(betas[u->getId()]);
 
       const LogWeight pe = e->getWeight();
       SparseLogVec re = *e->getFeatureVector();

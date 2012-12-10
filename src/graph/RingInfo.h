@@ -20,16 +20,19 @@
 class RingInfo {
 
 public:
-  RingInfo() : _score(LogWeight(0)) { }
+  RingInfo() : _ring(RingLog), _score(LogWeight(0)) { }
+
+  RingInfo(Ring ring) : _ring(ring), _score(LogWeight(0)) { }
   
-  RingInfo(LogWeight score) : _score(score) { }
+  RingInfo(Ring ring, LogWeight score) : _ring(ring), _score(score) { }
   
-  RingInfo(LogWeight score, const SparseLogVec& fv) : _score(score), _fv(fv) {}
+  RingInfo(Ring ring, LogWeight score, const SparseLogVec& fv) : _ring(ring),
+      _score(score), _fv(fv) {}
   
-  RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
-    _fv = *edge.getFeatureVector();
-    
-    if (r == RingExpectation)
+  RingInfo(Ring ring, const Hyperedge& edge) : _ring(ring),
+      _score(edge.getWeight()) {
+    _fv = *edge.getFeatureVector();    
+    if (_ring == RingExpectation)
       _fv *= _score; // pese 
   }
   
@@ -40,18 +43,18 @@ public:
   const SparseLogVec& fv() const {
     return _fv;
   }
-
+  
   /**
    * Semiring culmulative sum (Sum=LogAdd, Vit=Max)
    * @param ringInfo  Object to be accumulated
    * @param ring    Ring to be used
    */
-  void collectSum(const RingInfo& toAdd, const Ring& ring) {
-    if (ring == RingLog)
+  void collectSum(const RingInfo& toAdd) {
+    if (_ring == RingLog)
       _score += toAdd.score();
-    else if (ring == RingViterbi)
+    else if (_ring == RingViterbi)
       _score = std::max(_score, toAdd.score());
-    else if (ring == RingExpectation) {
+    else if (_ring == RingExpectation) {
       // <p,r> = <p1+p2, r1+r2>
       _score += toAdd.score();
       _fv += toAdd.fv();
@@ -60,10 +63,10 @@ public:
       assert(0);
   }
   
-  void collectProd(const RingInfo& toProd, const Ring& ring) {
-    if (ring == RingLog || ring == RingViterbi)
+  void collectProd(const RingInfo& toProd) {
+    if (_ring == RingLog || _ring == RingViterbi)
       _score *= toProd.score();
-    else if (ring == RingExpectation) {
+    else if (_ring == RingExpectation) {
       // <p,r> = <p1p2, p1r2 + p2r1>
       
       // p1r2 + p2r1
@@ -80,7 +83,7 @@ public:
   }
   
   static RingInfo one(const Ring& ring, const size_t numFeatures) {
-    RingInfo r(LogWeight(1));
+    RingInfo r(ring, LogWeight(1));
     if (ring == RingLog || ring == RingViterbi)
       return r;
     else {
@@ -91,7 +94,7 @@ public:
   }
 
   static RingInfo zero(const Ring& ring, const size_t numFeatures) {
-    RingInfo r(RingInfo(LogWeight(0)));
+    RingInfo r(ring, LogWeight(0));
     if (ring == RingLog || ring == RingViterbi)
       return r;
     else {
@@ -102,6 +105,8 @@ public:
   }
   
 private:
+  Ring _ring;
+  
   LogWeight _score;
   
   SparseLogVec _fv;
