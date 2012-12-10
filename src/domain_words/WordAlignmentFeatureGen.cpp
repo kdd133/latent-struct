@@ -285,10 +285,18 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
     }
   }
   
-  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
+  const size_t d = _alphabet->size();
+  SparseRealVec* fv = new SparseRealVec(d);
   set<int>::const_iterator it;
-  for (it = featureIds.begin(); it != featureIds.end(); ++it)
-    (*fv)(*it) = 1.0;
+  for (it = featureIds.begin(); it != featureIds.end(); ++it) {
+    const size_t index = *it;
+    if (index >= d) {
+      // Assume we're in feature gathering mode, in which case the fv we return
+      // will be ignored.
+      return fv;
+    }
+    (*fv)(index) = 1.0;
+  }
 
   if (_normalize) {
     const double normalization = x.getSize();

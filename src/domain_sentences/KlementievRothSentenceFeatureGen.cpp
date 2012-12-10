@@ -19,9 +19,9 @@
 #include "Ublas.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
-#include <boost/scoped_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/unordered_map.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -85,10 +85,7 @@ SparseRealVec* KlementievRothSentenceFeatureGen::getFeatures(
   vector<string>* subs_source; // pointer to the source substrings
   vector<string>* subs_target; // pointer to the target substrings
   
-  // substring pair counts
-  scoped_array<int> sub_pair_counts(new int[_alphabet->size()]);
-  for (size_t i = 0; i < _alphabet->size(); ++i)
-    sub_pair_counts[i] = 0;
+  unordered_map<int, int> sub_pair_counts; // substring pair counts
 
   // set pointers based on which string is the longest 
   if (s.size() > t.size()) {
@@ -163,10 +160,18 @@ SparseRealVec* KlementievRothSentenceFeatureGen::getFeatures(
   // TODO: Add the optional "distance" feature described in Feb. 17, 2011
   // email from M.W. Chang
 
-  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
-  for (size_t i = 0; i < _alphabet->size(); ++i) {
-    if (sub_pair_counts[i] > 0)
-      (*fv)(i) = sub_pair_counts[i];
+  const size_t d = _alphabet->size();
+  SparseRealVec* fv = new SparseRealVec(d);
+  
+  unordered_map<int, int>::const_iterator it;
+  for (it = sub_pair_counts.begin(); it != sub_pair_counts.end(); ++it) {
+    const size_t index = it->first;
+    if (index >= d) {
+      // Assume we're in feature gathering mode, in which case the fv we return
+      // will be ignored.
+      return fv;
+    }
+    (*fv)(index) = it->second;
   }
 
   if (_normalize) {

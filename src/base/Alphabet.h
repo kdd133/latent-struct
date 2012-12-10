@@ -11,16 +11,16 @@
 #define _ALPHABET_H
 
 #include <assert.h>
+#include <boost/unordered_map.hpp>
 #include <map>
 #include <string>
-#include <tr1/unordered_map>
 #include <vector>
 
 class Alphabet {
   
   public:
   
-    typedef std::tr1::unordered_map<std::string,int> DictType;
+    typedef boost::unordered_map<std::string,int> DictType;
     typedef DictType::value_type PairType;
   
     Alphabet(bool locked = false, bool count = false) : _locked(locked),

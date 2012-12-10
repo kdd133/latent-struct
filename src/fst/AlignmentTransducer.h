@@ -32,6 +32,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/unordered_map.hpp>
 #include <fst/shortest-distance.h>
 #include <fst/shortest-path.h>
 #include <fst/vector-fst.h>
@@ -184,10 +185,11 @@ inline void AlignmentTransducer<Arc>::clearBuildVariables() {
 template<typename Arc>
 void AlignmentTransducer<Arc>::toGraphviz(const string& fname) const {
   using namespace std;
+  using boost::unordered_map;
   // Build lookup tables for state names and edit operation names.
-  tr1::unordered_map<int, string> stateNames;
-  tr1::unordered_map<int, string> opNames;
-  typedef tr1::unordered_map<int, string>::value_type PairType;  
+  unordered_map<int, string> stateNames;
+  unordered_map<int, string> opNames;
+  typedef unordered_map<int, string>::value_type PairType;  
   ptr_vector<StateType>::const_iterator st;
   for (st = _stateTypes.begin(); st != _stateTypes.end(); ++st) {
     stateNames.insert(PairType(st->getId(), st->getName()));
@@ -379,7 +381,8 @@ inline void AlignmentTransducer<Arc>::addArc(const int opId,
     SparseRealVec* fv, const WeightVector& w) {
   // Note that we negate the innerProd so that the dynamic programming
   // routines (e.g., ShortestPath) will return max instead of min.
-  Arc arc(opId, destStateTypeId, (double)-w.innerProd(*fv), destId, fv);
+  const double score = fv ? (double)-w.innerProd(*fv) : 0;
+  Arc arc(opId, destStateTypeId, score, destId, fv);
   assert(sourceId >= 0);
   _fst->AddArc(sourceId, arc);
   if (fv)

@@ -12,8 +12,8 @@
 
 #include "TrainingObjective.h"
 #include "Ublas.h"
+#include <boost/unordered_map.hpp>
 #include <string>
-#include <tr1/unordered_map>
 #include <vector>
 
 class Dataset;
@@ -24,7 +24,7 @@ class LogLinearBinary : public TrainingObjective {
 
   public:
   
-    typedef std::tr1::unordered_map<int,LogWeight> DictType;
+    typedef boost::unordered_map<int,LogWeight> DictType;
     typedef DictType::value_type PairType;
   
     LogLinearBinary(const Dataset& dataset, const std::vector<Model*>& models) :

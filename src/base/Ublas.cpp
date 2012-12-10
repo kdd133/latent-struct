@@ -14,7 +14,7 @@
 namespace ublas_util {
 
   SparseLogVec& convertVec(const SparseRealVec& src, SparseLogVec& dest) {
-    assert(src.size() == dest.size());
+    assert(dest.size() >= src.size());
     dest.clear();
     SparseRealVec::const_iterator it;
     for (it = src.begin(); it != src.end(); ++it)
@@ -23,14 +23,14 @@ namespace ublas_util {
   }
   
   LogVec& convertVec(const RealVec& src, LogVec& dest) {
-    assert(src.size() == dest.size());
+    assert(dest.size() >= src.size());
     for (size_t i = 0; i < src.size(); ++i)
       dest(i) = LogWeight(src(i));
     return dest;
   }
   
   SparseRealVec& convertVec(const SparseLogVec& src, SparseRealVec& dest) {
-    assert(src.size() == dest.size());
+    assert(dest.size() >= src.size());
     dest.clear();
     SparseLogVec::const_iterator it;
     for (it = src.begin(); it != src.end(); ++it)
@@ -39,7 +39,7 @@ namespace ublas_util {
   }
   
   RealVec& convertVec(const LogVec& src, RealVec& dest) {
-    assert(src.size() == dest.size());
+    assert(dest.size() >= src.size());
     for (size_t i = 0; i < src.size(); ++i)
       dest(i) = exp((double)src(i));
     return dest;

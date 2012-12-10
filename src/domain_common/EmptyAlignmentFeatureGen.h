@@ -32,7 +32,7 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
     virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
         int j, const EditOperation& op,
         const std::vector<AlignmentPart>& editHistory) {
-      return 0;
+      return new SparseRealVec(_alphabet->size()); // zero vector
     }
       
     virtual ~EmptyAlignmentFeatureGen() {}

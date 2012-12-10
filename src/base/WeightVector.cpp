@@ -41,22 +41,26 @@ void WeightVector::reAlloc(int dim) {
 }
 
 double WeightVector::innerProd(const SparseLogVec& fv) const {
-  if (_dim == 0)
+  if (_dim == 0 || fv.size() == 0)
     return 0.0;
   double prod = 0;
   SparseLogVec::const_iterator it;
-  for (it = fv.begin(); it != fv.end(); ++it)
+  for (it = fv.begin(); it != fv.end(); ++it) {
+    assert(it.index() < _dim);
     prod += exp(*it) * _weights[it.index()];
+  }
   return prod;
 }
 
 double WeightVector::innerProd(const SparseRealVec& fv) const {
-  if (_dim == 0)
+  if (_dim == 0 || fv.size() == 0)
     return 0.0;
   double prod = 0;
   SparseRealVec::const_iterator it;
-  for (it = fv.begin(); it != fv.end(); ++it)
+  for (it = fv.begin(); it != fv.end(); ++it) {
+    assert(it.index() < _dim);
     prod += (*it) * _weights[it.index()];
+  }
   return prod;
 }
 

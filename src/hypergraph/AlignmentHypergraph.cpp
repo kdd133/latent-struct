@@ -87,7 +87,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
   // on a "pre-start" arc that every path through the fst must include.
   if (includeObservedFeaturesArc) {
     SparseRealVec* fv = _fgenObs->getFeatures(pair, label);
-    assert(fv);
+    assert(fv && (fv->size() > 0 || _fgenObs->getAlphabet()->size() == 0));
     const StateId preStartStateId = addNode();
     addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
         startStateId, fv, w);
@@ -97,6 +97,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
   
   if (includeStartArc) {
     SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, noOp, history);
+    assert(fv && (fv->size() > 0 || _fgen->getAlphabet()->size() == 0));
     const StateId preStartStateId = addNode();
     addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
         startStateId, fv, w);
@@ -174,11 +175,14 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
   getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == _nodes.size());
   
+  assert(_fgenObs->getAlphabet() == _fgen->getAlphabet());
+  const size_t d = _fgen->getAlphabet()->size();
+  
   shared_array<RingInfo> betas(new RingInfo[_nodes.size()]);
   
   // The beta value for the "root" node (i.e., the goal node in this case, since
   // we are working in reverse) is one by construction.
-  betas[_goal->getId()] = RingInfo::one(ring);
+  betas[_goal->getId()] = RingInfo::one(ring, d);
   
   // For each node, in reverse topological order...
   BOOST_FOREACH(const Hypernode* v, revTopOrder) {
@@ -186,7 +190,7 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
       continue; // Skip the goal node, which was handled above.
       
     const int parentId = v->getId();      
-    betas[parentId] = RingInfo::zero(ring);
+    betas[parentId] = RingInfo::zero(ring, d);
     
     // For each incoming edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
@@ -206,11 +210,13 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
   getNodesTopologicalOrder(topOrder, false);
   assert(topOrder.size() == _nodes.size());
   
+  assert(_fgenObs->getAlphabet() == _fgen->getAlphabet());
+  const size_t d = _fgen->getAlphabet()->size();
+  
   shared_array<RingInfo> alphas(new RingInfo[_nodes.size()]);
   for (size_t i = 0; i < _nodes.size(); ++i)
-    alphas[i] = RingInfo::zero(ring);
-  
-  alphas[_root->getId()] = RingInfo::one(ring);
+    alphas[i] = RingInfo::zero(ring, d);  
+  alphas[_root->getId()] = RingInfo::one(ring, d);
   
   // For each node, in topological order...
   BOOST_FOREACH(const Hypernode* v, topOrder) {
@@ -456,13 +462,14 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
       SparseRealVec* fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
+      assert(fv && (fv->size() > 0 || _fgen->getAlphabet()->size() == 0));
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           _goal->getId(), fv, w);
       history.pop_back();
     }
     else {
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
-          _goal->getId(), new SparseRealVec(), w);
+          _goal->getId(), new SparseRealVec(_fgen->getAlphabet()->size()), w);
     }
     return;
   }
@@ -531,6 +538,7 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
     const WeightVector& w) {
   assert(fv);
   assert(sourceId >= 0);
+  
 //  Arc arc(opId, destStateTypeId, (double)-w.innerProd(fv), destId, fv);
 
   Hypernode& parent = _nodes[sourceId];

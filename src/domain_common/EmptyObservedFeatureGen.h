@@ -32,7 +32,7 @@ class EmptyObservedFeatureGen : public ObservedFeatureGen {
       ObservedFeatureGen(alphabet) {}
     
     virtual SparseRealVec* getFeatures(const Pattern& x, const Label y) {
-      return new SparseRealVec(_alphabet->size()); // return the zero vector
+      return new SparseRealVec(_alphabet->size()); // zero vector
     }
     
     virtual int processOptions(int argc, char** argv) {

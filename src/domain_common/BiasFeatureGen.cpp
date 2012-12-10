@@ -55,20 +55,27 @@ int BiasFeatureGen::processOptions(int argc, char** argv) {
   return 0;
 }
 
-SparseRealVec* BiasFeatureGen::getFeatures(const Pattern& x, const Label y) {
-  const size_t d = _alphabet->size();
-  SparseRealVec* fv = new SparseRealVec(d);
+SparseRealVec* BiasFeatureGen::getFeatures(const Pattern& x, const Label y) {  
   stringstream ss;
   ss << y << FeatureGenConstants::PART_SEP << kPrefix;
   const int fId = _alphabet->lookup(ss.str(), true);
+  
+  const size_t d = _alphabet->size();
+  SparseRealVec* fv = new SparseRealVec(d);
+  
   if (fId == -1) {
     // This should only ever happen if there's a class in the test set that
     // didn't appear in the training set.
     return fv; // return the zero vector
   }
   
+  if (fId >= d) {
+    // Assume we are in feature gathering mode.
+    return fv;
+  }
+
   (*fv)(fId) = 1;
-    
+
   if (_normalize) {
     const double normalization = x.getSize();
     assert(normalization > 0);

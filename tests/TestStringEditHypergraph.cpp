@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_CHECK_CLOSE(exp(fv[iBias]), 1, 1e-4);
   
   // Check that the Viterbi score is correct.
-  RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
+  double viterbiScore = model->viterbiScore(W, *pair, label);
   BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
   
   SparseRealVec realFv(d);

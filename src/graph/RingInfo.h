@@ -10,37 +10,22 @@
 #ifndef _RINGINFO_H
 #define _RINGINFO_H
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
-
 #include "Hyperedge.h"
 #include "LogWeight.h"
 #include "Ring.h"
+#include "Ublas.h"
 #include <algorithm>
 #include <boost/numeric/ublas/vector_sparse.hpp>
 
 class RingInfo {
 
 public:
-  typedef boost::numeric::ublas::compressed_vector<LogWeight> sparse_vector;
-  
-  RingInfo() : _score(0) { }
+  RingInfo() : _score(LogWeight(0)) { }
   
   RingInfo(LogWeight score) : _score(score) { }
   
-  RingInfo(LogWeight score, const FeatureVector<LogWeight>* fv) :
-    _score(score) {
-    if (fv)
-      fv->toSparseVector(_fv);
-  }
+  RingInfo(LogWeight score, const SparseLogVec& fv) : _score(score), _fv(fv) {}
   
-  /**
-   * Reinterprets an edgeInfo object with appropriate values for use in an edge representation
-   * in the provided semi-ring
-   * @param ei  Source edgeInfo
-   * @param r   Semiring of interest
-   */
   RingInfo(const Hyperedge& edge, Ring r) : _score(edge.getWeight()) {
     _fv = *edge.getFeatureVector();
     
@@ -52,7 +37,7 @@ public:
     return _score;
   }
   
-  const sparse_vector& fv() const {
+  const SparseLogVec& fv() const {
     return _fv;
   }
 
@@ -75,11 +60,6 @@ public:
       assert(0);
   }
   
-  /**
-   * Semiring culmulative product (Sum,Vit=Add)
-   * @param riPath  Object to be accumulated
-   * @param ring    Ring to be used
-   */
   void collectProd(const RingInfo& toProd, const Ring& ring) {
     if (ring == RingLog || ring == RingViterbi)
       _score *= toProd.score();
@@ -88,7 +68,7 @@ public:
       
       // p1r2 + p2r1
       _fv *= toProd.score(); // p2r1
-      sparse_vector r2(toProd.fv());
+      SparseLogVec r2(toProd.fv());
       r2 *= _score; // p1r2
       _fv += r2;
     
@@ -99,40 +79,32 @@ public:
       assert(0);
   }
   
-  /**
-   * Returns the multiplicative identity for this semiring
-   * @param ring  Semiring of interest
-   * @return    Multiplicative identity (1)
-   */
-  static RingInfo one(const Ring& ring) {
+  static RingInfo one(const Ring& ring, const size_t numFeatures) {
+    RingInfo r(LogWeight(1));
     if (ring == RingLog || ring == RingViterbi)
-      return RingInfo(LogWeight(1));
+      return r;
     else {
       assert(ring == RingExpectation);
-      return RingInfo(LogWeight(1), new FeatureVector<LogWeight>());
+      r._fv = SparseLogVec(numFeatures);
+      return r;
     }
   }
 
-  /**
-   * Returns the additive identity for this semiring
-   * @param ring  Semiring of interest
-   * @return    Additive identity (0)
-   */
-  static RingInfo zero(const Ring& ring) {
+  static RingInfo zero(const Ring& ring, const size_t numFeatures) {
+    RingInfo r(RingInfo(LogWeight(0)));
     if (ring == RingLog || ring == RingViterbi)
-      return RingInfo(LogWeight(0));
+      return r;
     else {
       assert(ring == RingExpectation);
-      return RingInfo(LogWeight(0), new FeatureVector<LogWeight>());
+      r._fv = SparseLogVec(numFeatures);
+      return r;
     }
   }
   
 private:
-  // Either edge score (on edge), or accumulated mass (on state)
   LogWeight _score;
   
-  // Either edge features (on edge), or accumulated features (on state)
-  sparse_vector _fv;
+  SparseLogVec _fv;
 };
 
 #endif

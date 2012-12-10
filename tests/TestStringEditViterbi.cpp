@@ -6,7 +6,6 @@
 #include "Dataset.h"
 #include "LogLinearMulti.h"
 #include "Model.h"
-#include "RealWeight.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "WordAlignmentFeatureGen.h"
@@ -89,7 +88,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   W.add(iSub, -100);
   
   // Check that the Viterbi score is correct.
-  RealWeight viterbiScore = model->viterbiScore(W, *pair, label);
+  double viterbiScore = model->viterbiScore(W, *pair, label);
   BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
   
   SparseRealVec fv(d);
