@@ -44,29 +44,25 @@ public:
     return _fv;
   }
   
-  /**
-   * Semiring culmulative sum (Sum=LogAdd, Vit=Max)
-   * @param ringInfo  Object to be accumulated
-   * @param ring    Ring to be used
-   */
-  void collectSum(const RingInfo& toAdd) {
+  RingInfo& operator+=(const RingInfo& toAdd) {
     if (_ring == RingLog)
       _score += toAdd.score();
     else if (_ring == RingViterbi)
       _score = std::max(_score, toAdd.score());
-    else if (_ring == RingExpectation) {
+    else {
+      assert(_ring == RingExpectation);
       // <p,r> = <p1+p2, r1+r2>
       _score += toAdd.score();
       _fv += toAdd.fv();
     }
-    else
-      assert(0);
+    return (*this);
   }
   
-  void collectProd(const RingInfo& toProd) {
+  RingInfo& operator*=(const RingInfo& toProd) {
     if (_ring == RingLog || _ring == RingViterbi)
       _score *= toProd.score();
-    else if (_ring == RingExpectation) {
+    else {
+      assert(_ring == RingExpectation);
       // <p,r> = <p1p2, p1r2 + p2r1>
       
       // p1r2 + p2r1
@@ -78,8 +74,7 @@ public:
       // p1p2
       _score *= toProd.score();
     }
-    else
-      assert(0);
+    return (*this);
   }
   
   static RingInfo one(const Ring& ring, const size_t numFeatures) {

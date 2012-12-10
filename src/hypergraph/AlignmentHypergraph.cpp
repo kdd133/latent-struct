@@ -199,8 +199,8 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
       RingInfo k(ring, *e);
       // For each antecedent node...
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        k.collectProd(betas[u->getId()]);
-      betas[parentId].collectSum(k);
+        k *= betas[u->getId()];
+      betas[parentId] += k;
     }
   }
   return betas;
@@ -229,10 +229,10 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
         // Incorporate the product of the sibling beta scores
         BOOST_FOREACH(const Hypernode* w, e->getChildren()) {
           if (w != u)
-            score.collectProd(betas[w->getId()]);
+            score *= betas[w->getId()];
         }
-        score.collectProd(alphas[v->getId()]);
-        alphas[u->getId()].collectSum(score);
+        score *= alphas[v->getId()];
+        alphas[u->getId()] += score;
       }
     }
   }
@@ -260,7 +260,7 @@ AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
         
       RingInfo keBar(alphas[v.getId()]);      
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
-        keBar.collectProd(betas[u->getId()]);
+        keBar *= betas[u->getId()];
 
       const LogWeight pe = e->getWeight();
       SparseLogVec re = *e->getFeatureVector();
