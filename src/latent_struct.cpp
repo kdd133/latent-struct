@@ -8,7 +8,7 @@
  */
 
 #include "AlignmentFeatureGen.h"
-#include "AlignmentTransducer.h"
+#include "AlignmentHypergraph.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
@@ -23,7 +23,6 @@
 #include "KlementievRothSentenceFeatureGen.h"
 #include "Label.h"
 #include "LbfgsOptimizer.h"
-#include "LogFeatArc.h"
 #include "LogLinearBinary.h"
 #include "LogLinearBinaryUnscaled.h"
 #include "LogLinearBinaryObs.h"
@@ -119,7 +118,7 @@ int main(int argc, char** argv) {
       << KlementievRothSentenceFeatureGen::name() << "}";      
   stringstream modelMsgObs;
   modelMsgObs << "model {" <<
-      StringEditModel<AlignmentTransducer<StdFeatArc> >::name() << "}";
+      StringEditModel<AlignmentHypergraph>::name() << "}";
   stringstream objMsgObs;
   objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
@@ -154,7 +153,7 @@ in the training objective, i.e., (beta/2)*||w||^2")
         "if --sample-train is enabled, this option ensures that all the \
 positive examples present in the data are retained")
     ("model", opt::value<string>(&modelName)->default_value(
-        StringEditModel<LogFeatArc>::name()), modelMsgObs.str().c_str())
+        StringEditModel<AlignmentHypergraph>::name()), modelMsgObs.str().c_str())
     ("no-early-grid-stop", opt::bool_switch(&noEarlyGridStop),
         "by default, we break from the grid search loop (over the tolerance \
 and beta values) if the optimizer failed to converge; however, if this flag is \
@@ -287,20 +286,8 @@ initial weights")
     
     // initialize a model
     Model* model = 0;
-    if (modelName == StringEditModel<AlignmentTransducer<StdFeatArc> >::name()) {
-      if (istarts_with(objName, "LogLinear")) {
-        model = new StringEditModel<AlignmentTransducer<LogFeatArc> >(fgenLat,
-            fgenObs);
-      }
-      else if (istarts_with(objName, "MaxMargin")) {
-        model = new StringEditModel<AlignmentTransducer<StdFeatArc> >(fgenLat,
-            fgenObs);
-      }
-      else if (!help) {
-        cout << "Invalid arguments: Objective name does not begin with LogLinear "
-            << "or MaxMargin: " << objName << endl << options << endl;
-        return 1;
-      }
+    if (modelName == StringEditModel<AlignmentHypergraph>::name()) {
+      model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
     }
     else {
       if (!help) {

@@ -16,6 +16,7 @@
 #include <math.h>
 #include <string>
 #include <vector>
+
 using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
@@ -110,11 +111,11 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   
   // Check that the Viterbi score is correct.
   double viterbiScore = model->viterbiScore(W, *pair, label);
-  BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
+  BOOST_CHECK_CLOSE(viterbiScore, -300, 1e-8);
   
   SparseRealVec realFv(d);
   double maxScore = model->maxFeatures(W, realFv, *pair, label, true);
-  BOOST_CHECK_CLOSE((double)maxScore, (double)viterbiScore, 1e-8);
+  BOOST_CHECK_CLOSE(maxScore, viterbiScore, 1e-8);
   
   // Check that values in the max-scoring feature vector are correct.  
   BOOST_CHECK_CLOSE((double)realFv[iIns], 3, 1e-4);

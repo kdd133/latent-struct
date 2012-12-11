@@ -37,7 +37,7 @@ class Graph {
 
     // Note: Assumes fv has been zeroed out.
     virtual double maxFeatureVector(SparseRealVec& fv,
-        bool getCostOnly = false) = 0;
+        bool getCostOnly = false) const = 0;
         
     virtual LogWeight logExpectedFeatureCooccurrences(LogMat& fm,
         LogVec& fv) = 0;

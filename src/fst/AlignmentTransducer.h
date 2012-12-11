@@ -76,7 +76,7 @@ class AlignmentTransducer : public Graph {
 
     // Note: Assumes fv has been zeroed out.
     virtual double maxFeatureVector(SparseRealVec& fv,
-        bool getCostOnly = false);
+        bool getCostOnly = false) const;
         
     // Returns the sequence of edit operations that constitute the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
@@ -449,7 +449,7 @@ LogWeight AlignmentTransducer<Arc>::logExpectedFeatureCooccurrences(LogMat& fm,
 
 template<typename Arc>
 double AlignmentTransducer<Arc>::maxFeatureVector(SparseRealVec& fv,
-    bool getCostOnly) {
+    bool getCostOnly) const {
   assert(_fst);
   
   fst::VectorFst<Arc> viterbiFst;
@@ -535,7 +535,7 @@ AlignmentTransducer<StdFeatArc>::logExpectedFeaturesUnnorm(LogVec& fv) {
 
 template<> inline double
 AlignmentTransducer<LogFeatArc>::maxFeatureVector(SparseRealVec& fv,
-    bool getCostOnly) {
+    bool getCostOnly) const {
   throw std::logic_error("Can't run Viterbi in the Log semiring.");
 }
 

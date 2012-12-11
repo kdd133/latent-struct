@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE UnitTests
 
-#include "AlignmentTransducer.h"
+#include "AlignmentHypergraph.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
@@ -51,8 +51,7 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
-  Model* model = new StringEditModel<AlignmentTransducer<LogFeatArc> >(fgenLat,
-      fgenObs);
+  Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
   ret = model->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
   

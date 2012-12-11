@@ -1,6 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 
-#include "AlignmentTransducer.h"
+#include "AlignmentHypergraph.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
@@ -41,12 +41,11 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
   BOOST_CHECK_EQUAL(ret, 0);
-  Model* model = new StringEditModel<AlignmentTransducer<StdFeatArc> >(fgenLat,
-      fgenObs);
+  Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
   ret = model->processOptions(argc, argv);
   BOOST_CHECK_EQUAL(ret, 0);
   
-  vector<Model*> models;
+  std::vector<Model*> models;
   models.push_back(model);  
   
   Dataset trainData;

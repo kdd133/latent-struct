@@ -1,6 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 
-#include "AlignmentTransducer.h"
+#include "AlignmentHypergraph.h"
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
@@ -47,8 +47,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
-  Model* model = new StringEditModel<AlignmentTransducer<StdFeatArc> >(fgenLat,
-      fgenObs);
+  Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
   ret = model->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(ret, 0);
   
@@ -110,8 +109,8 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   // Check that the max-scoring alignment is correct.
   std::stringstream alignmentStr;
   model->printAlignment(alignmentStr, W, *pair, label);
-  const string alignment = alignmentStr.str();
-  string correctAlignment =
+  const std::string alignment = alignmentStr.str();
+  std::string correctAlignment =
       "Mat11 Ins1 Mat11 Ins1 Mat11 Mat11 Mat11 Mat11 Ins1 \n";
   correctAlignment += "|s| |t| |r|e|s|s| \n|s|u|t|o|r|e|s|s|u\n";
   BOOST_CHECK(alignment == correctAlignment);

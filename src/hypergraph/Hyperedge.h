@@ -28,24 +28,29 @@ public:
   
   Hyperedge(int id, const Hypernode& parent, LogWeight weight,
       SparseLogVec* fv = 0) :
-    _id(id), _parent(parent), _weight(weight), _fv(fv) { }
+    _id(id), _parent(parent), _weight(weight), _fv(fv), _label(-1) { }
   
   Hyperedge(int id, const Hypernode& parent,
       std::list<const Hypernode*> children, LogWeight weight,
       SparseLogVec* fv = 0) :
-    _id(id), _parent(parent), _children(children), _weight(weight), _fv(fv) { }
+    _id(id), _parent(parent), _children(children), _weight(weight), _fv(fv),
+    _label(-1) { }
   
-  int getId() const;
+  int getId() const { return _id; }
   
-  const Hypernode& getParent() const;
+  const Hypernode& getParent() const { return _parent; }
   
-  void setWeight(LogWeight weight);
+  void setWeight(LogWeight weight) { _weight = weight; }
   
-  LogWeight getWeight() const;
+  LogWeight getWeight() const { return _weight; }
   
-  const std::list<const Hypernode*>& getChildren() const;
+  const std::list<const Hypernode*>& getChildren() const { return _children; }
   
-  const SparseLogVec* getFeatureVector() const;
+  const SparseLogVec* getFeatureVector() const { return _fv.get(); }
+  
+  int getLabel() const { return _label; }
+  
+  void setLabel(int label) { _label = label; }
   
 private:
   int _id;
@@ -53,31 +58,7 @@ private:
   std::list<const Hypernode*> _children;
   LogWeight _weight;
   boost::shared_ptr<SparseLogVec> _fv;
-  
+  int _label;
 };
-
-inline int Hyperedge::getId() const {
-  return _id;
-}
-
-inline const Hypernode& Hyperedge::getParent() const {
-  return _parent;
-}
-
-inline void Hyperedge::setWeight(LogWeight weight) {
-  _weight = weight;
-}
-
-inline LogWeight Hyperedge::getWeight() const {
-  return _weight;
-}
-
-inline const std::list<const Hypernode*>& Hyperedge::getChildren() const {
-  return _children;
-}
-
-inline const SparseLogVec* Hyperedge::getFeatureVector() const {
-  return _fv.get();
-}
 
 #endif

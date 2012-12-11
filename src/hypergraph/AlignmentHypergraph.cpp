@@ -118,7 +118,7 @@ void AlignmentHypergraph::rescore(const WeightVector& w) {
 }
 
 void AlignmentHypergraph::getNodesTopologicalOrder(
-    list<const Hypernode*>& ordering, bool reverse) {
+    list<const Hypernode*>& ordering, bool reverse) const {
   assert(ordering.size() == 0);
   ordering.clear();
   
@@ -170,7 +170,7 @@ void AlignmentHypergraph::getNodesTopologicalOrder(
   }
 }
 
-shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
+shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) const {
   list<const Hypernode*> revTopOrder;
   getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == _nodes.size());
@@ -207,7 +207,7 @@ shared_array<RingInfo> AlignmentHypergraph::inside(const Ring ring) {
 }
 
 shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
-    shared_array<RingInfo> betas) {
+    shared_array<RingInfo> betas) const {
   list<const Hypernode*> topOrder;
   getNodesTopologicalOrder(topOrder, false);
   assert(topOrder.size() == _nodes.size());
@@ -240,7 +240,7 @@ shared_array<RingInfo> AlignmentHypergraph::outside(const Ring ring,
 }
 
 AlignmentHypergraph::InsideOutsideResult AlignmentHypergraph::insideOutside(
-    const Ring ring) {
+    const Ring ring) const {
 
   // Run inside() and outside().
   shared_array<RingInfo> betas = inside(ring);
@@ -328,7 +328,7 @@ LogWeight AlignmentHypergraph::logExpectedFeatureCooccurrences(LogMat& fm,
 }
 
 double AlignmentHypergraph::maxFeatureVector(SparseRealVec& fv,
-    bool getCostOnly) {  
+    bool getCostOnly) const {  
 #if 0
   // We save and then restore _betas (which will be overwritten by the call to
   // inside()) in case, e.g., logPartition() had already been computed for this
@@ -355,7 +355,7 @@ double AlignmentHypergraph::maxFeatureVector(SparseRealVec& fv,
   return viterbiScore;
 }
 
-double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
+double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) const {
   list<const Hypernode*> revTopOrder;
   getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == _nodes.size());
@@ -403,7 +403,16 @@ double AlignmentHypergraph::viterbi(list<const Hyperedge*>& path) {
 }
 
 void AlignmentHypergraph::maxAlignment(list<int>& opIds) const {
-  assert(0);
+  opIds.clear();
+  
+  list<const Hyperedge*> bestPath;
+  viterbi(bestPath);
+  
+  list<const Hyperedge*>::const_iterator it;
+  for (it = bestPath.begin(); it != bestPath.end(); ++it) {
+    assert(*it);
+    opIds.push_back((*it)->getLabel());
+  }
 }
 
 void AlignmentHypergraph::toGraphviz(const string& fname) const {
@@ -555,6 +564,7 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   delete fv;
   
   Hyperedge* edge = new Hyperedge(edgeId, parent, children, edgeWeight, logFv);
+  edge->setLabel(opId); // used by maxAlignment()
   
   parent.addEdge(edge);
   _edges.push_back(edge);

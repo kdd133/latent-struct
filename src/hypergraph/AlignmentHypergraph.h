@@ -60,7 +60,7 @@ class AlignmentHypergraph : public Graph {
     void rescore(const WeightVector& w);
 
     void getNodesTopologicalOrder(std::list<const Hypernode*>& ordering,
-      bool reverse = false);
+      bool reverse = false) const;
 
     LogWeight logPartition();
 
@@ -70,7 +70,7 @@ class AlignmentHypergraph : public Graph {
     LogWeight logExpectedFeatureCooccurrences(LogMat& fm, LogVec& fv);
 
     // Note: Assumes fv has been zeroed out.
-    double maxFeatureVector(SparseRealVec& fv, bool getCostOnly = false);
+    double maxFeatureVector(SparseRealVec& fv, bool getCostOnly = false) const;
         
     // Returns the *reverse* sequence of edit operations in to the maximum
     // scoring alignment. i.e., The operations corresponding to these ids can
@@ -102,14 +102,14 @@ class AlignmentHypergraph : public Graph {
         const StateId sourceId, const StateId destId,
         SparseRealVec* fv, const WeightVector& w);
         
-    boost::shared_array<RingInfo> inside(const Ring ring);
+    boost::shared_array<RingInfo> inside(const Ring ring) const;
     
     boost::shared_array<RingInfo> outside(const Ring ring,
-        boost::shared_array<RingInfo> betas);
+        boost::shared_array<RingInfo> betas) const;
         
-    InsideOutsideResult insideOutside(const Ring ring);
+    InsideOutsideResult insideOutside(const Ring ring) const;
     
-    double viterbi(std::list<const Hyperedge*>& bestPath);
+    double viterbi(std::list<const Hyperedge*>& bestPath) const;
         
     void clear();
     

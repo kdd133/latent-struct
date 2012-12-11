@@ -13,7 +13,6 @@
 #include "AlignmentFeatureGen.h"
 #include "InputReader.h"
 #include "Label.h"
-#include "LogFeatArc.h"
 #include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
@@ -25,7 +24,6 @@
 #include "OpReplace.h"
 #include "Pattern.h"
 #include "StateType.h"
-#include "StdFeatArc.h"
 #include "StringEditModel.h"
 #include "StringPair.h"
 #include "Ublas.h"
@@ -83,8 +81,8 @@ class StringEditModel : public Model {
     virtual void printAlignment(std::ostream& out, const WeightVector& w,
       const Pattern& pattern, const Label label);
     
-    static const string& name() {
-      static const string _name = "StringEdit";
+    static const std::string& name() {
+      static const std::string _name = "StringEdit";
       return _name;
     }
     
@@ -208,7 +206,7 @@ void StringEditModel<Graph>::addZeroOrderStates() {
 template <typename Graph>
 void StringEditModel<Graph>::addFirstOrderStates() {
   using namespace boost;
-  using std::string;
+  using namespace std;
   
   //// Add states ////
   
@@ -332,7 +330,7 @@ void StringEditModel<Graph>::addFirstOrderStates() {
 template <typename Graph>
 void StringEditModel<Graph>::addSecondOrderStates() {
   using namespace boost;
-  using std::string;
+  using namespace std;
   
   // FIXME: Longer phrase lengths are not actually supported here yet, since we
   // have more operations than states; this means the history can be ambiguous.
@@ -476,6 +474,7 @@ void StringEditModel<Graph>::addSecondOrderStates() {
 
 template <typename Graph>
 int StringEditModel<Graph>::processOptions(int argc, char** argv) {
+  using namespace std;
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
@@ -575,6 +574,7 @@ double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
   const double maxScore = graph->maxFeatureVector(fv);
+  using namespace std;
   graph->clearDynProgVariables();
   return maxScore;
 }
@@ -607,8 +607,8 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
 }
 
 template <typename Graph>
-void StringEditModel<Graph>::printAlignment(std::ostream& out, const WeightVector& w,
-    const Pattern& x, const Label y) {
+void StringEditModel<Graph>::printAlignment(std::ostream& out,
+    const WeightVector& w, const Pattern& x, const Label y) {
   using namespace std;
   
   Graph* graph = getGraph(_fstCache, w, x, y);
@@ -641,6 +641,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out, const WeightVecto
     BOOST_FOREACH(const EditOperation* op, source->getValidOperations()) {
       if (op->getId() == opId) {
         source = op->apply(s, t, source, i, j, iNew, jNew);
+        assert(source);
         assert(source->getId() >= 0);
         assert(iNew >= i && jNew >= j);
         int iPhraseLen = iNew - i;
