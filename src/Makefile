@@ -9,7 +9,6 @@
 # The current dependencies are:
 #   Boost (http://www.boost.org), version 1.48 or higher.
 #   LBFGS (http://www.chokkan.org/software/liblbfgs), version 1.10 or higher.
-#   OpenFst (http://www.openfst.org), version 1.2.6 or higher.
 #   QuadProg++ (http://sourceforge.net/projects/quadprog), version 1.2 or higher.
 #   -- Note: Latent Struct uses the ublas-based library, uQuadProgpp.
 #
@@ -17,8 +16,8 @@
 # need to add a -I<path to header(s)> entry to INCLUDES, and a -L<path to lib(s)>
 # entry to LIBS below.
 
-INCLUDES = -I. -Ibase -Idomain_common -Idomain_sentences -Idomain_words -Iedit_operations -Ifst -Igraph -Ihypergraph -Imodels -Ioptimization -Itrain_objectives -Iutil -I/usr/local/include
-LIBS = -L/usr/local/lib -lfst -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem
+INCLUDES = -I. -Ibase -Idomain_common -Idomain_sentences -Idomain_words -Iedit_operations -Igraph -Ihypergraph -Imodels -Ioptimization -Itrain_objectives -Iutil -I/usr/local/include
+LIBS = -L/usr/local/lib -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem
 CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 CC = g++ -O3 -DNDEBUG $(CCFLAGS)
 CCDEP = $(CC) $(INCLUDES) -MM
