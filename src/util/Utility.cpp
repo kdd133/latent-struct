@@ -19,6 +19,10 @@
 #include "WeightVector.h"
 #include <boost/foreach.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/shared_array.hpp>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -223,4 +227,15 @@ void Utility::printResults(const Dataset& evalData,
   double fscore = (precision + recall == 0) ? 0 : 2 * ((precision * recall)
       / (precision + recall));
   printf("%s-Fscore: %.4f\n", id_, fscore);
+}
+
+shared_array<double> Utility::generateGaussianSamples(size_t n, double mean,
+    double stdev, int seed) {
+  shared_array<double> samples(new double[n]);
+  mt19937 mt(seed);
+  normal_distribution<> gaussian(mean, stdev);
+  variate_generator<mt19937, normal_distribution<> > rgen(mt, gaussian);
+  for (size_t i = 0; i < n; ++i)
+    samples[i] = rgen();
+  return samples;
 }

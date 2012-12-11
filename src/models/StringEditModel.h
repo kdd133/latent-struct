@@ -573,8 +573,7 @@ double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
-  const double maxScore = graph->maxFeatureVector(fv);
-  using namespace std;
+  const double maxScore = graph->maxFeatureVector(fv);  
   graph->clearDynProgVariables();
   return maxScore;
 }

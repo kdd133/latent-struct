@@ -13,6 +13,7 @@
 #include "Label.h"
 #include "LabelScoreTable.h"
 #include "Ublas.h"
+#include <boost/shared_array.hpp>
 #include <string>
 
 class Dataset;
@@ -48,6 +49,9 @@ class Utility {
     
     // Return the zero-one loss, given the correct label y and guess yhat.
     static double delta(Label y, Label yhat);
+    
+    static boost::shared_array<double> generateGaussianSamples(std::size_t n,
+      double mean, double stdev, int seed = 0); 
 
   private:
   
@@ -56,7 +60,7 @@ class Utility {
     static const double log1PlusTiny;
     
     static void printResults(const Dataset& evalData, LabelScoreTable& scores,
-        const std::string& id, const std::string& fname);
+      const std::string& id, const std::string& fname);
 };
 
 inline double Utility::sigmoid(double a) {

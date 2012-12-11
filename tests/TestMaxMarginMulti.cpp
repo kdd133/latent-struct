@@ -12,6 +12,7 @@
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
+#include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
@@ -65,24 +66,23 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   
   WeightVector W(d);
   
-  // set the feature weight for bias class y=0 to one
-  int index = alphabet->lookup("0_Bias", false);
-  BOOST_REQUIRE(index >= 0);
-  W.add(index, 1.0);
-  BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
+  // Set the weights to some random values.
+  shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1, 33);
+  W.setWeights(samples.get(), d);
+  samples.reset();
   
   RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(W, fval, gradFv);
   
-  BOOST_CHECK_CLOSE(1, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.50, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(0.85, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.35, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(4.65, gradFv[3], 1e-8);
-  BOOST_CHECK_CLOSE(-0.50, gradFv[4], 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv[5], 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(6.1197757635591392, fval, 1e-8);
+  BOOST_CHECK_CLOSE(-0.25, gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.2, gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0, gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.9, gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(0.25, gradFv[4], 1e-8);
+  BOOST_CHECK_CLOSE(4.4, gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(4.1, gradFv[6], 1e-8);
   BOOST_CHECK_CLOSE(0, gradFv[7], 1e-8);
   
   shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
@@ -100,5 +100,5 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   
   objective.valueAndGradient(W, fval, gradFv);
   Utility::addRegularizationL2(W, opt.getBeta(), fval, gradFv);
-  BOOST_CHECK_CLOSE(0.60818096163, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.9406601396594475, fval, 1e-8);
 }

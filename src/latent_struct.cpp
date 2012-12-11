@@ -49,7 +49,6 @@
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/random/mersenne_twister.hpp>
-#include <boost/random/normal_distribution.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -558,11 +557,11 @@ initial weights")
         v[it->second] += fgenLat->getDefaultFeatureWeight(it->first);
     }
     if (iends_with(weightsInit, "noise")) {
-      mt19937 mt(seed);
-      normal_distribution<> gaussian(0, weightsNoise);
-      variate_generator<mt19937, normal_distribution<> > rgen(mt, gaussian);
+      shared_array<double> samples = Utility::generateGaussianSamples(d, 0,
+          weightsNoise, seed);
       for (int i = 0; i < d; i++)
-        v[i] += rgen();
+        v[i] += samples[i];
+      samples.reset(); // we don't need this array any more
     }
     wInit.setWeights(v, d);
     delete[] v;
