@@ -12,11 +12,10 @@
 
 #include "Label.h"
 #include "Ublas.h"
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/shared_array.hpp>
 #include <list>
 #include <string>
 
+class Hypernode;
 class LogWeight;
 class Pattern;
 class WeightVector;
@@ -30,26 +29,17 @@ class Graph {
       
     virtual void rescore(const WeightVector& w) = 0;
 
-    virtual LogWeight logPartition() = 0;
-
-    // Note: Assumes fv has been zeroed out.
-    virtual LogWeight logExpectedFeaturesUnnorm(LogVec& fv) = 0; 
-
-    // Note: Assumes fv has been zeroed out.
-    virtual double maxFeatureVector(SparseRealVec& fv,
-        bool getCostOnly = false) const = 0;
-        
-    virtual LogWeight logExpectedFeatureCooccurrences(LogMat& fm,
-        LogVec& fv) = 0;
-        
-    // Returns the *reverse* sequence of edit operations in to the maximum
-    // scoring alignment. i.e., The operations corresponding to these ids can
-    // be applied in reverse order to reconstruct the optimal alignment.
-    virtual void maxAlignment(std::list<int>& opIds) const = 0;
-    
     virtual void toGraphviz(const std::string& fname) const = 0;
     
-    virtual int numArcs() = 0;
+    virtual int numEdges() const = 0;
+    
+    virtual int numNodes() const = 0;
+    
+    virtual const Hypernode* root() const = 0;
+    
+    virtual const Hypernode* goal() const = 0;
+    
+    virtual int numFeatures() const = 0;
     
     virtual void clearBuildVariables() = 0;
 };

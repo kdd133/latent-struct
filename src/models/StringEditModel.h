@@ -11,6 +11,7 @@
 #define _STRINGEDITMODEL_H
 
 #include "AlignmentFeatureGen.h"
+#include "Inference.h"
 #include "InputReader.h"
 #include "Label.h"
 #include "LogWeight.h"
@@ -541,15 +542,15 @@ size_t StringEditModel<Graph>::gatherFeatures(const Pattern& x,
     const Label y) {
   WeightVector wNull;
   Graph* graph = getGraph(_fstCache, wNull, x, y);
-  const int numArcs = graph->numArcs();
-  return numArcs;
+  const int numEdges = graph->numEdges();
+  return numEdges;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = graph->logPartition();
+  const LogWeight logZ = Inference::logPartition(*graph);
   return logZ;
 }
 
@@ -558,7 +559,7 @@ double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   SparseRealVec fv;
-  const double maxScore = graph->maxFeatureVector(fv, true);
+  const double maxScore = Inference::maxFeatureVector(*graph, fv, true);
   return maxScore;
 }
 
@@ -570,7 +571,7 @@ double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
-  const double maxScore = graph->maxFeatureVector(fv);  
+  const double maxScore = Inference::maxFeatureVector(*graph, fv);
   return maxScore;
 }
 
@@ -579,7 +580,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
     LogVec& fv, const Pattern& x, const Label y,
     bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv);
+  const LogWeight logZ = Inference::logExpectedFeaturesUnnorm(*graph, fv);
   if (normalize)
     fv *= -logZ;
   return logZ;
@@ -591,7 +592,8 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
       LogVec& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = graph->logExpectedFeatureCooccurrences(fm, fv);
+  const LogWeight logZ = Inference::logExpectedFeatureCooccurrences(*graph,
+      fm, fv);
   if (normalize) {
     fv *= -logZ;
     fm *= -logZ;
@@ -608,7 +610,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   assert(graph);
   
   list<int> alignmentOps;
-  graph->maxAlignment(alignmentOps);
+  Inference::viterbiPath(*graph, alignmentOps);
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();

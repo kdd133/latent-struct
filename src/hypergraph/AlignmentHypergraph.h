@@ -38,13 +38,6 @@ class AlignmentHypergraph : public Graph {
     typedef int StateId;
     typedef boost::multi_array<StateId, 3> StateIdTable;
     
-    typedef struct insideOutsideResult {
-      LogWeight Z;
-      LogVec rBar;
-      LogVec sBar;
-      LogMat tBar;
-    } InsideOutsideResult;
-    
     virtual ~AlignmentHypergraph() { }
     
     // The first StateType in the list will be used as the start state and as
@@ -54,34 +47,24 @@ class AlignmentHypergraph : public Graph {
         boost::shared_ptr<ObservedFeatureGen> fgenObs,
         bool includeFinalFeats = true);
     
-    void build(const WeightVector& w, const Pattern& x, Label label,
+    virtual void build(const WeightVector& w, const Pattern& x, Label label,
         bool includeStartArc, bool includeObservedFeaturesArc);
       
-    void rescore(const WeightVector& w);
+    virtual void rescore(const WeightVector& w);
 
-    void getNodesTopologicalOrder(std::list<const Hypernode*>& ordering,
-      bool reverse = false) const;
-
-    LogWeight logPartition();
-
-    // Note: Assumes fv has been zeroed out.
-    LogWeight logExpectedFeaturesUnnorm(LogVec& fv);
-        
-    LogWeight logExpectedFeatureCooccurrences(LogMat& fm, LogVec& fv);
-
-    // Note: Assumes fv has been zeroed out.
-    double maxFeatureVector(SparseRealVec& fv, bool getCostOnly = false) const;
-        
-    // Returns the *reverse* sequence of edit operations in to the maximum
-    // scoring alignment. i.e., The operations corresponding to these ids can
-    // be applied in reverse order to reconstruct the optimal alignment.
-    void maxAlignment(std::list<int>& opIds) const;
+    virtual void toGraphviz(const std::string& fname) const;
     
-    void toGraphviz(const std::string& fname) const;
+    virtual int numEdges() const;
     
-    int numArcs();
+    virtual int numNodes() const;
     
-    void clearBuildVariables();
+    virtual const Hypernode* root() const;
+    
+    virtual const Hypernode* goal() const;
+    
+    virtual int numFeatures() const;
+    
+    virtual void clearBuildVariables();
     
     static const StateId noId;
     
@@ -100,18 +83,9 @@ class AlignmentHypergraph : public Graph {
         const StateId sourceId, const StateId destId,
         SparseRealVec* fv, const WeightVector& w);
         
-    boost::shared_array<RingInfo> inside(const Ring ring) const;
-    
-    boost::shared_array<RingInfo> outside(const Ring ring,
-        boost::shared_array<RingInfo> betas) const;
-        
-    InsideOutsideResult insideOutside(const Ring ring) const;
-    
-    double viterbi(std::list<const Hyperedge*>& bestPath) const;
-        
     void clear();
     
-    int numEdges(int nodeId) const;
+    int numOutgoingEdges(int nodeId) const;
     
     boost::ptr_vector<Hypernode> _nodes;
     
