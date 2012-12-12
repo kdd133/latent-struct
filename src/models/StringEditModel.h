@@ -542,7 +542,6 @@ size_t StringEditModel<Graph>::gatherFeatures(const Pattern& x,
   WeightVector wNull;
   Graph* graph = getGraph(_fstCache, wNull, x, y);
   const int numArcs = graph->numArcs();
-  graph->clearDynProgVariables();
   return numArcs;
 }
 
@@ -551,7 +550,6 @@ LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logPartition();
-  graph->clearDynProgVariables();
   return logZ;
 }
 
@@ -561,7 +559,6 @@ double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
   Graph* graph = getGraph(_fstCache, w, x, y);
   SparseRealVec fv;
   const double maxScore = graph->maxFeatureVector(fv, true);
-  graph->clearDynProgVariables();
   return maxScore;
 }
 
@@ -574,7 +571,6 @@ double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
   const double maxScore = graph->maxFeatureVector(fv);  
-  graph->clearDynProgVariables();
   return maxScore;
 }
 
@@ -584,7 +580,6 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
     bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeaturesUnnorm(fv);
-  graph->clearDynProgVariables();
   if (normalize)
     fv *= -logZ;
   return logZ;
@@ -597,7 +592,6 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   const LogWeight logZ = graph->logExpectedFeatureCooccurrences(fm, fv);
-  graph->clearDynProgVariables();
   if (normalize) {
     fv *= -logZ;
     fm *= -logZ;
@@ -615,7 +609,6 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   
   list<int> alignmentOps;
   graph->maxAlignment(alignmentOps);
-  graph->clearDynProgVariables();
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();

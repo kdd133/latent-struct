@@ -51,8 +51,6 @@ class Graph {
     
     virtual int numArcs() = 0;
     
-    virtual void clearDynProgVariables() = 0;
-    
     virtual void clearBuildVariables() = 0;
 };
 

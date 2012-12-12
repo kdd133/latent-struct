@@ -439,10 +439,6 @@ int AlignmentHypergraph::numArcs() {
   return _edges.size();
 }
 
-void AlignmentHypergraph::clearDynProgVariables() {
-
-}
-
 void AlignmentHypergraph::clearBuildVariables() {
   _stateIdTable.resize(extents[0][0][0]);
 }
@@ -573,7 +569,6 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
 void AlignmentHypergraph::clear() {
   _nodes.clear();
   _edges.clear();
-  clearDynProgVariables();
 }
 
 int AlignmentHypergraph::numEdges(int nodeId) const {

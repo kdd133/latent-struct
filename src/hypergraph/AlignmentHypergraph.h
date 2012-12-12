@@ -81,8 +81,6 @@ class AlignmentHypergraph : public Graph {
     
     int numArcs();
     
-    void clearDynProgVariables();
-    
     void clearBuildVariables();
     
     static const StateId noId;
