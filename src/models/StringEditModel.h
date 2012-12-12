@@ -11,9 +11,11 @@
 #define _STRINGEDITMODEL_H
 
 #include "AlignmentFeatureGen.h"
+#include "ExpectationSemiring.h"
 #include "Inference.h"
 #include "InputReader.h"
 #include "Label.h"
+#include "LogSemiring.h"
 #include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
@@ -21,13 +23,14 @@
 #include "OpInsert.h"
 #include "OpMatch.h"
 #include "OpNone.h"
-#include "OpSubstitute.h"
 #include "OpReplace.h"
+#include "OpSubstitute.h"
 #include "Pattern.h"
 #include "StateType.h"
 #include "StringEditModel.h"
 #include "StringPair.h"
 #include "Ublas.h"
+#include "ViterbiSemiring.h"
 #include "WeightVector.h"
 #include <algorithm>
 #include <assert.h>
@@ -550,7 +553,7 @@ template <typename Graph>
 LogWeight StringEditModel<Graph>::totalMass(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = Inference::logPartition(*graph);
+  const LogWeight logZ = Inference<LogSemiring>::logPartition(*graph);
   return logZ;
 }
 
@@ -559,7 +562,8 @@ double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
   SparseRealVec fv;
-  const double maxScore = Inference::maxFeatureVector(*graph, fv, true);
+  const double maxScore = Inference<ViterbiSemiring>::maxFeatureVector(
+      *graph, fv, true);
   return maxScore;
 }
 
@@ -571,7 +575,8 @@ double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
-  const double maxScore = Inference::maxFeatureVector(*graph, fv);
+  const double maxScore = Inference<ViterbiSemiring>::maxFeatureVector(
+      *graph, fv);
   return maxScore;
 }
 
@@ -580,7 +585,8 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
     LogVec& fv, const Pattern& x, const Label y,
     bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = Inference::logExpectedFeaturesUnnorm(*graph, fv);
+  const LogWeight logZ = Inference<LogSemiring>::logExpectedFeatures(
+      *graph, fv);
   if (normalize)
     fv *= -logZ;
   return logZ;
@@ -592,8 +598,8 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
       LogVec& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  const LogWeight logZ = Inference::logExpectedFeatureCooccurrences(*graph,
-      fm, fv);
+  const LogWeight logZ = Inference<ExpectationSemiring>::
+      logExpectedFeatureCooccurrences(*graph, fm, fv);
   if (normalize) {
     fv *= -logZ;
     fm *= -logZ;
@@ -610,7 +616,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   assert(graph);
   
   list<int> alignmentOps;
-  Inference::viterbiPath(*graph, alignmentOps);
+  Inference<ViterbiSemiring>::viterbiPath(*graph, alignmentOps);
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();

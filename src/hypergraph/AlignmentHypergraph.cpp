@@ -15,8 +15,6 @@
 #include "Hypernode.h"
 #include "LogWeight.h"
 #include "OpNone.h"
-#include "Ring.h"
-#include "RingInfo.h"
 #include "StateType.h"
 #include "StringPair.h"
 #include "Ublas.h"

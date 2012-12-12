@@ -17,7 +17,6 @@
 #include "Hypernode.h"
 #include "Label.h"
 #include "ObservedFeatureGen.h"
-#include "Ring.h"
 #include "Ublas.h"
 #include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -28,7 +27,6 @@
 
 class LogWeight;
 class Pattern;
-class RingInfo;
 class StateType;
 class StringPair;
 class WeightVector;
