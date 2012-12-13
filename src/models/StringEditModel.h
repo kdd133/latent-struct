@@ -561,7 +561,6 @@ template <typename Graph>
 double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
     const Pattern& x, const Label y) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  SparseRealVec fv;
   const double maxScore = Inference<ViterbiSemiring>::viterbiScore(*graph);
   return maxScore;
 }
