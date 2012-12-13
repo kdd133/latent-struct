@@ -68,11 +68,6 @@ public:
   }
   
   typedef struct {
-    LogVec rBar;
-    LogMat tBar;
-  } accumulator;
-  
-  typedef struct {
     LogWeight Z;
     LogVec rBar;
     LogVec sBar;

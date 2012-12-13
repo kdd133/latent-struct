@@ -57,6 +57,11 @@ class Inference {
     
     static void getNodesTopologicalOrder(const Graph& g,
         std::list<const Hypernode*>& ordering, bool reverse = false);
+        
+    typedef struct viterbi_entry {
+      LogWeight score;
+      const Hyperedge* backPointer;
+    } ViterbiEntry;
 };
 
 template <class Semiring>
@@ -239,12 +244,7 @@ double Inference<Semiring>::viterbi(const Graph& g,
   assert(revTopOrder.size() == g.numNodes());
   path.clear();
   
-  typedef struct entry {
-    LogWeight score;
-    const Hyperedge* backPointer;
-  } Entry;
-  
-  Entry* chart = new Entry[g.numNodes()];
+  boost::scoped_array<ViterbiEntry> chart(new ViterbiEntry[g.numNodes()]);
   for (size_t i = 0; i < g.numNodes(); ++i) {
     chart[i].score = LogWeight(0);
     chart[i].backPointer = 0;
@@ -259,7 +259,7 @@ double Inference<Semiring>::viterbi(const Graph& g,
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
         pathScore *= chart[u->getId()].score;
       
-      Entry& nodeEntry = chart[v->getId()];
+      ViterbiEntry& nodeEntry = chart[v->getId()];
       if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
         nodeEntry.score = pathScore;
         nodeEntry.backPointer = e;
@@ -276,7 +276,6 @@ double Inference<Semiring>::viterbi(const Graph& g,
   }
   
   const double pathScore = chart[g.root()->getId()].score;
-  delete[] chart;
   return pathScore;
 }
 
