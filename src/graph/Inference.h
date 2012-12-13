@@ -33,12 +33,15 @@ class Inference {
     static LogWeight logPartition(const Graph& g);
 
     static LogWeight logExpectedFeatures(const Graph& g, LogVec& fv); 
-
-    static double maxFeatureVector(const Graph& g, SparseRealVec& fv,
-        bool getCostOnly = false);
         
     static LogWeight logExpectedFeatureCooccurrences(const Graph& g, LogMat& fm,
         LogVec& fv);
+    
+    // Note: maxFeatureVector and viterbiScore will return the same value, but
+    // if you only need the score, the viterbiScore function should be slightly
+    // more efficient because it does not keep track of back-pointers.    
+    static double maxFeatureVector(const Graph& g, SparseRealVec& fv);
+    static double viterbiScore(const Graph& g);
         
     // Returns the *reverse* sequence of labels that correspond to the edges
     // in the Viterbi (max-scoring) path.
@@ -79,18 +82,17 @@ LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g, LogVec& fv) {
 }
 
 template <class Semiring>
-double Inference<Semiring>::maxFeatureVector(const Graph& g, SparseRealVec& fv,
-    bool getCostOnly) {
+double Inference<Semiring>::maxFeatureVector(const Graph& g,
+    SparseRealVec& fv) {
   std::list<const Hyperedge*> bestPath;
   const double viterbiScore = viterbi(g, bestPath);
-  if (!getCostOnly) {
-    fv.clear();
-    fv.resize(g.numFeatures());
-    SparseRealVec temp(fv.size());
-    BOOST_FOREACH(const Hyperedge* e, bestPath) {
-      assert(e->getChildren().size() == 1); // Only works for graphs at this point
-      fv += ublas_util::convertVec(*e->getFeatureVector(), temp);
-    }
+  
+  fv.clear();
+  fv.resize(g.numFeatures());
+  SparseRealVec temp(fv.size());
+  BOOST_FOREACH(const Hyperedge* e, bestPath) {
+    assert(e->getChildren().size() == 1); // Only works for graphs at this point
+    fv += ublas_util::convertVec(*e->getFeatureVector(), temp);
   }
   return viterbiScore;
 }
@@ -117,6 +119,12 @@ void Inference<Semiring>::viterbiPath(const Graph& g, std::list<int>& labels) {
     assert(*it);
     labels.push_back((*it)->getLabel());
   }
+}
+
+template <class Semiring>
+double Inference<Semiring>::viterbiScore(const Graph& g) {
+  boost::shared_array<Semiring> betas = inside(g);
+  return betas[g.root()->getId()].score();
 }
 
 template <class Semiring>
