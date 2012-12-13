@@ -283,51 +283,47 @@ double Inference<Semiring>::viterbi(const Graph& g,
 template <class Semiring>
 void Inference<Semiring>::getNodesTopologicalOrder(const Graph& g,
     std::list<const Hypernode*>& ordering, bool reverse) {
+  
+  enum colour {BLACK, GREY, WHITE};  
+  boost::scoped_array<int> nodeColour(new int[g.numNodes()]);
+  for (size_t i = 0; i < g.numNodes(); i++)
+    nodeColour[i] = WHITE;
+  
+  std::stack<const Hypernode*> theStack;
+  const Hypernode* u = g.root();
+  nodeColour[u->getId()] = GREY;
+  
   ordering.clear();
-  
-  // True once this node and all its children have been covered
-  boost::scoped_array<bool> completed(new bool[g.numNodes()]);
-  
-  // True after the first time we hit a node
-  boost::scoped_array<bool> reached(new bool[g.numNodes()]);
-  
-  for (size_t i = 0; i < g.numNodes(); i++) {
-    completed[i] = false;
-    reached[i] = false;
-  }
-  
-  std::stack<const Hypernode*> stck;
-  stck.push(g.root());
-  
-  while (stck.size() > 0)
-  {
-    const Hypernode* cur = stck.top();
-    
-    if (completed[cur->getId()]) {
-      // Only want to emit each node once
-      stck.pop();
-    }
-    else {
-      if (reached[cur->getId()]) {
-        // If this is the second time we've hit this node, it's safe to emit
-        stck.pop();
-        completed[cur->getId()] = true;
-        if (reverse)
-          ordering.push_back(cur);
-        else
-          ordering.push_front(cur);
-      }
-      else {
-        // The first time we hit a node, push all children to make sure they're covered
-        reached[cur->getId()] = true;
-        BOOST_FOREACH(const Hyperedge* edge, cur->getEdges()) {
-          BOOST_FOREACH(const Hypernode* child, edge->getChildren()) {
-            if (!completed[child->getId()]) {
-              assert(!reached[child->getId()]); // Check for cycles
-              stck.push(child);
-            }
-          }
+
+  while (u != 0) {
+    bool uHasWhiteNeighbour = false;
+    BOOST_FOREACH(const Hyperedge* edge, u->getEdges()) {
+      BOOST_FOREACH(const Hypernode* v, edge->getChildren()) {
+        if (nodeColour[v->getId()] == WHITE) {
+          uHasWhiteNeighbour = true;
+          nodeColour[v->getId()] = GREY;
+          theStack.push(u);
+          u = v;
+          break;
         }
+      }
+      if (uHasWhiteNeighbour)
+        break;
+    }
+    
+    if (!uHasWhiteNeighbour) {
+      nodeColour[u->getId()] = BLACK;
+      
+      if (reverse)
+        ordering.push_back(u);
+      else
+        ordering.push_front(u);
+        
+      if (theStack.empty())
+        u = 0;
+      else {
+        u = theStack.top();
+        theStack.pop();
       }
     }
   }
