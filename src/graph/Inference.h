@@ -45,8 +45,8 @@ class Inference {
     static void viterbiPath(const Graph& g, std::list<int>& edgeLabels);
     
   private:    
-    static boost::shared_ptr<typename Semiring::insideOutsideResult>
-        insideOutside(const Graph& g);
+    static void insideOutside(const Graph& g, typename
+        Semiring::InsideOutsideResult& result);
     
     static boost::shared_array<Semiring> inside(const Graph& g);
     
@@ -67,10 +67,10 @@ LogWeight Inference<Semiring>::logPartition(const Graph& g) {
 
 template <class Semiring>
 LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g, LogVec& fv) {
-  boost::shared_ptr<typename Semiring::insideOutsideResult> inOut =
-      insideOutside(g);
-  fv = inOut->rBar;
-  return inOut->Z;
+  typename Semiring::InsideOutsideResult result;
+  insideOutside(g, result);
+  fv = result.rBar;
+  return result.Z;
 }
 
 template <class Semiring>
@@ -93,11 +93,11 @@ double Inference<Semiring>::maxFeatureVector(const Graph& g, SparseRealVec& fv,
 template <class Semiring>
 LogWeight Inference<Semiring>::logExpectedFeatureCooccurrences(const Graph& g,
     LogMat& fm, LogVec& fv) {
-  boost::shared_ptr<typename Semiring::insideOutsideResult> inOut =
-      insideOutside(g);
-  fv = inOut->sBar;
-  fm = inOut->tBar;
-  return inOut->Z;
+  typename Semiring::InsideOutsideResult result;
+  insideOutside(g, result);
+  fv = result.sBar;
+  fm = result.tBar;
+  return result.Z;
 }
 
 template <class Semiring>
@@ -115,18 +115,16 @@ void Inference<Semiring>::viterbiPath(const Graph& g, std::list<int>& labels) {
 }
 
 template <class Semiring>
-boost::shared_ptr<typename Semiring::insideOutsideResult> Inference<Semiring>::
-    insideOutside(const Graph& g) {
-  using namespace boost;
-  
+void Inference<Semiring>::insideOutside(const Graph& g,
+    typename Semiring::InsideOutsideResult& result) {
+
   // Run inside() and outside().
-  shared_array<Semiring> betas = inside(g);
-  shared_array<Semiring> alphas = outside(g, betas);
+  boost::shared_array<Semiring> betas = inside(g);
+  boost::shared_array<Semiring> alphas = outside(g, betas);
     
-  typename Semiring::accumulator xHat = Semiring::getInsideOutsideAccumulator(
-      g.numFeatures());
+  Semiring::initInsideOutsideAccumulator(g.numFeatures(), result);
   
-  scoped_array<bool> marked(new bool[g.numNodes()]);
+  boost::scoped_array<bool> marked(new bool[g.numNodes()]);
   for (size_t i = 0; i < g.numNodes(); i++)
     marked[i] = false;
 
@@ -156,13 +154,12 @@ boost::shared_ptr<typename Semiring::insideOutsideResult> Inference<Semiring>::
       BOOST_FOREACH(const Hypernode* u, e->getChildren())
         keBar *= betas[u->getId()];
 
-      Semiring::accumulate(xHat, keBar, *e);
+      Semiring::accumulate(result, keBar, *e);
     }
     queue.pop_front(); // Discard the node we just processed.
   }
   
-  return boost::shared_ptr<typename Semiring::insideOutsideResult>(
-      Semiring::getInsideOutsideResult(xHat, betas[g.root()->getId()]));
+  Semiring::finalizeInsideOutsideResult(result, betas[g.root()->getId()]);
 }
     
 template <class Semiring>

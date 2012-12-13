@@ -44,33 +44,30 @@ public:
   static LogSemiring zero(const size_t numFeatures) {
     return LogSemiring(LogWeight(0));
   }
-  
-  typedef LogVec accumulator;
-  
-  static accumulator getInsideOutsideAccumulator(const size_t numFeatures) {
-    return LogVec(numFeatures);
+
+  typedef struct {
+    LogWeight Z;
+    LogVec rBar;
+  } InsideOutsideResult;
+
+  static void initInsideOutsideAccumulator(const std::size_t d,
+      InsideOutsideResult& result) {
+    result.rBar.resize(d);
   }
-  
-  static void accumulate(accumulator& x, const LogSemiring& keBar,
+
+  static void accumulate(InsideOutsideResult& x, const LogSemiring& keBar,
       const Hyperedge& e) {
     // Compute: xHat = xHat + keBar*xe
     //    where xe = pe*re
     SparseLogVec pe_re = *e.getFeatureVector();
     pe_re *= e.getWeight() * keBar.score();
-    x += pe_re;
+    x.rBar += pe_re;
   }
   
-  typedef struct {
-    LogWeight Z;
-    LogVec rBar;
-  } insideOutsideResult;
-  
-  static insideOutsideResult* getInsideOutsideResult(const accumulator& x,
+  static void finalizeInsideOutsideResult(InsideOutsideResult& result,
       const LogSemiring& betaRoot) {
-    insideOutsideResult* result = new insideOutsideResult;
-    result->Z = betaRoot.score();
-    result->rBar = x;
-    return result;
+    // rBar has (presumably) already been set via accumulation
+    result.Z = betaRoot.score();
   }
 
 private:

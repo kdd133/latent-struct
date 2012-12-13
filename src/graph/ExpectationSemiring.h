@@ -72,13 +72,21 @@ public:
     LogMat tBar;
   } accumulator;
   
-  static accumulator getInsideOutsideAccumulator(const size_t numFeatures) {
-    accumulator a = {LogVec(numFeatures), LogMat(numFeatures, numFeatures)};
-    return a;
+  typedef struct {
+    LogWeight Z;
+    LogVec rBar;
+    LogVec sBar;
+    LogMat tBar;
+  } InsideOutsideResult;
+  
+  static void initInsideOutsideAccumulator(const std::size_t d,
+      InsideOutsideResult& result) {
+    result.rBar.resize(d);
+    result.tBar.resize(d, d);
   }
   
-  static void accumulate(accumulator& x, const ExpectationSemiring& keBar,
-      const Hyperedge& e) {
+  static void accumulate(InsideOutsideResult& x,
+      const ExpectationSemiring& keBar, const Hyperedge& e) {
     const LogWeight pe = e.getWeight();
       
     // In our applications, we have re == se
@@ -103,21 +111,11 @@ public:
     x.tBar += (pe_re_se + pe_se_keBarR);
   }
   
-  typedef struct {
-    LogWeight Z;
-    LogVec rBar;
-    LogVec sBar;
-    LogMat tBar;
-  } insideOutsideResult;
-  
-  static insideOutsideResult* getInsideOutsideResult(const accumulator& x,
+  static void finalizeInsideOutsideResult(InsideOutsideResult& result,
       const ExpectationSemiring& betaRoot) {
-    insideOutsideResult* result = new insideOutsideResult;
-    result->Z = betaRoot.score();
-    result->rBar = x.rBar;
-    result->sBar = betaRoot.fv();
-    result->tBar = x.tBar;
-    return result;
+    // rBar and tBar have (presumably) already been set via accumulation
+    result.Z = betaRoot.score();
+    result.sBar = betaRoot.fv();
   }
   
 private:

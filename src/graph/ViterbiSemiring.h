@@ -48,7 +48,7 @@ public:
   
   // Although insideOutside() cannot be called with this semiring, we need to
   // define this type in order to get everything to compile.
-  typedef void insideOutsideResult;
+  typedef char InsideOutsideResult;
   
 private:
   LogWeight _score;
