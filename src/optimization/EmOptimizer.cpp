@@ -61,7 +61,7 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
   bool innerMaxItersPrev = false; // True if inner solver reached max iterations
                                   // on the previous EM iteration.
   for (int iter = 0; iter < _maxIters; iter++) {
-//    boost::timer::auto_cpu_timer timer; // Uncomment to print timing info.
+    boost::timer::cpu_timer timer;
     
     // E-step (uses new W)
     _objective.setLatentFeatureVectors(w);
@@ -75,9 +75,11 @@ Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
       return Optimizer::FAILURE;
     }
     
-    if (!_quiet)
+    if (!_quiet) {
       cout << name() << " iter = " << iter << ": prev=" << valPrev <<
-          " current=" << valCur << endl;
+          " current=" << valCur;
+      cout << " timer:" << timer.format();
+    }
       
     if (status == Optimizer::BACKWARD_PROGRESS) {
       cout << name() << " iter = " << iter <<

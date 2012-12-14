@@ -96,7 +96,7 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
   
   bool converged = false;
   for (size_t t = 1; t <= _maxIters; t++) {
-//    boost::timer::auto_cpu_timer timer; // Uncomment to print timing info.
+    boost::timer::cpu_timer timer;
     
     // Add the next column to the matrix "A", which we'll actually represent as
     // a ptr_vector of column vectors.
@@ -187,8 +187,9 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     
     if (!_quiet) {
       printf("%s: t = %d  bundle = %d  Jw_t = %0.4e  min_Jw = %0.4e  \
-JwCP = %0.4e  epsilon_t = %0.4e\n", name().c_str(), (int)t, (int)bs, Jw,
+JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
         min_Jw, JwCP, epsilon_t);
+      cout << " timer:" << timer.format();
     }
     
     // Shrinking heuristic: Discard (grad,b) pairs for which alpha == 0.
