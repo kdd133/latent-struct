@@ -6,6 +6,7 @@
 #include "Dataset.h"
 #include "LbfgsOptimizer.h"
 #include "LogLinearMulti.h"
+#include "Parameters.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -62,7 +63,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 8);
   
-  WeightVector W(d);
+  Parameters W(d);
   
   // set the feature weight for bias class y=0 to one
   int index = alphabet->lookup("0_Bias", false);

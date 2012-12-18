@@ -13,10 +13,10 @@
 #include "LabelScoreTable.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
-#include "WeightVector.h"
 #include <boost/foreach.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -55,16 +55,17 @@ bool Utility::loadDataset(const InputReader& reader, string fileName,
 }
 
 // Add L2 regularization.
-void Utility::addRegularizationL2(const WeightVector& W, const double beta,
+void Utility::addRegularizationL2(const Parameters& theta, const double beta,
     double& fval, RealVec& grad) {
   assert(beta > 0.0);
-  assert(W.getDim() == grad.size());
-  fval += beta/2 * W.squaredL2Norm();
-  for (size_t i = 0; i < W.getDim(); ++i)
-    grad(i) += W.getWeight(i) * beta; // add beta*W to gradient
+  const int d = theta.getTotalDim();
+  assert(d == grad.size());
+  fval += beta/2 * theta.squaredL2Norm();
+  for (size_t i = 0; i < d; ++i)
+    grad(i) += theta.getWeight(i) * beta; // add beta*theta to gradient
 }
 
-void Utility::evaluate(const vector<WeightVector>& weightVectors,
+void Utility::evaluate(const vector<Parameters>& weightVectors,
     TrainingObjective& obj, const Dataset& evalData,
     const vector<string>& identifiers, const vector<string>& fnames,
     bool caching) {
@@ -140,7 +141,7 @@ void Utility::evaluate(const vector<WeightVector>& weightVectors,
   }
 }
 
-void Utility::evaluate(const WeightVector& w, TrainingObjective& obj,
+void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
     const Dataset& evalData, const string& identifier, const string& fname) {
     
   assert(obj.getModel(0).getFgenLatent()->getAlphabet()->isLocked());

@@ -19,8 +19,8 @@
 class Dataset;
 class InputReader;
 class Model;
+class Parameters;
 class TrainingObjective;
-class WeightVector;
 
 class Utility {
 
@@ -29,14 +29,14 @@ class Utility {
     static bool loadDataset(const InputReader& reader, std::string fileName,
       Dataset& dataset);
 
-    static void addRegularizationL2(const WeightVector& W, const double beta,
+    static void addRegularizationL2(const Parameters& W, const double beta,
       double& fval, RealVec& grad);
         
-    static void evaluate(const WeightVector& w, TrainingObjective& obj,
+    static void evaluate(const Parameters& w, TrainingObjective& obj,
       const Dataset& eval, const std::string& identifier,
       const std::string& outFname = "");
       
-    static void evaluate(const std::vector<WeightVector>& weightVectors,
+    static void evaluate(const std::vector<Parameters>& weightVectors,
       TrainingObjective& obj, const Dataset& evalData,
       const std::vector<std::string>& ids,
       const std::vector<std::string>& fnames, bool enableCache);

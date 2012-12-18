@@ -19,9 +19,9 @@
 #include "Model.h"
 #include "Ublas.h"
 #include "Utility.h"
-#include "WeightVector.h"
+#include "Parameters.h"
 
-void LogLinearBinaryObs::valueAndGradientPart(const WeightVector& w,
+void LogLinearBinaryObs::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
@@ -36,7 +36,7 @@ void LogLinearBinaryObs::valueAndGradientPart(const WeightVector& w,
     bool own = false;
     SparseRealVec* phi = model.observedFeatures(xi, ypos, own);
     assert(phi);
-    const double mass = -yi * w.innerProd(*phi);
+    const double mass = -yi * theta.w.innerProd(*phi);
     funcVal += Utility::log1Plus(exp(mass));
     gradFv += (*phi) * (-yi * (1 - Utility::sigmoid(-mass)));
     
@@ -44,7 +44,7 @@ void LogLinearBinaryObs::valueAndGradientPart(const WeightVector& w,
   }
 }
 
-void LogLinearBinaryObs::predictPart(const WeightVector& w, Model& model,
+void LogLinearBinaryObs::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   const Label ypos = TrainingObjective::kPositive;  
@@ -54,7 +54,7 @@ void LogLinearBinaryObs::predictPart(const WeightVector& w, Model& model,
     bool own = false;
     SparseRealVec* phi = model.observedFeatures(x, ypos, own);
     assert(phi);
-    const double z = w.innerProd(*phi);
+    const double z = theta.w.innerProd(*phi);
     if (own) delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);

@@ -13,16 +13,16 @@
 #include "MaxMarginBinaryObs.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Parameters.h"
 #include "Ublas.h"
 #include "Utility.h"
-#include "WeightVector.h"
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <iostream>
 #include <vector>
 
-void MaxMarginBinaryObs::valueAndGradientPart(const WeightVector& w,
+void MaxMarginBinaryObs::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
@@ -37,7 +37,7 @@ void MaxMarginBinaryObs::valueAndGradientPart(const WeightVector& w,
     bool own = false;
     SparseRealVec* phi = model.observedFeatures(xi, ypos, own);
     assert(phi);
-    const double z = yi * w.innerProd(*phi);
+    const double z = yi * theta.w.innerProd(*phi);
     funcVal += Utility::hinge(1-z);
     
     // Gradient contribution is 0 if z=y*w'*phi >= 1, and -y*phi otherwise. 
@@ -48,7 +48,7 @@ void MaxMarginBinaryObs::valueAndGradientPart(const WeightVector& w,
   }
 }
 
-void MaxMarginBinaryObs::predictPart(const WeightVector& w, Model& model,
+void MaxMarginBinaryObs::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   const Label ypos = TrainingObjective::kPositive;
@@ -58,7 +58,7 @@ void MaxMarginBinaryObs::predictPart(const WeightVector& w, Model& model,
     bool own = false;
     SparseRealVec* phi = model.observedFeatures(x, ypos, own);
     assert(phi);
-    const double z = w.innerProd(*phi);
+    const double z = theta.w.innerProd(*phi);
     if (own) delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);

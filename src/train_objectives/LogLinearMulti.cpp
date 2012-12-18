@@ -13,16 +13,17 @@
 #include "LogLinearMulti.h"
 #include "LogWeight.h"
 #include "Model.h"
+#include "Parameters.h"
 #include "Ublas.h"
 #include "WeightVector.h"
 #include <boost/shared_array.hpp>
 #include <vector>
 
-void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
+void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
-  const int d = w.getDim();
+  const int d = theta.w.getDim();
   
   std::vector<LogWeight> mass(k, LogWeight());
   std::vector<LogVec> feats(k, LogVec(d));  
@@ -43,7 +44,7 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     
     for (Label y = 0; y < k; y++) {
       // Note: The last argument is false b/c we want unnormalized features.
-      mass[y] = model.expectedFeatures(w, feats[y], xi, y, false);
+      mass[y] = model.expectedFeatures(theta.w, feats[y], xi, y, false);
       featsTotal += feats[y];
       massTotal += mass[y];
     }
@@ -63,14 +64,14 @@ void LogLinearMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   }
 }
 
-void LogLinearMulti::predictPart(const WeightVector& w, Model& model,
+void LogLinearMulti::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double yScore = model.totalMass(w, x, y);
+      const double yScore = model.totalMass(theta.w, x, y);
       scores.setScore(id, y, yScore);
     }
   }

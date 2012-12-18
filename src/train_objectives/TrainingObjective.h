@@ -14,12 +14,12 @@
 #include "Label.h"
 #include "LabelScoreTable.h"
 #include "Model.h"
+#include "Parameters.h"
 #include "Ublas.h"
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <vector>
 
 class Pattern;
-class WeightVector;
 
 class TrainingObjective {
 
@@ -30,22 +30,28 @@ class TrainingObjective {
     
     virtual ~TrainingObjective() {}
   
-    virtual void valueAndGradient(const WeightVector& w, double& value,
+    virtual void valueAndGradient(const Parameters& theta, double& value,
       RealVec& grad);
     
-    virtual void predict(const WeightVector& w, const Dataset& evalData,
+    virtual void predict(const Parameters& theta, const Dataset& evalData,
       LabelScoreTable& scores);
     
     // Called once, prior to training. Typically used to allocate on or more
     // FeatureVector objects.
-    virtual void initLatentFeatureVectors(const WeightVector& w);
+    virtual void initLatentFeatureVectors(const Parameters& theta);
     
     // Assigns each thread a partition of the data, and instructs it to
     // compute the latent feature vectors for the given partition, via
     // setLatentFeatureVectorsPart.
-    virtual void setLatentFeatureVectors(const WeightVector& w);
+    virtual void setLatentFeatureVectors(const Parameters& theta);
     
     virtual bool isBinary() const = 0;
+    
+    // Does this objective learn separate parameters for latent variable
+    // imputation and classification;
+    virtual bool isUW() const {
+      return false; // false by default
+    }
     
     void setComputeAverageLoss(bool state) {
       _computeAverageLoss = state;
@@ -76,7 +82,7 @@ class TrainingObjective {
     // If true, divide the loss by 1/t, where t is the number of examples.
     bool _computeAverageLoss;
     
-    virtual void valueAndGradientPart(const WeightVector& w, Model& model,
+    virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label maxLabel, double& f, RealVec& g) = 0;
     
@@ -84,10 +90,10 @@ class TrainingObjective {
     // called and may modify the function value and/or gradient. For example,
     // MaxMarginMulti requires us to account for the imputed feature vector
     // exactly once -- but not once per thread.
-    virtual void valueAndGradientFinalize(const WeightVector& w, double& f,
+    virtual void valueAndGradientFinalize(const Parameters& theta, double& f,
         RealVec& g);
       
-    virtual void predictPart(const WeightVector& w, Model& model,
+    virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label maxLabel, LabelScoreTable& scores) = 0;
       
@@ -96,7 +102,7 @@ class TrainingObjective {
     // vectors that were computed on the previous iteration.
     virtual void clearLatentFeatureVectors();
       
-    virtual void setLatentFeatureVectorsPart(const WeightVector& w, Model& model,
+    virtual void setLatentFeatureVectorsPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end);
       
     virtual void gatherFeaturesPart(Model& model,

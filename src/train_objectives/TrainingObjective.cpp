@@ -10,7 +10,7 @@
 #include "Dataset.h"
 #include "Label.h"
 #include "TrainingObjective.h"
-#include "WeightVector.h"
+#include "Parameters.h"
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -37,12 +37,12 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
       _dataset.numPartitions() == _models.size());
 }
 
-void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
+void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
     RealVec& gradFv) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
-  vector<RealVec> grads(numParts, RealVec(w.getDim()));
+  vector<RealVec> grads(numParts, RealVec(theta.getTotalDim()));
   vector<double> fvals(numParts, 0);
   
   // Compute the function values and gradients.
@@ -51,7 +51,7 @@ void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
     const Dataset::iterator begin = _dataset.partitionBegin(i);
     const Dataset::iterator end = _dataset.partitionEnd(i);
     threads.push_back(new thread(bind(
-        &TrainingObjective::valueAndGradientPart, this, boost::cref(w),
+        &TrainingObjective::valueAndGradientPart, this, boost::cref(theta),
         boost::ref(_models[i]), begin, end, k, boost::ref(fvals[i]),
         boost::ref(grads[i])
     )));
@@ -66,7 +66,7 @@ void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
     fval += fvals[i];
   }
   
-  valueAndGradientFinalize(w, fval, gradFv);
+  valueAndGradientFinalize(theta, fval, gradFv);
   
   if (_computeAverageLoss) {
     // Scale the value and gradient by 1/t
@@ -76,7 +76,7 @@ void TrainingObjective::valueAndGradient(const WeightVector& w, double& fval,
   }
 }
 
-void TrainingObjective::predict(const WeightVector& w, const Dataset& evalData,
+void TrainingObjective::predict(const Parameters& theta, const Dataset& evalData,
     LabelScoreTable& scores) {
   const size_t numParts = evalData.numPartitions();
   assert(numParts == getNumModels());
@@ -87,7 +87,7 @@ void TrainingObjective::predict(const WeightVector& w, const Dataset& evalData,
     const Dataset::iterator begin = evalData.partitionBegin(i);
     const Dataset::iterator end = evalData.partitionEnd(i);
     threads.push_back(new thread(bind(
-        &TrainingObjective::predictPart, this, boost::cref(w),
+        &TrainingObjective::predictPart, this, boost::cref(theta),
         boost::ref(_models[i]), begin, end, k, boost::ref(scores)
     )));
   }  
@@ -96,7 +96,7 @@ void TrainingObjective::predict(const WeightVector& w, const Dataset& evalData,
     threads[i].join();
 }
 
-void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
+void TrainingObjective::setLatentFeatureVectors(const Parameters& theta) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   clearLatentFeatureVectors();
@@ -106,7 +106,7 @@ void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
     const Dataset::iterator end = _dataset.partitionEnd(i);
     threads.push_back(new thread(bind(
         &TrainingObjective::setLatentFeatureVectorsPart, this,
-        boost::cref(w), boost::ref(_models[i]), begin, end
+        boost::cref(theta), boost::ref(_models[i]), begin, end
     )));
   }
   // Wait for the threads to finish.
@@ -114,7 +114,7 @@ void TrainingObjective::setLatentFeatureVectors(const WeightVector& w) {
     threads[i].join();
 }
 
-void TrainingObjective::setLatentFeatureVectorsPart(const WeightVector& w,
+void TrainingObjective::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
   assert(0); // Not implemented by the given TrainingObjective subclass.
              // Should not be called for an objective that doesn't use it.
@@ -125,11 +125,11 @@ void TrainingObjective::clearLatentFeatureVectors() {
              // Should not be called for an objective that doesn't use it.
 }
 
-void TrainingObjective::initLatentFeatureVectors(const WeightVector& w) {
+void TrainingObjective::initLatentFeatureVectors(const Parameters& theta) {
   // Not implemented by the given TrainingObjective subclass. Do nothing.
 }
 
-void TrainingObjective::valueAndGradientFinalize(const WeightVector& w,
+void TrainingObjective::valueAndGradientFinalize(const Parameters& theta,
     double& f, RealVec& g) {
   // Not implemented by the given TrainingObjective subclass. Do nothing.
 }

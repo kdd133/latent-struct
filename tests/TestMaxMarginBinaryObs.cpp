@@ -7,6 +7,7 @@
 #include "EmptyAlignmentFeatureGen.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "MaxMarginBinaryObs.h"
+#include "Parameters.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 686);
   
-  WeightVector W(d);
+  Parameters W(d);
   
   // set the feature weight for bias class y=1 to one
   int index = alphabet->lookup("1_Bias", false);

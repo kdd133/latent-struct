@@ -11,11 +11,11 @@
 #define _BMRMOPTIMIZER_H
 
 #include "Optimizer.h"
+#include "Parameters.h"
 #include <string>
 
 class Dataset;
 class TrainingObjective;
-class WeightVector;
 
 class BmrmOptimizer : public Optimizer {
 
@@ -24,7 +24,7 @@ class BmrmOptimizer : public Optimizer {
     
     virtual ~BmrmOptimizer() {}
 
-    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+    virtual Optimizer::status train(Parameters& theta, double& funcVal,
       double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);

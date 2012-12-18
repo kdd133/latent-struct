@@ -10,6 +10,7 @@
 #ifndef _LOGLINEARBINARYOBS_H
 #define _LOGLINEARBINARYOBS_H
 
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include <string>
@@ -17,7 +18,6 @@
 
 class Dataset;
 class Model;
-class WeightVector;
 
 class LogLinearBinaryObs : public TrainingObjective {
 
@@ -37,11 +37,11 @@ class LogLinearBinaryObs : public TrainingObjective {
     
   private:
   
-    virtual void valueAndGradientPart(const WeightVector& w, Model& model,
+    virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, double& funcVal, RealVec& gradFv);
       
-    virtual void predictPart(const WeightVector& w, Model& model,
+    virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, LabelScoreTable& scores);
 };

@@ -10,10 +10,10 @@
 #include "LbfgsOptimizer.h"
 #include "Model.h"
 #include "Optimizer.h"
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
-#include "WeightVector.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
@@ -65,18 +65,18 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   
   const LbfgsInstance* inst = (LbfgsInstance*)instance;
   TrainingObjective& obj = *inst->obj;
-  WeightVector& w = *inst->w;
+  Parameters& theta = *inst->theta;
   const double beta = inst->beta;
   double fval = 0;
   
   // Set our model to the current point x.
-  w.setWeights(x, d);
+  theta.setWeights(x, d);
   
-  // Compute the gradient at the given w.
-  // Note: The above setting of w updated the model used here by obj.
+  // Compute the gradient at the given theta.
+  // Note: The above setting of theta updated the model used here by obj.
   RealVec gradFv(d);
-  obj.valueAndGradient(w, fval, gradFv);
-  Utility::addRegularizationL2(w, beta, fval, gradFv);
+  obj.valueAndGradient(theta, fval, gradFv);
+  Utility::addRegularizationL2(theta, beta, fval, gradFv);
   
   // Copy the new gradient back into g, for return to lbfgs.
   for (int i = 0; i < d; i++)
@@ -104,16 +104,16 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
   return 0;
 }
 
-Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
+Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
     double tol) const {
   boost::timer::cpu_timer timer;
-  const int d = w.getDim();
+  const int d = theta.getTotalDim();
   assert(d > 0);
   
-  LbfgsInstance inst = { &_objective, &w, _beta, _quiet };
+  LbfgsInstance inst = { &_objective, &theta, _beta, _quiet };
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
-    x[i] = w.getWeight(i); // set the starting point to be w
+    x[i] = theta.getWeight(i); // set the starting point to be theta
 
   lbfgsfloatval_t objVal = 0.0;
   int ret = -1;
@@ -180,7 +180,7 @@ Optimizer::status LbfgsOptimizer::train(WeightVector& w, double& fval,
         objVal << endl;
     cout << timer.format();
   }
-  w.setWeights(x, d); // copy the final point into w
+  theta.setWeights(x, d); // copy the final point into theta
   
   lbfgs_free(x);
   return status;

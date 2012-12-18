@@ -11,12 +11,12 @@
 #define _LBFGSOPTIMIZER_H
 
 #include "Optimizer.h"
+#include "Parameters.h"
 #include <lbfgs.h>
 #include <string>
 
 class Dataset;
 class TrainingObjective;
-class WeightVector;
 
 class LbfgsOptimizer : public Optimizer {
 
@@ -25,7 +25,7 @@ class LbfgsOptimizer : public Optimizer {
     
     virtual ~LbfgsOptimizer() {}
 
-    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+    virtual Optimizer::status train(Parameters& theta, double& funcVal,
       double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);
@@ -57,7 +57,7 @@ class LbfgsOptimizer : public Optimizer {
         
     typedef struct {
       TrainingObjective* obj;
-      WeightVector* w;
+      Parameters* theta;
       double beta;
       bool quiet;
     } LbfgsInstance;

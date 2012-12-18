@@ -14,17 +14,16 @@
 #include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Parameters.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 
-void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
+void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
-  const WeightVector W0; // zero weight vector, for computing |Z(x)|
-  
-  const int d = w.getDim();
+  const int d = theta.w.getDim();
   const int ypos = TrainingObjective::kPositive;
   
   LogVec feats(d);
@@ -38,7 +37,8 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
     
     // Compute the expected feature vector (normalized).
     //feats.zero(); // not needed because expectedFeatures performs reinit
-    const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
+    const LogWeight logMass = model.expectedFeatures(theta.w, feats, xi, ypos,
+        true);
 
     const LogWeight fW = (yi == 1) ? -logMass : logMass;
     funcVal += Utility::log1Plus(exp(fW)); // i.e., exp(fW)
@@ -48,17 +48,14 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const WeightVector& w,
   }
 }
 
-void LogLinearBinaryUnscaled::predictPart(const WeightVector& w, Model& model,
+void LogLinearBinaryUnscaled::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  const WeightVector W0; // zero weight vector, for computing |Z(x)|
   const Label ypos = TrainingObjective::kPositive;  
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    const LogWeight logMass = model.totalMass(w, x, ypos);
-    const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
-    const LogWeight z = logMass * (-logSizeZx);
+    const LogWeight z = model.totalMass(theta.w, x, ypos);
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, (-z));
   }

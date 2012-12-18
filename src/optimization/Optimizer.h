@@ -10,9 +10,10 @@
 #ifndef _OPTIMIZER_H
 #define _OPTIMIZER_H
 
+#include "Parameters.h"
+
 class Dataset;
 class TrainingObjective;
-class WeightVector;
 
 class Optimizer {
 
@@ -38,7 +39,7 @@ class Optimizer {
 
     // Returns a status code; stores the objective value at the optimal point
     // in funcVal.
-    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+    virtual Optimizer::status train(Parameters& theta, double& funcVal,
       double tolerance) const = 0;
 
     virtual int processOptions(int argc, char** argv) = 0;

@@ -14,6 +14,7 @@
 #include "LogWeight.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
+#include "Parameters.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
@@ -22,13 +23,13 @@
 
 using boost::shared_array;
 
-void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
+void LogLinearBinary::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
   const WeightVector W0; // zero weight vector, for computing |Z(x)|
   
-  const int d = w.getDim();
+  const int d = theta.w.getDim();
   const int ypos = TrainingObjective::kPositive;
   
   LogVec feats(d);
@@ -42,7 +43,8 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
     
     // Compute the expected feature vector (normalized).
     //feats.zero(); // not needed because expectedFeatures performs reinit
-    const LogWeight logMass = model.expectedFeatures(w, feats, xi, ypos, true);
+    const LogWeight logMass = model.expectedFeatures(theta.w, feats, xi, ypos,
+        true);
     
     // Compute the number of paths through the fst using the zero weight vector.
     // We cache this value in a lookup table (implemented as a map). This is
@@ -70,7 +72,7 @@ void LogLinearBinary::valueAndGradientPart(const WeightVector& w, Model& model,
   }
 }
 
-void LogLinearBinary::predictPart(const WeightVector& w, Model& model,
+void LogLinearBinary::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   const WeightVector W0; // zero weight vector, for computing |Z(x)|
@@ -78,7 +80,7 @@ void LogLinearBinary::predictPart(const WeightVector& w, Model& model,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    const LogWeight logMass = model.totalMass(w, x, ypos);
+    const LogWeight logMass = model.totalMass(theta.w, x, ypos);
     const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
     const LogWeight z = logMass * (-logSizeZx);
     scores.setScore(id, ypos, z);

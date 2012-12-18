@@ -11,10 +11,10 @@
 #define _EMOPTIMIZER_H
 
 #include "Optimizer.h"
+#include "Parameters.h"
 #include <boost/shared_ptr.hpp>
 #include <string>
 
-class WeightVector;
 class Dataset;
 class TrainingObjective;
 
@@ -25,7 +25,7 @@ class EmOptimizer : public Optimizer {
     
     virtual ~EmOptimizer() {}
 
-    virtual Optimizer::status train(WeightVector& w, double& funcVal,
+    virtual Optimizer::status train(Parameters& theta, double& funcVal,
       double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);

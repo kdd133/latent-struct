@@ -16,18 +16,18 @@
 #include "ObservedFeatureGen.h"
 #include "Ublas.h"
 #include "Utility.h"
-#include "WeightVector.h"
+#include "Parameters.h"
 #include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
 #include <vector>
 
 using namespace std;
 
-void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
+void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
   
-  const int d = w.getDim();
+  const int d = theta.w.getDim();
   
   vector<double> score(k);
   vector<SparseRealVec> feats(k, SparseRealVec(d));  
@@ -40,7 +40,7 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
   // However, if the gradient is requested outside of the optimization routine,
   // we need to initialize the latent FVs using the given weight vector.
   if (!_imputedFv)
-    initLatentFeatureVectors(w);
+    initLatentFeatureVectors(theta);
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -49,7 +49,8 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     double scoreMax(-numeric_limits<double>::infinity());
     Label yMax = 0;
     for (Label y = 0; y < k; y++) {
-      score[y] = Utility::delta(yi,y) + model.maxFeatures(w, feats[y], xi, y);
+      score[y] = Utility::delta(yi,y) + model.maxFeatures(theta.w, feats[y],
+          xi, y);
       if (score[y] > scoreMax) {
         scoreMax = score[y];
         yMax = y;
@@ -65,22 +66,22 @@ void MaxMarginMulti::valueAndGradientPart(const WeightVector& w, Model& model,
     SparseRealVec* phi_yi = model.observedFeatures(xi, yi, own);
     assert(phi_yi);
     gradFv -= (*phi_yi);
-    funcVal -= w.innerProd(*phi_yi);
+    funcVal -= theta.w.innerProd(*phi_yi);
     if (own) delete phi_yi;
   }
 }
 
-void MaxMarginMulti::valueAndGradientFinalize(const WeightVector& w,
+void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
     double& funcVal, RealVec& gradFv) {    
   // Subtract the sum of the imputed vectors from the gradient.
   gradFv -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
-  funcVal = Utility::hinge(funcVal - w.innerProd(*_imputedFv)); 
+  funcVal = Utility::hinge(funcVal - theta.w.innerProd(*_imputedFv)); 
 }
 
-void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
+void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
-  const int d = w.getDim();
+  const int d = theta.w.getDim();
   SparseRealVec fv(d);  
   
   for (Dataset::iterator it = begin; it != end; ++it) {
@@ -91,15 +92,15 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const WeightVector& w,
     // observed features (if any) being included in the max feature vector.
     // Those do not need to be fixed in order to exploit the semi-convexity
     // property.
-    model.maxFeatures(w, fv, xi, yi, false);
+    model.maxFeatures(theta.w, fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
     (*_imputedFv) += fv;
   }
 }
 
-void MaxMarginMulti::initLatentFeatureVectors(const WeightVector& w) {
+void MaxMarginMulti::initLatentFeatureVectors(const Parameters& theta) {
   assert(_dataset.numExamples() > 0);
-  _imputedFv.reset(new SparseRealVec(w.getDim()));
+  _imputedFv.reset(new SparseRealVec(theta.w.getDim()));
 }
 
 void MaxMarginMulti::clearLatentFeatureVectors() {
@@ -107,14 +108,14 @@ void MaxMarginMulti::clearLatentFeatureVectors() {
   _imputedFv->clear();
 }
 
-void MaxMarginMulti::predictPart(const WeightVector& w, Model& model,
+void MaxMarginMulti::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double yScore = model.viterbiScore(w, x, y);
+      const double yScore = model.viterbiScore(theta.w, x, y);
       scores.setScore(id, y, yScore);
     }
   }

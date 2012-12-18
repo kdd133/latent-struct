@@ -31,6 +31,8 @@ typedef boost::numeric::ublas::vector<double> RealVec;
 
 typedef boost::numeric::ublas::compressed_matrix<LogWeight> SparseLogMat;
 typedef boost::numeric::ublas::matrix<LogWeight> LogMat;
+typedef boost::numeric::ublas::compressed_matrix<double> SparseRealMat;
+typedef boost::numeric::ublas::matrix<double> RealMat;
 
 namespace ublas_util {
 

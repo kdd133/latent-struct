@@ -62,21 +62,21 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
   return 0;
 }
 
-Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
+Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     double tol) const {
   namespace ublas = boost::numeric::ublas;
-  const size_t d = w.getDim();
+  const size_t d = w.getTotalDim();
   assert(d > 0);
   
   const double TINY = 1e-6; // Add this value to D to ensure pos-def.
   const double ALPHA_TOL = 1e-12; // Value below which alpha is considered zero
 
   // Some variables we'll need to reuse inside the main loop.
-  boost::ptr_deque<ublas::vector<double> > grads;
-  ublas::vector<double> b(1);
-  ublas::matrix<double> G(1, 1);
-  ublas::matrix<double> copyG(1, 1);
-  ublas::vector<double> wTemp(d);
+  boost::ptr_deque<RealVec> grads;
+  RealVec b(1);
+  RealMat G(1, 1);
+  RealMat copyG(1, 1);
+  RealVec wTemp(d);
   RealVec grad_t(d);
   double Remp;
   
@@ -129,20 +129,20 @@ Optimizer::status BmrmOptimizer::train(WeightVector& w, double& min_Jw,
     b(bs - 1) = -b_t;
     
     // Encode the constraint: L1-norm(alpha) = 1.
-    ublas::matrix<double> CE(bs, 1);
-    ublas::vector<double> ce0(1);    
+    RealMat CE(bs, 1);
+    RealVec ce0(1);    
     for (size_t i = 0; i < bs; i++)
       CE(i, 0) = 1;
     ce0(0) = -1;
     
     // Encode the constraint: alpha >= 0.
     ublas::identity_matrix<double> CI(bs);
-    ublas::vector<double> ci0(bs);
+    RealVec ci0(bs);
     for (size_t i = 0; i < bs; i++)
       ci0(i) = 0;
     
     // Allocate a vector to hold the solution.
-    ublas::vector<double> alpha(bs);
+    RealVec alpha(bs);
     
     // Note: The call to solve_quadprog may modify G, so we preserve a copy.
     copyG = G;

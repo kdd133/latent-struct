@@ -10,6 +10,7 @@
 #ifndef _LOGLINEARBINARY_H
 #define _LOGLINEARBINARY_H
 
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include <boost/unordered_map.hpp>
@@ -43,11 +44,11 @@ class LogLinearBinary : public TrainingObjective {
     
     DictType _logSizeZxMap;
     
-    virtual void valueAndGradientPart(const WeightVector& w, Model& model,
+    virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, double& funcVal, RealVec& gradFv);
       
-    virtual void predictPart(const WeightVector& w, Model& model,
+    virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, LabelScoreTable& scores);
 };

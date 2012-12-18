@@ -27,12 +27,14 @@
 #include "LogLinearBinaryUnscaled.h"
 #include "LogLinearBinaryObs.h"
 #include "LogLinearMulti.h"
+#include "MainHelpers.h"
 #include "MaxMarginBinary.h"
 #include "MaxMarginBinaryObs.h"
 #include "MaxMarginMulti.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
+#include "Parameters.h"
 #include "Pattern.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "SentencePairReader.h"
@@ -40,7 +42,7 @@
 #include "StringEditModel.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
-#include "WeightVector.h"
+#include "Parameters.h"
 #include "WordPairReader.h"
 #include <algorithm>
 #include <assert.h>
@@ -61,9 +63,6 @@
 
 using namespace boost;
 using namespace std;
-
-void evaluateMultipleWeightVectors(const vector<WeightVector>&, const Dataset&,
-    TrainingObjective&, const string&, int, bool, bool, bool);
 
 int main(int argc, char** argv) {
   // Store the options in string format for later writing to an output file.
@@ -213,7 +212,7 @@ initial weights")
     return 1;
   }
   
-  if (!boost::iends_with(dirPath, "/"))
+  if (!iends_with(dirPath, "/"))
     dirPath += "/";
     
   const string alphabetFname = dirPath + "alphabet.txt";
@@ -222,7 +221,7 @@ initial weights")
   vector<Model*> models;
   
   shared_ptr<Alphabet> loadedAlphabet(new Alphabet(false, false));
-  if (boost::filesystem::exists(alphabetFname)) {
+  if (filesystem::exists(alphabetFname)) {
     if (!loadedAlphabet->read(alphabetFname)) {
       cout << "Error: Unable to read " << alphabetFname << endl;
       return 1;
@@ -309,7 +308,7 @@ initial weights")
     }
   }
   
-  boost::timer::auto_cpu_timer timerTotal;
+  timer::auto_cpu_timer timerTotal;
   
   Dataset trainData(threads);
   Dataset evalData(threads);
@@ -335,7 +334,7 @@ initial weights")
   if (!help && trainFileSpecified) {
     {
       cout << "Loading " << trainFilename << " ...\n";
-      boost::timer::auto_cpu_timer loadTrainTimer;
+      timer::auto_cpu_timer loadTrainTimer;
       if (Utility::loadDataset(*reader, trainFilename, trainData)) {
         cout << "Error: Unable to load train file " << trainFilename << endl;
         return 1;
@@ -497,7 +496,7 @@ initial weights")
     cout << "Gathering features ...\n";
     size_t maxNumFvs = 0, totalNumFvs = 0;
     {
-      boost::timer::auto_cpu_timer gatherTimer;
+      timer::auto_cpu_timer gatherTimer;
       objective->gatherFeatures(maxNumFvs, totalNumFvs);
       assert(maxNumFvs > 0 && totalNumFvs > 0);
       objective->combineAndLockAlphabets();
@@ -543,34 +542,21 @@ initial weights")
   
   assert(betas.size() > 0);
   assert(tolerances.size() > 0);
-  WeightVector wInit(d); // zero vector
-
-  // Set initial weights (Note: the reAlloc above set them all to zero).
-  if (weightsInit != "zero") {
-    double* v = new double[d];
-    for (int i = 0; i < d; i++)
-      v[i] = 0;    
-    if (istarts_with(weightsInit, "heuristic")) {
-      const Alphabet::DictType& dict = alphabet->getDict();
-      Alphabet::DictType::const_iterator it; 
-      for (it = dict.begin(); it != dict.end(); it++)
-        v[it->second] += fgenLat->getDefaultFeatureWeight(it->first);
-    }
-    if (iends_with(weightsInit, "noise")) {
-      shared_array<double> samples = Utility::generateGaussianSamples(d, 0,
-          weightsNoise, seed);
-      for (int i = 0; i < d; i++)
-        v[i] += samples[i];
-      samples.reset(); // we don't need this array any more
-    }
-    wInit.setWeights(v, d);
-    delete[] v;
+  
+  // Set the initial parameters.
+  Parameters theta0;
+  if (objective->isUW()) {
+    theta0 = Parameters(d, d);
+    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet, fgenLat);
   }
+  else
+    theta0 = Parameters(d);
+  initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet, fgenLat);
 
   // Train weights for each combination of the beta and tolerance parameters.
   // Note that the fsts (if caching is enabled) will be reused after being
   // built during the first parameter combination.
-  vector<WeightVector> weightVectors;
+  vector<Parameters> weightVectors;
   sort(tolerances.rbegin(), tolerances.rend()); // sort in descending order
   sort(betas.rbegin(), betas.rend()); // sort in descending order
   BOOST_FOREACH(const double tol, tolerances) {
@@ -578,24 +564,33 @@ initial weights")
       assert(beta > 0); // by definition, these should be positive values
       assert(tol > 0);
       
-      weightVectors.push_back(WeightVector(d));
-      WeightVector& w = weightVectors.back();
-      w.setWeights(wInit.getWeights(), d);      
+      weightVectors.push_back(Parameters(d));
+      Parameters& theta = weightVectors.back();
+      theta.setParams(theta0, d);      
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       
-      stringstream weightsFname;
-      weightsFname << dirPath << wvIndex << "-weights.txt";
+      stringstream weightsFnameW, weightsFnameU;
+      weightsFnameW << dirPath << wvIndex << "-weights.txt";
+      weightsFnameU << dirPath << wvIndex << "-weightsU.txt";
       bool weightsFileIsGood = false;
       
-      if (boost::filesystem::exists(weightsFname.str()))
+      if (filesystem::exists(weightsFnameW.str()))
       {
         assert(resumed);
-        if (!w.read(weightsFname.str(), alphabet->size()))
-          cout << "Warning: Unable to read " << weightsFname.str() << endl;
-        else
+        if (theta.w.read(weightsFnameW.str(), alphabet->size()))
           weightsFileIsGood = true;
-      }
+        else
+          cout << "Warning: Unable to read " << weightsFnameW.str() << endl;
+          
+        if (weightsFileIsGood && objective->isUW())
+        {
+          if (!theta.u.read(weightsFnameU.str(), alphabet->size())) {
+            cout << "Warning: Unable to read " << weightsFnameU.str() << endl;
+            weightsFileIsGood = false;
+          }
+        }
+      }      
       
       if (!weightsFileIsGood) {
         if (trainFileSpecified && !skipTraining) {
@@ -604,10 +599,10 @@ initial weights")
           cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
               "tolerance=" << tol << endl;
           {
-            boost::timer::auto_cpu_timer trainTimer;
+            timer::auto_cpu_timer trainTimer;
             double fval = 0.0; // (not used)
             optimizer->setBeta(beta);
-            status = optimizer->train(w, fval, tol);
+            status = optimizer->train(theta, fval, tol);
           }
           if (status == Optimizer::FAILURE) {
             cout << "Warning: Optimizer returned status " << status << ". " <<
@@ -640,8 +635,10 @@ initial weights")
 
       // If an output directory was specfied, save the weight vector.
       if (writeFiles && !weightsFileIsGood) {
-        if (!w.write(weightsFname.str()))
-          cout << "Warning: Unable to write " << weightsFname.str() << endl;
+        if (!theta.w.write(weightsFnameW.str()))
+          cout << "Warning: Unable to write " << weightsFnameW.str() << endl;
+        if (!theta.u.write(weightsFnameU.str()))
+          cout << "Warning: Unable to write " << weightsFnameU.str() << endl;
       }
       
       // Classify train examples and optionally write the predictions to a file.
@@ -650,13 +647,13 @@ initial weights")
       stringstream predictFname; // Defaults to empty string (for evaluate()).
       if (writeFiles)
         predictFname << dirPath << wvIndex << "-train_predictions.txt";
-      if (!boost::filesystem::exists(predictFname.str())) {
+      if (!filesystem::exists(predictFname.str())) {
         cout << "Classifying train examples ...\n";
         {
           stringstream identifier;
           identifier << wvIndex << "-Train";
-          boost::timer::auto_cpu_timer classifyTrainTimer;
-          Utility::evaluate(w, *objective, trainData, identifier.str(),
+          timer::auto_cpu_timer classifyTrainTimer;
+          Utility::evaluate(theta, *objective, trainData, identifier.str(),
               predictFname.str());
         }
       }
@@ -679,7 +676,7 @@ initial weights")
     int evalId = 0;
     BOOST_FOREACH(const string& evalFilename, evalFilenames) {
       cout << "Loading " << evalFilename << " ...\n";
-      boost::timer::auto_cpu_timer loadEvalTimer;
+      timer::auto_cpu_timer loadEvalTimer;
       Dataset evalData(threads); // Intentionally shadowing previous variable.
       if (Utility::loadDataset(*reader, evalFilename, evalData)) {
         cout << "Error: Unable to load eval file " << evalFilename << endl;
@@ -711,54 +708,4 @@ initial weights")
   }
 
   return 0;
-}
-
-// Classify eval examples and optionally write the predictions to files.
-// Can also write the alignments to files upon request.
-void evaluateMultipleWeightVectors(const vector<WeightVector>& weightVectors,
-    const Dataset& evalData, TrainingObjective& objective, const string& path,
-    int id, bool writeFiles, bool writeAlignments, bool cachingEnabled) {
-  vector<string> identifiers;
-  vector<string> fnames;
-  for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
-    stringstream fname;
-    if (writeFiles) {
-      fname << path << wvIndex << "-eval" << id << "_predictions.txt";
-      fnames.push_back(fname.str());
-    }
-    else
-      fnames.push_back("");
-    stringstream identifier;
-    identifier << wvIndex << "-Eval";
-    identifiers.push_back(identifier.str());
-    
-    if (writeAlignments) {
-      // FIXME: This does not make use of multiple threads or of caching. It
-      // should probably be performed alongside the eval predictions. 
-      stringstream alignFname;
-      alignFname << path << wvIndex << "-eval" << id << "_alignments_yi.txt";
-      ofstream alignOut(alignFname.str().c_str());
-      if (!alignOut.good()) {
-        cout << "Warning: Unable to write " << alignFname.str() << endl;
-        continue;
-      }
-      Model& model = objective.getModel(0);
-      assert(!model.getCacheEnabled()); // this would waste memory
-      const WeightVector& w = weightVectors[wvIndex];
-      cout << "Printing alignments to " << alignFname.str() << ".\n";
-      BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
-        BOOST_FOREACH(const Label y, evalData.getLabelSet()) {
-          if (objective.isBinary() && y != 1)
-            continue;
-          alignOut << ex.x()->getId() << " (yi = " << ex.y() << ")  y = "
-              << y << endl;
-          model.printAlignment(alignOut, w, *ex.x(), y);
-          alignOut << endl;
-        }
-      }
-      alignOut.close();
-    }
-  }
-  Utility::evaluate(weightVectors, objective, evalData, identifiers, fnames,
-      cachingEnabled);
 }

@@ -10,9 +10,9 @@
 #include "EmOptimizer.h"
 #include "Model.h"
 #include "Optimizer.h"
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
-#include "WeightVector.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
@@ -53,7 +53,7 @@ on two consecutive EM iterations")
   return 0;
 }
 
-Optimizer::status EmOptimizer::train(WeightVector& w, double& valCur,
+Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     double tol) const {
   _objective.initLatentFeatureVectors(w);
   double valPrev = numeric_limits<double>::infinity();

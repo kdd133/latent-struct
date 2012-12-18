@@ -10,6 +10,7 @@
 #ifndef _MAXMARGINOBJECTIVE_H
 #define _MAXMARGINOBJECTIVE_H
 
+#include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include <boost/scoped_ptr.hpp>
@@ -38,21 +39,21 @@ class MaxMarginMulti : public TrainingObjective {
     
   private:
   
-    virtual void valueAndGradientPart(const WeightVector& w, Model& model,
+    virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, double& funcVal, RealVec& gradFv);
       
-    virtual void valueAndGradientFinalize(const WeightVector& w, double& f,
+    virtual void valueAndGradientFinalize(const Parameters& theta, double& f,
       RealVec& g);
       
-    virtual void predictPart(const WeightVector& w, Model& model,
+    virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, LabelScoreTable& scores);
       
-    virtual void setLatentFeatureVectorsPart(const WeightVector& w, Model& model,
+    virtual void setLatentFeatureVectorsPart(const Parameters& theta, Model& model,
         const Dataset::iterator& begin, const Dataset::iterator& end);
         
-    virtual void initLatentFeatureVectors(const WeightVector& w);
+    virtual void initLatentFeatureVectors(const Parameters& theta);
     
     virtual void clearLatentFeatureVectors();
   
