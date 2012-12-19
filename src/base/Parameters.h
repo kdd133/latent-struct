@@ -29,7 +29,7 @@ public:
   Parameters(int dw, int du) : w(dw), u(du) { }
   
   void add(const int index, const double v) {
-    if (hasU()) {
+    if (hasU() && index >= w.getDim()) {
       assert(index - w.getDim() >= 0);
       u.add(index - w.getDim(), v);
     }
@@ -50,7 +50,7 @@ public:
   }
   
   double getWeight(int index) const {
-    if (hasU()) {
+    if (hasU() && index >= w.getDim()) {
       assert(index - w.getDim() >= 0);
       return u.getWeight(index - w.getDim());
     }
@@ -69,18 +69,22 @@ public:
     else {
       // w and u
       assert(hasU() && len == w.getDim() + u.getDim());
-      double prod = w.innerProd(fv);
+      double prod = 0;
+      for (int i = 0; i < w.getDim(); i++)
+        prod += fv(i) * w.getWeight(i);
       int fv_i = w.getDim();
-      for (int i = 0; i < len; i++, fv_i++)
+      for (int i = 0; fv_i < len; i++, fv_i++)
         prod += fv(fv_i) * u.getWeight(i);
       return prod;
     }
   }
   
-  void setParams(const Parameters& other, int d) {
-    w.setWeights(other.w.getWeights(), d);
+  void setParams(const Parameters& other) {
+    assert(other.w.getDim() == w.getDim());
+    assert(other.u.getDim() == u.getDim());
+    w.setWeights(other.w.getWeights(), other.w.getDim());
     if (other.hasU())
-      u.setWeights(other.u.getWeights(), d);
+      u.setWeights(other.u.getWeights(), other.u.getDim());
   }
   
   void setWeights(const double* values, int len) {

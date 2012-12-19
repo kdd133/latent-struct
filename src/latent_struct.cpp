@@ -564,9 +564,13 @@ initial weights")
       assert(beta > 0); // by definition, these should be positive values
       assert(tol > 0);
       
-      weightVectors.push_back(Parameters(d));
+      if (objective->isUW())
+        weightVectors.push_back(Parameters(d, d));
+      else
+        weightVectors.push_back(Parameters(d));
+
       Parameters& theta = weightVectors.back();
-      theta.setParams(theta0, d);      
+      theta.setParams(theta0); 
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       
