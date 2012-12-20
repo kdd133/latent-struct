@@ -98,6 +98,8 @@ std::ostream& operator<<(std::ostream& out, const LogWeight& w) {
 }
 
 LogWeight operator-(const LogWeight& w) {
+  if (w == LogWeight(0))
+    return w; // The negation of zero is zero (returning +inf causes problems)
   LogWeight negated = w;
   negated._val *= -1;
   return negated;
