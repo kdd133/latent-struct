@@ -5,6 +5,7 @@
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
 #include "LbfgsOptimizer.h"
+#include "LogLinearMulti.h"
 #include "LogLinearMultiUW.h"
 #include "Parameters.h"
 #include "StringEditModel.h"
@@ -68,22 +69,45 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   const int d = theta.getTotalDim();
   
   // Set the weights to some random values.
-  shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1, 33);
-  theta.setWeights(samples.get(), d);
-  samples.reset();
+//  shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1);
+//  theta.setWeights(samples.get(), d);
+//  samples.reset();
   
+  // Set the weights to random values, but set the w and u weights to be equal.
+//  const int n = theta.w.getDim();
+//  shared_array<double> samples = Utility::generateGaussianSamples(n, 0, 1);
+//  theta.w.setWeights(samples.get(), n);
+//  theta.u.setWeights(samples.get(), n);
+//  samples.reset();
+
+  // set the feature weight for bias class y=0 to one
+  int index = alphabet->lookup("0_Bias", false);
+  BOOST_REQUIRE(index >= 0);
+  theta.w.add(index, 1.0);
+  theta.u.add(index, 1.0);
+  
+  // Create a LogLinearMulti objective and initialize parameters thetaW such
+  // that thetaW.w == theta.w
+  LogLinearMulti objectiveW(trainData, models); // inherit existing alphabet
+  Parameters thetaW(numFeats);
+  BOOST_REQUIRE(!thetaW.hasU());
+  thetaW.add(index, 1.0);
+  
+  // Get the function value and gradient for LogLinearMulti.
+  RealVec gradFvW(numFeats);
+  double fvalW;
+  objectiveW.valueAndGradient(thetaW, fvalW, gradFvW);
+  
+  // Get the function value and gradient for LogLinearMultiUW. 
   RealVec gradFv(d);
   double fval;
   objective.valueAndGradient(theta, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(0.71278741450, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.69725812519, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.30803476795, gradFv[3], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[0], gradFv[4], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[1], gradFv[5], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[2], gradFv[6], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[3], gradFv[7], 1e-8);
+  
+  // Since we set w == u above, the function values and the w portion of the
+  // gradients should be equal.
+  BOOST_CHECK_CLOSE(fvalW, fval, 1e-8);
+  for (int i = 0; i < theta.w.getDim(); ++i)
+    BOOST_CHECK_CLOSE(gradFvW[i], gradFv[i], 1e-8);
   
   LbfgsOptimizer opt(objective);
   ret = opt.processOptions(argc, argv);

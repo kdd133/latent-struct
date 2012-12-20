@@ -92,6 +92,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiUW::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
+  assert(0); // This is the w-only version. u-w not implemented yet.
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();

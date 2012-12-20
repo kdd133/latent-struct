@@ -39,6 +39,7 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
     RealVec& gradFv) {
+  assert(gradFv.size() == theta.getTotalDim());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
