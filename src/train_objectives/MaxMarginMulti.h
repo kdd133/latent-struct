@@ -7,8 +7,8 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#ifndef _MAXMARGINOBJECTIVE_H
-#define _MAXMARGINOBJECTIVE_H
+#ifndef _MAXMARGINMULTI_H
+#define _MAXMARGINMULTI_H
 
 #include "Parameters.h"
 #include "TrainingObjective.h"

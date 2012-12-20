@@ -15,7 +15,6 @@
 #include "Model.h"
 #include "Parameters.h"
 #include "Ublas.h"
-#include "WeightVector.h"
 #include <boost/shared_array.hpp>
 #include <vector>
 
@@ -50,17 +49,16 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     }
     
     // Normalize
-    featsTotal *= -massTotal;
-    feats[yi] *= -mass[yi];
+    featsTotal /= massTotal;
+    feats[yi] /= mass[yi];
 
     // Convert features from log- to real-space, then update gradient
     gradFv += ublas_util::convertVec(featsTotal, temp);
     gradFv -= ublas_util::convertVec(feats[yi], temp);
 
     // Update function value
-    // Note: We want the log, which is why we don't convert to RealWeight.
-    funcVal += massTotal;
-    funcVal -= mass[yi];
+    // Note: We want the log, which is why we don't exponentiate.
+    funcVal += (double)massTotal - (double)mass[yi];
   }
 }
 

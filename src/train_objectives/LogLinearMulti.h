@@ -7,8 +7,8 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
-#ifndef _LOGLINEAROBJECTIVE_H
-#define _LOGLINEAROBJECTIVE_H
+#ifndef _LOGLINEARMULTI_H
+#define _LOGLINEARMULTI_H
 
 #include "Parameters.h"
 #include "TrainingObjective.h"
