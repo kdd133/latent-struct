@@ -8,6 +8,7 @@
  */
 
 #include "Ublas.h"
+#include "WeightVector.h"
 #include <assert.h>
 #include <cmath>
 
@@ -42,6 +43,23 @@ namespace ublas_util {
     assert(dest.size() >= src.size());
     for (size_t i = 0; i < src.size(); ++i)
       dest(i) = exp((double)src(i));
+    return dest;
+  }
+  
+  RealMat& convertMat(const LogMat& src, RealMat& dest) {
+    assert(dest.size1() == src.size1());
+    assert(dest.size2() == src.size2());
+    for (size_t i = 0; i < src.size1(); ++i)
+      for (size_t j = 0; j < src.size2(); ++j)
+        dest(i, j) = exp((double)src(i, j));
+    return dest;
+  }
+  
+  RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
+      RealVec& dest) {
+    assert(w.getDim() == v.getDim() && w.getDim() == dest.size());
+    for (int i = 0; i < w.getDim(); ++i)
+      dest(i) = w.getWeight(i) - v.getWeight(i);
     return dest;
   }
 }

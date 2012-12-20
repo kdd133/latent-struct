@@ -31,6 +31,8 @@ class WeightVector {
     
     double innerProd(const SparseRealVec& fv) const;
     
+    double innerProd(const LogVec& fv) const;
+    
     double innerProd(const RealVec& fv) const;
     
     void add(const int index, const double value);

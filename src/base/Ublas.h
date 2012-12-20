@@ -24,6 +24,8 @@
 #include <boost/numeric/ublas/vector.hpp>
 #include <cmath>
 
+class WeightVector;
+
 typedef boost::numeric::ublas::compressed_vector<LogWeight> SparseLogVec;
 typedef boost::numeric::ublas::vector<LogWeight> LogVec;
 typedef boost::numeric::ublas::compressed_vector<double> SparseRealVec;
@@ -43,6 +45,11 @@ namespace ublas_util {
   SparseRealVec& convertVec(const SparseLogVec& src, SparseRealVec& dest);
   
   RealVec& convertVec(const LogVec& src, RealVec& dest);
+  
+  RealMat& convertMat(const LogMat& src, RealMat& dest);
+  
+  RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
+      RealVec& dest);
 }
 
 #endif

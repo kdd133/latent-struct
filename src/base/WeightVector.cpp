@@ -64,6 +64,16 @@ double WeightVector::innerProd(const SparseRealVec& fv) const {
   return prod;
 }
 
+double WeightVector::innerProd(const LogVec& fv) const {
+  assert(fv.size() == _dim);
+  if (_dim == 0)
+    return 0.0;
+  double prod = 0;
+  for (size_t i = 0; i < fv.size(); ++i)
+    prod += exp(fv(i)) * _weights[i];
+  return prod;
+}
+
 double WeightVector::innerProd(const RealVec& fv) const {
   assert(fv.size() == _dim);
   if (_dim == 0)
