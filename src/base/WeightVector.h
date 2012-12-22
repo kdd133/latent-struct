@@ -12,6 +12,7 @@
 
 #include "Ublas.h"
 #include <boost/shared_array.hpp>
+#include <ostream>
 #include <string>
 
 class LogWeight;
@@ -52,6 +53,8 @@ class WeightVector {
     bool read(const std::string& fname, int dim);
     
     bool write(const std::string& fname) const;
+    
+    friend std::ostream& operator<<(std::ostream& out, const WeightVector& w);
 
   private:
   
