@@ -40,7 +40,7 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
     const LogWeight logMass = model.expectedFeatures(theta.w, feats, xi, ypos,
         true);
 
-    const LogWeight fW = (yi == 1) ? -logMass : logMass;
+    const double fW = (yi == 1) ? -(double)logMass : (double)logMass;
     funcVal += Utility::log1Plus(exp(fW)); // i.e., exp(fW)
     
     ublas_util::convertVec(feats, temp);

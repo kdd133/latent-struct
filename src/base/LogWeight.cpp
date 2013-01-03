@@ -50,33 +50,27 @@ const LogWeight LogWeight::operator+(const LogWeight& w) const {
   }
 }
 
-const LogWeight LogWeight::operator-(const LogWeight& w) const {
-  return (*this) + (-w);
-}
-
 const LogWeight LogWeight::operator*(const LogWeight& w) const {
-  const LogWeight zero(0);
-  if ((*this) == zero || w == zero)
-    return zero;
-  else {
-    LogWeight result;
-    result._val = _val + w._val;
-    return result;
-  }
+  // The explicit check for zero isn't needed because the addition below will
+  // return -Inf (i.e., "zero") if either of the operands is -Inf.
+  // const LogWeight zero(0);
+  // if ((*this) == zero || w == zero)
+  //   return zero;
+  LogWeight result;
+  result._val = _val + w._val;
+  return result;
 }
 
 const LogWeight LogWeight::operator/(const LogWeight& w) const {
-  return (*this) * (-w);
+  // TODO: Handle the case where the argument is zero. Should division by zero
+  // return NaN or throw an exception?
+  LogWeight result;
+  result._val = _val - w._val;
+  return result;
 }
 
 LogWeight& LogWeight::operator+=(const LogWeight& w) {
   const LogWeight result = (*this) + w;
-  _val = result._val;
-  return (*this);
-}
-
-LogWeight& LogWeight::operator-=(const LogWeight& w) {
-  const LogWeight result = (*this) - w;
   _val = result._val;
   return (*this);
 }
@@ -95,14 +89,6 @@ LogWeight& LogWeight::operator/=(const LogWeight& w) {
 
 std::ostream& operator<<(std::ostream& out, const LogWeight& w) {
   return out << w._val;
-}
-
-LogWeight operator-(const LogWeight& w) {
-  if (w == LogWeight(0))
-    return w; // The negation of zero is zero (returning +inf causes problems)
-  LogWeight negated = w;
-  negated._val *= -1;
-  return negated;
 }
 
 LogWeight sqrt(LogWeight w) {

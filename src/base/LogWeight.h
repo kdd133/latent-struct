@@ -22,21 +22,15 @@ class LogWeight {
     
     const LogWeight operator+(const LogWeight& w) const;
     
-    const LogWeight operator-(const LogWeight& w) const;
-    
     const LogWeight operator*(const LogWeight& w) const;
     
     const LogWeight operator/(const LogWeight& w) const;
     
     LogWeight& operator+=(const LogWeight& w);
     
-    LogWeight& operator-=(const LogWeight& w);
-    
     LogWeight& operator*=(const LogWeight& w);
     
     LogWeight& operator/=(const LogWeight& w);
-    
-    friend LogWeight operator-(const LogWeight& w);
     
     friend std::ostream& operator<<(std::ostream& out, const LogWeight& w);
     

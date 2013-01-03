@@ -63,8 +63,8 @@ void LogLinearBinary::valueAndGradientPart(const Parameters& theta, Model& model
     else
       logSizeZx = item->second;
 
-    const LogWeight z = logMass * (-logSizeZx);
-    const LogWeight fW = (yi == 1) ? -z : z;
+    const LogWeight z = logMass / logSizeZx;
+    const double fW = (yi == 1) ? -(double)z : (double)z;
     funcVal += Utility::log1Plus(exp(fW));
     
     ublas_util::convertVec(feats, temp);
@@ -82,7 +82,7 @@ void LogLinearBinary::predictPart(const Parameters& theta, Model& model,
     const size_t id = x.getId();
     const LogWeight logMass = model.totalMass(theta.w, x, ypos);
     const LogWeight logSizeZx = model.totalMass(W0, x, ypos);
-    const LogWeight z = logMass * (-logSizeZx);
+    const LogWeight z = logMass / logSizeZx;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, (-z));
   }

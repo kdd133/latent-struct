@@ -7,47 +7,41 @@
 
 BOOST_AUTO_TEST_CASE(testWeight)
 {
-  // Check that the relationships between log and real values hold.
+  const LogWeight zero(0);
+  const LogWeight one(1);
+  const LogWeight two(2);
+  const LogWeight three(3);
+  
+  // Check that the identities between log and real values hold.
   {
-    BOOST_CHECK_EQUAL(exp(LogWeight(0)), 0);
-    BOOST_CHECK_EQUAL(log(0), LogWeight(0));
-    BOOST_CHECK_EQUAL(exp(LogWeight(1)), 1);
-    BOOST_CHECK_EQUAL(log(1), LogWeight(1));
+    BOOST_CHECK_EQUAL(exp(zero), 0);
+    BOOST_CHECK_EQUAL(log(0), zero);
+    BOOST_CHECK_EQUAL(exp(one), 1);
+    BOOST_CHECK_EQUAL(log(1), one);
   }
   
-  // Check that multiplication by a negated value equals division by the
-  // original value.
+  // Test multiplication.
   {
-    LogWeight mult = LogWeight(2) * (-LogWeight(3));
-    LogWeight div = LogWeight(2) / LogWeight(3);
-    BOOST_CHECK_CLOSE((double)mult, (double)div, 1e-8);
+    BOOST_CHECK_CLOSE((double)(two * three), 1.79175, 1e-3);
+    BOOST_CHECK_CLOSE((double)(three * two), 1.79175, 1e-3);
+    BOOST_CHECK_EQUAL((double)(zero * two), (double)zero);
+    BOOST_CHECK_EQUAL((double)(two * zero), (double)zero);
+    BOOST_CHECK_EQUAL((double)(zero * zero), (double)zero);
   }
   
-  // Check that multiplication by a negated value equals division by the
-  // original value, this time using shorthand arithmetic operator assignments. 
+  // Test division.
   {
-    LogWeight mult = LogWeight(2);
-    mult *= (-LogWeight(3));
-    LogWeight div = LogWeight(2);
-    div /= LogWeight(3);
-    BOOST_CHECK_CLOSE((double)mult, (double)div, 1e-8);
+    BOOST_CHECK_CLOSE((double)(two / three), -0.405465, 1e-3);
+    BOOST_CHECK_CLOSE((double)(three / two), 0.405465, 1e-3);
+    BOOST_CHECK_EQUAL((double)(zero / two), (double)zero);
+    // TODO: Should division by zero return NaN, +Inf, or throw an exception?
   }
   
-  // Check that addition by a negated value equals subtraction by the original
-  // value.
+  // Test addition.
   {
-    LogWeight add = LogWeight(2) + (-LogWeight(3));
-    LogWeight sub = LogWeight(2) - LogWeight(3);
-    BOOST_CHECK_CLOSE((double)add, (double)sub, 1e-8);
-  }
-  
-  // Check that addition by a negated value equals subtraction by the original
-  // value, this time using shorthand arithmetic operator assignments.
-  {
-    LogWeight add = LogWeight(2);
-    add += (-LogWeight(3));
-    LogWeight sub = LogWeight(2);
-    sub -= LogWeight(3);
-    BOOST_CHECK_CLOSE((double)add, (double)sub, 1e-8);
+    BOOST_CHECK_CLOSE((double)(two + three), 1.60943, 1e-3);
+    BOOST_CHECK_CLOSE((double)(three + two), 1.60943, 1e-3);
+    BOOST_CHECK_CLOSE((double)(zero + three), (double)three, 1e-3);
+    BOOST_CHECK_CLOSE((double)(three + zero), (double)three, 1e-3);
   }
 }

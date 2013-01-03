@@ -586,7 +586,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
   const LogWeight logZ = Inference<LogSemiring>::logExpectedFeatures(
       *graph, fv);
   if (normalize)
-    fv *= -logZ;
+    fv /= logZ;
   return logZ;
 }
 
@@ -599,8 +599,8 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
   const LogWeight logZ = Inference<ExpectationSemiring>::
       logExpectedFeatureCooccurrences(*graph, fm, fv);
   if (normalize) {
-    fv *= -logZ;
-    fm *= -logZ;
+    fv /= logZ;
+    fm /= logZ;
   }
   return logZ;
 }
