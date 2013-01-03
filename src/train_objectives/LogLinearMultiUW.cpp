@@ -63,10 +63,11 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.
     LogWeight massU_yi = model.expectedFeatureCooccurrences(theta.u,
         logCoocU_yi, logFeatsU_yi, xi, yi);
-    
+        
     // Compute the matrix of feature covariances.
-    LogMat logCovU_yi = logCoocU_yi - outer_prod(logFeatsU_yi, logFeatsU_yi);
-    ublas_util::convertMat(logCovU_yi, covU_yi); // exponentiate the values
+    ublas_util::convertVec(logFeatsU_yi, feats);
+    ublas_util::convertMat(logCoocU_yi, covU_yi);
+    covU_yi = covU_yi - outer_prod(feats, feats);
     
     // Compute u-w and store the result in feats.
     ublas_util::subtractWeightVectors(theta.u, theta.w, feats);
