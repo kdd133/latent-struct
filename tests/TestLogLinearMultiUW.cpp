@@ -38,24 +38,25 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
   int ret = fgenObs->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
+  BOOST_REQUIRE_EQUAL(ret, 0);
   shared_ptr<WordAlignmentFeatureGen> fgenLat(new WordAlignmentFeatureGen(
       alphabet));
   ret = fgenLat->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
-  Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
-  ret = model->processOptions(argc, argv);
-  BOOST_CHECK_EQUAL(ret, 0);
-  
-  std::vector<Model*> models;
-  models.push_back(model);  
+  BOOST_REQUIRE_EQUAL(ret, 0);
   
   Dataset trainData;
   WordPairReader reader;
   bool badFile = Utility::loadDataset(reader, "he_tiny", trainData);
   BOOST_REQUIRE(!badFile);
   
-  LogLinearMultiUW objective(trainData, models);
+  std::vector<Model*> models;
+  {
+    Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
+    ret = model->processOptions(argc, argv);
+    BOOST_REQUIRE_EQUAL(ret, 0);
+    models.push_back(model);
+  }
+  LogLinearMultiUW objective(trainData, models); // objective now owns models
   size_t maxNumFvs = 0, totalNumFvs = 0;
   objective.gatherFeatures(maxNumFvs, totalNumFvs);
   BOOST_REQUIRE(maxNumFvs > 0 && totalNumFvs > 0);
@@ -68,30 +69,26 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   Parameters theta(numFeats, numFeats);
   const int d = theta.getTotalDim();
   
-  // Set the weights to some random values.
-//  shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1);
-//  theta.setWeights(samples.get(), d);
-//  samples.reset();
-  
   // Set the weights to random values, but set the w and u weights to be equal.
-//  const int n = theta.w.getDim();
-//  shared_array<double> samples = Utility::generateGaussianSamples(n, 0, 1);
-//  theta.w.setWeights(samples.get(), n);
-//  theta.u.setWeights(samples.get(), n);
-//  samples.reset();
-
-  // set the feature weight for bias class y=0 to one
-  int index = alphabet->lookup("0_Bias", false);
-  BOOST_REQUIRE(index >= 0);
-  theta.w.add(index, 1.0);
-  theta.u.add(index, 1.0);
+  shared_array<double> samples = Utility::generateGaussianSamples(numFeats, 0, 1);
+  theta.w.setWeights(samples.get(), numFeats);
+  theta.u.setWeights(samples.get(), numFeats);
   
   // Create a LogLinearMulti objective and initialize parameters thetaW such
   // that thetaW.w == theta.w
-  LogLinearMulti objectiveW(trainData, models); // inherit existing alphabet
+  std::vector<Model*> modelsW;
+  {
+    // We need to create separate (although identical) models, since the
+    // LogLinearMultiUW objective above owns the vector named "models".
+    Model* model = new StringEditModel<AlignmentHypergraph>(fgenLat, fgenObs);
+    ret = model->processOptions(argc, argv);
+    BOOST_REQUIRE_EQUAL(ret, 0);
+    modelsW.push_back(model);
+  }
+  LogLinearMulti objectiveW(trainData, modelsW);
   Parameters thetaW(numFeats);
   BOOST_REQUIRE(!thetaW.hasU());
-  thetaW.add(index, 1.0);
+  thetaW.setWeights(samples.get(), numFeats);
   
   // Get the function value and gradient for LogLinearMulti.
   RealVec gradFvW(numFeats);
@@ -121,5 +118,12 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   
   objective.valueAndGradient(theta, fval, gradFv);
   Utility::addRegularizationL2(theta, opt.getBeta(), fval, gradFv);
-  BOOST_CHECK_CLOSE(0.67414588974, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.67628998419572, fval, 1e-8);
+
+  // Shouldn't w be approximately equal to u at the optimizer?
+  for (int i = 0; i < theta.w.getDim(); ++i)
+    BOOST_CHECK_CLOSE(theta.w.getWeight(i), theta.u.getWeight(i), 1e-8);
+    
+  using namespace std;
+  cout << "w: " << theta.w << endl << "u: " << theta.u << endl;
 }
