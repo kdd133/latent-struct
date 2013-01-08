@@ -121,6 +121,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   BOOST_CHECK_CLOSE(0.67628998419572, fval, 1e-8);
 
   // Shouldn't w be approximately equal to u at the optimizer?
+  BOOST_REQUIRE_EQUAL(theta.w.getDim(), theta.u.getDim());
   for (int i = 0; i < theta.w.getDim(); ++i)
     BOOST_CHECK_CLOSE(theta.w.getWeight(i), theta.u.getWeight(i), 1e-8);
     

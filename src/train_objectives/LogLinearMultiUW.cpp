@@ -19,7 +19,6 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
-#include <boost/shared_array.hpp>
 #include <vector>
 
 void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
@@ -38,7 +37,11 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   LogVec logFeats;      // call to expectedFeatures will allocate
   RealVec feats(n);
   RealVec gradU(n);
+  RealVec uMinusW(n);
   RealMat covU_yi(n, n);
+  
+  // Compute u-w.
+  ublas_util::subtractWeightVectors(theta.u, theta.w, uMinusW);
   
   funcVal = 0;
   gradFv.clear();
@@ -69,11 +72,8 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     ublas_util::convertMat(logCoocU_yi, covU_yi);
     covU_yi = covU_yi - outer_prod(feats, feats);
     
-    // Compute u-w and store the result in feats.
-    ublas_util::subtractWeightVectors(theta.u, theta.w, feats);
-    
     // Compute covU_yi' * (u-w) and store the result in gradU.
-    axpy_prod(feats, covU_yi, gradU, true);
+    axpy_prod(uMinusW, covU_yi, gradU, true);
     
     // Update the gradient wrt w (first, exponentiate features).
     subrange(gradFv, 0, n) += ublas_util::convertVec(logFeatsW, feats);
@@ -84,7 +84,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     
     // Update the function value.
     // Note: We work in log space here, which is why we don't exponentiate.
-    funcVal += theta.u.innerProd(logFeatsU_yi) - theta.w.innerProd(logFeatsU_yi); 
+    funcVal += inner_prod(uMinusW, feats); // add (u-w)*featsU_yi
     funcVal += massW;
     funcVal -= massU_yi;
   }
@@ -93,12 +93,14 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiUW::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  assert(0); // This is the w-only version. u-w not implemented yet.
+  LogVec logFeatsU;
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double yScore = model.totalMass(theta.w, x, y);
+      assert(0); // This hasn't been tested yet!
+      double yScore = model.expectedFeatures(theta.u, logFeatsU, x, y, false);
+      yScore += theta.w.innerProd(logFeatsU) - theta.u.innerProd(logFeatsU);
       scores.setScore(id, y, yScore);
     }
   }
