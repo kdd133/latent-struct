@@ -47,10 +47,6 @@ public:
   double squaredL2Norm() const;
   
   void zero();
-  
-  // If hasU() is true, return the index corresponding to the first entry of u;
-  // otherwise, return 0.
-  std::size_t getFirstIndexOfU() const;
 };
 
 #endif

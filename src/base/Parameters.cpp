@@ -91,9 +91,3 @@ void Parameters::zero() {
   w.zero();
   u.zero();
 }
-
-size_t Parameters::getFirstIndexOfU() const {
-  if (hasU())
-    return w.getDim();
-  return 0;
-}
