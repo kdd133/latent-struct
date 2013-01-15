@@ -25,6 +25,10 @@ class SparsePattern : public Pattern {
           _vector(i) = values[i];
       }
     }
+    
+    SparsePattern(const SparseRealVec& vector) {
+      _vector = vector;
+    }
 
     const SparseRealVec& getVector() const {
       return _vector;

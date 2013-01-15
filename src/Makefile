@@ -16,7 +16,7 @@
 # need to add a -I<path to header(s)> entry to INCLUDES, and a -L<path to lib(s)>
 # entry to LIBS below.
 
-INCLUDES = -I. -Ibase -Idomain_common -Idomain_sentences -Idomain_words -Iedit_operations -Igraph -Ihypergraph -Imodels -Ioptimization -Itrain_objectives -Iutil -I/usr/local/include
+INCLUDES = -I. -Ibase -Idomain_common -Idomain_sentences -Idomain_synthetic -Idomain_words -Iedit_operations -Igraph -Ihypergraph -Imodels -Ioptimization -Itrain_objectives -Iutil -I/usr/local/include
 LIBS = -L/usr/local/lib -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem
 CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 CC = g++ -O3 -DNDEBUG $(CCFLAGS)

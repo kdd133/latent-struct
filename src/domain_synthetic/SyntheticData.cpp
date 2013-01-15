@@ -11,6 +11,7 @@
 #include "SyntheticData.h"
 #include "Ublas.h"
 #include "Utility.h"
+#include <boost/numeric/ublas/vector_proxy.hpp>
 #include <boost/shared_array.hpp>
 
 using namespace boost;
@@ -23,7 +24,20 @@ void SyntheticData::generate(size_t m, size_t nx, size_t ny, size_t nz,
   
 }
 
+SparseRealVec SyntheticData::phi_rep(const SparsePattern& x, size_t y, size_t z,
+    size_t ny, size_t nz) {
+  const int nx = x.getSize();
+  const int ind_yz = y*nz + z;
+  SparseRealVec phi(nx*ny*nz);
+  subrange(phi, nx*ind_yz, nx*(ind_yz+1)) = x.getVector();
+  return phi;
+}
+
 SparseRealVec SyntheticData::prob_x(const Parameters& theta,
     const SparsePattern& x, size_t ny, size_t nz) {
-  SparseRealVec response // wait, isn't this supposed to be a matrix?
+  SparseRealVec response(nz*ny);
+  for (size_t y = 0; y < ny; ++y)
+    for (size_t z = 0; z < nz; ++z)
+      response(y*nz + z) = theta.innerProd(phi_rep(x, y, z, ny, nz));
+  return response;
 }

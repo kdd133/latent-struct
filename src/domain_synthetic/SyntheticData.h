@@ -12,6 +12,7 @@
 
 #include "Dataset.h"
 #include "Parameters.h"
+#include "SparsePattern.h"
 #include "Ublas.h"
 
 class SyntheticData {
@@ -19,6 +20,9 @@ class SyntheticData {
   public:
     static void generate(std::size_t m, std::size_t nx, std::size_t ny,
         std::size_t nz, const Parameters& theta, Dataset& dataset, int seed = 0);
+      
+    static SparseRealVec phi_rep(const SparsePattern& x, std::size_t y,
+        std::size_t z, std::size_t ny, std::size_t nz);
       
     static SparseRealVec prob_x(const Parameters& theta, const SparsePattern& x,
         std::size_t ny, std::size_t nz);
