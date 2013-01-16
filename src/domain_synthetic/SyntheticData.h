@@ -12,20 +12,33 @@
 
 #include "Dataset.h"
 #include "Parameters.h"
-#include "SparsePattern.h"
 #include "Ublas.h"
 
-class SyntheticData {
+namespace synthetic {
 
-  public:
-    static void generate(std::size_t m, std::size_t nx, std::size_t ny,
-        std::size_t nz, const Parameters& theta, Dataset& dataset, int seed = 0);
+void generate(std::size_t m, std::size_t nx, std::size_t ny, std::size_t nz,
+    const Parameters& theta, Dataset& dataset, int seed = 0);
       
-    static SparseRealVec phi_rep(const SparsePattern& x, std::size_t y,
-        std::size_t z, std::size_t ny, std::size_t nz);
+SparseRealVec phi_rep(const SparseRealVec& x, std::size_t y, std::size_t z,
+    std::size_t ny, std::size_t nz);
       
-    static SparseRealVec prob_x(const Parameters& theta, const SparsePattern& x,
-        std::size_t ny, std::size_t nz);
-};
+SparseRealVec prob_x(const Parameters& theta, const SparseRealVec& x,
+    std::size_t ny, std::size_t nz);
+    
+double log_sum_exp(const SparseRealVec& x);
+
+SparseRealVec& vec_exp(SparseRealVec& x);
+
+SparseRealVec& vec_log(SparseRealVec& x);
+
+double vec_sum(const SparseRealVec& x);
+
+SparseRealVec cumsum(const SparseRealVec& x);
+
+int first_index_gt(const SparseRealVec& x, const double value);
+
+void ind2sub(int d1, int d2, int index, int& i, int& j);
+
+}
 
 #endif
