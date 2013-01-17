@@ -1,5 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 
+#include "Dataset.h"
 #include "Parameters.h"
 #include "SyntheticData.h"
 #include "Ublas.h"
@@ -44,17 +45,26 @@ BOOST_AUTO_TEST_CASE(testSynthetic)
   BOOST_CHECK_CLOSE(cumsum_probs[2], 0.8846361124409103, 1e-8);
   BOOST_CHECK_CLOSE(cumsum_probs[3], 1.0, 1e-8);
   
+  // Test the first_index_lte function.
+  BOOST_CHECK_EQUAL(first_index_gt(cumsum_probs, 0.4), 0);
+  BOOST_CHECK_EQUAL(first_index_gt(cumsum_probs, 0.6), 2);
+  BOOST_CHECK_EQUAL(first_index_gt(cumsum_probs, 0.9), 3);
+  
   // Test the ind2sub function.
   int i = -1, j = -1;
   ind2sub(2, 3, 0, i, j);
   BOOST_CHECK_EQUAL(i, 0);
   BOOST_CHECK_EQUAL(j, 0);
-  i = -1, j = -1;
   ind2sub(2, 3, 1, i, j);
-  BOOST_CHECK_EQUAL(i, 1);
-  BOOST_CHECK_EQUAL(j, 0);
-  i = -1, j = -1;
-  ind2sub(2, 3, 2, i, j);
   BOOST_CHECK_EQUAL(i, 0);
   BOOST_CHECK_EQUAL(j, 1);
+  ind2sub(2, 3, 5, i, j);
+  BOOST_CHECK_EQUAL(i, 1);
+  BOOST_CHECK_EQUAL(j, 2);
+  ind2sub(3, 2, 5, i, j);
+  BOOST_CHECK_EQUAL(i, 2);
+  BOOST_CHECK_EQUAL(j, 1);
+  
+  Dataset data;
+  generate(10, nx, ny, nz, theta, data, 12345);
 }

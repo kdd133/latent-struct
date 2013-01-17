@@ -25,9 +25,8 @@ using numeric::ublas::scalar_vector;
 
 namespace synthetic {
 
-void generate(size_t m, size_t nx, size_t ny, size_t nz,
-    const Parameters& theta, Dataset& dataset, int seed) {
-  
+void generate(size_t t, size_t nx, size_t ny, size_t nz,
+    const Parameters& theta, Dataset& dataset, int seed) {  
   // Create two random number generators: one for a normal distribution and
   // another for a uniform distribution over [0,1).
   mt19937 mersenne(seed);
@@ -35,15 +34,26 @@ void generate(size_t m, size_t nx, size_t ny, size_t nz,
   variate_generator<mt19937, normal_distribution<> > randn(mersenne, normal);  
   uniform_01<> uniform;
   variate_generator<mt19937, uniform_01<> > rand(mersenne, uniform); 
-  
-  // Generate a random vector.
-  SparseRealVec x(nx);
-  for (SparseRealVec::iterator it = x.begin(); it != x.end(); ++it)
-    *it = randn();
-  
-  SparseRealVec probs_yz = prob_x(theta, x, ny, nz);
-  SparseRealVec cummprobs_yz = cumsum(probs_yz);
-  const int index = first_index_gt(x, rand());
+
+  for (size_t i = 0; i < t; ++i) {  
+    // Generate a random observation.
+    SparseRealVec x(nx);
+    for (size_t k = 0; k < nx; ++k)
+      x(k) = randn();
+    
+    SparseRealVec probs_yz = prob_x(theta, x, ny, nz); // p(y,z|x)
+    SparseRealVec cummprobs_yz = cumsum(probs_yz);
+    const int index = first_index_gt(cummprobs_yz, rand()); // sample y,z|x
+    assert(index >= 0);
+
+    // Convert the sampled index into its corresponding y and z labels. 
+    int y = -1, z = -1;
+    ind2sub(ny, nz, index, y, z);
+    
+    // Create an example and add it to the dataset.
+    Example xi(new SparsePattern(x, z), y);
+    dataset.addExample(xi);
+  }
 }
 
 int first_index_gt(const SparseRealVec& x, const double value) {
@@ -113,8 +123,10 @@ SparseRealVec cumsum(const SparseRealVec& x) {
   return cumm;
 }
 
-void ind2sub(int d1, int d2, int ndx, int& i_out, int& j_out) {
-  // TODO: Work this out on paper, keeping in mind that Matlab indexes from 1.
+void ind2sub(int d1, int d2, int index, int& i, int& j) {
+  assert(d1 > 0 && d2 > 0 && index >= 0);
+  i = index / d2;
+  j = index % d2;
 }
 
 }

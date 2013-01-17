@@ -10,15 +10,18 @@
 #ifndef _SPARSEPATTERN_H
 #define _SPARSEPATTERN_H
 
+#include "Label.h"
 #include "Pattern.h"
 #include "Ublas.h"
 #include <boost/shared_array.hpp>
 
-// A data structure that stores a vector of real values.
+// A data structure that stores a vector of real values, and optionally the
+// value of a latent (i.e., unobserved during training) variable z.
 class SparsePattern : public Pattern {
 
   public:
-    SparsePattern(boost::shared_array<double> values, std::size_t len) {
+    SparsePattern(boost::shared_array<double> values, std::size_t len,
+        Label z = -1) : _z(z) {
       _vector = SparseRealVec(len);
       for (std::size_t i = 0; i < len; ++i) {
         if (values[i] != 0)
@@ -26,12 +29,16 @@ class SparsePattern : public Pattern {
       }
     }
     
-    SparsePattern(const SparseRealVec& vector) {
+    SparsePattern(const SparseRealVec& vector, Label z = -1) : _z(z) {
       _vector = vector;
     }
 
     const SparseRealVec& getVector() const {
       return _vector;
+    }
+    
+    Label getZ() {
+      return _z;
     }
 
     virtual int getSize() const {
@@ -40,6 +47,7 @@ class SparsePattern : public Pattern {
 
   private:
     SparseRealVec _vector;
+    Label _z;
 };
 
 #endif

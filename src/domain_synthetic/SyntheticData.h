@@ -16,7 +16,7 @@
 
 namespace synthetic {
 
-void generate(std::size_t m, std::size_t nx, std::size_t ny, std::size_t nz,
+void generate(std::size_t t, std::size_t nx, std::size_t ny, std::size_t nz,
     const Parameters& theta, Dataset& dataset, int seed = 0);
       
 SparseRealVec phi_rep(const SparseRealVec& x, std::size_t y, std::size_t z,
@@ -37,7 +37,7 @@ SparseRealVec cumsum(const SparseRealVec& x);
 
 int first_index_gt(const SparseRealVec& x, const double value);
 
-void ind2sub(int d1, int d2, int index, int& i, int& j);
+void ind2sub(int dim1, int dim2, int index, int& i, int& j);
 
 }
 
