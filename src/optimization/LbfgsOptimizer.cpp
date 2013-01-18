@@ -25,7 +25,8 @@ using namespace boost;
 using namespace std;
 
 LbfgsOptimizer::LbfgsOptimizer(TrainingObjective& objective) :
-    Optimizer(objective, 1e-4), _restarts(3), _quiet(false) {
+    Optimizer(objective, 1e-4), _restarts(3), _noRegularization(false),
+    _quiet(false) {
   lbfgs_parameter_init(&_params);
 }
 
@@ -40,6 +41,8 @@ int LbfgsOptimizer::processOptions(int argc, char** argv) {
     ("max-linesearch",
         opt::value<int>(&_params.max_linesearch)->default_value(5),
         "maximum number of line search iterations")
+    ("lbfgs-no-regularization", opt::bool_switch(&_noRegularization),
+        "disable regularization (regardless of the value of beta)")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("restarts", opt::value<int>(&_restarts)->default_value(3),
         "number of times to restart Lbfgs when it thinks it has converged")
@@ -67,6 +70,7 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   TrainingObjective& obj = *inst->obj;
   Parameters& theta = *inst->theta;
   const double beta = inst->beta;
+  const bool regularize = inst->regularize;
   double fval = 0;
   
   // Set our model to the current point x.
@@ -76,7 +80,8 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   // Note: The above setting of theta updated the model used here by obj.
   RealVec gradFv(d);
   obj.valueAndGradient(theta, fval, gradFv);
-  Utility::addRegularizationL2(theta, beta, fval, gradFv);
+  if (regularize)
+    Utility::addRegularizationL2(theta, beta, fval, gradFv);
   
   // Copy the new gradient back into g, for return to lbfgs.
   for (int i = 0; i < d; i++)
@@ -110,7 +115,8 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   const int d = theta.getTotalDim();
   assert(d > 0);
   
-  LbfgsInstance inst = { &_objective, &theta, _beta, _quiet };
+  LbfgsInstance inst = { &_objective, &theta, _beta, !_noRegularization,
+      _quiet };
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
     x[i] = theta.getWeight(i); // set the starting point to be theta
@@ -180,6 +186,7 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
         objVal << endl;
     cout << timer.format();
   }
+  fval = objVal;
   theta.setWeights(x, d); // copy the final point into theta
   
   lbfgs_free(x);

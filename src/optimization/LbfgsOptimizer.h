@@ -45,6 +45,8 @@ class LbfgsOptimizer : public Optimizer {
     // progress when it actually can.
     int _restarts; 
     
+    bool _noRegularization; // if true, regularization is disabled
+    
     bool _quiet; // suppress optimization output
 
     static lbfgsfloatval_t evaluate(void* instance, const lbfgsfloatval_t* x,
@@ -59,6 +61,7 @@ class LbfgsOptimizer : public Optimizer {
       TrainingObjective* obj;
       Parameters* theta;
       double beta;
+      bool regularize;
       bool quiet;
     } LbfgsInstance;
 };
