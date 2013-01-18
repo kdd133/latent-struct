@@ -23,17 +23,18 @@ using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
 {
-  const int argc = 9;
+  const int argc = 10;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
   argv[1] = (char*) "--order=0";
   argv[2] = (char*) "--no-align-ngrams";
   argv[3] = (char*) "--no-collapsed-align-ngrams";
   argv[4] = (char*) "--restarts=2";
-  argv[5] = (char*) "--quiet";
+  argv[5] = (char*) "--quietX";
   argv[6] = (char*) "--no-normalize";
   argv[7] = (char*) "--bias-no-normalize";
   argv[8] = (char*) "--no-final-arc-feats";
+  argv[9] = (char*) "--lbfgs-no-regularization";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -106,25 +107,46 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   for (int i = 0; i < theta.w.getDim(); ++i)
     BOOST_CHECK_CLOSE(gradFvW[i], gradFv[i], 1e-8);
   
-  LbfgsOptimizer opt(objective);
-  ret = opt.processOptions(argc, argv);
-  BOOST_REQUIRE_EQUAL(0, ret);
-  opt.setBeta(0.1);
-  BOOST_REQUIRE_EQUAL(opt.getBeta(), 0.1);
-  
+  const double tol = 1e-5;
   double fvalOpt = 0.0;
-  Optimizer::status status = opt.train(theta, fvalOpt, 1e-5);
-  BOOST_REQUIRE(status == Optimizer::CONVERGED);
-  
+  {
+    LbfgsOptimizer opt(objective);
+    ret = opt.processOptions(argc, argv);
+    BOOST_REQUIRE_EQUAL(0, ret);
+    Optimizer::status status = opt.train(theta, fvalOpt, tol);
+    BOOST_REQUIRE(status == Optimizer::CONVERGED);
+  }  
   objective.valueAndGradient(theta, fval, gradFv);
-  Utility::addRegularizationL2(theta, opt.getBeta(), fval, gradFv);
-  BOOST_CHECK_CLOSE(0.67628998419572, fval, 1e-8);
+//  Utility::addRegularizationL2(theta, opt.getBeta(), fval, gradFv);
+  BOOST_CHECK_CLOSE(fval, fvalOpt, 1e-8);
+  BOOST_CHECK_CLOSE(fval, 0.67628998419572, 1e-8);
+
+  double fvalOptW = 0.0;
+  {
+    LbfgsOptimizer opt(objectiveW);
+    ret = opt.processOptions(argc, argv);
+    BOOST_REQUIRE_EQUAL(0, ret);
+    Optimizer::status status = opt.train(thetaW, fvalOptW, tol);
+    BOOST_REQUIRE(status == Optimizer::CONVERGED);
+  }
+  
+  BOOST_CHECK_CLOSE(fvalOpt, fvalOptW, 1e-8); // pass if we decrease tol?
 
   // Shouldn't w be approximately equal to u at the optimizer?
   BOOST_REQUIRE_EQUAL(theta.w.getDim(), theta.u.getDim());
   for (int i = 0; i < theta.w.getDim(); ++i)
     BOOST_CHECK_CLOSE(theta.w.getWeight(i), theta.u.getWeight(i), 1e-8);
-    
+
   using namespace std;
   cout << "w: " << theta.w << endl << "u: " << theta.u << endl;
+
+  theta.u.setWeights(theta.w.getWeights(), theta.w.getDim());
+  objective.valueAndGradient(theta, fval, gradFv);
+  BOOST_CHECK_CLOSE(fval, fvalOpt, 1e-8);
+//  Utility::addRegularizationL2(theta, opt.getBeta(), fval, gradFv);
+  BOOST_CHECK_CLOSE(fval, 0.67628998419572, 1e-8);
+  
+  cout << endl << "w: " << theta.w << endl << "u: " << theta.u << endl;
+    
+
 }
