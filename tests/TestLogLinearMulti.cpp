@@ -93,8 +93,5 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   double fvalOpt = 0.0;
   Optimizer::status status = opt.train(W, fvalOpt, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
-  
-  objective.valueAndGradient(W, fval, gradFv);
-  Utility::addRegularizationL2(W, opt.getBeta(), fval, gradFv);
-  BOOST_CHECK_CLOSE(0.67414588974, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.67414588974, fvalOpt, 1e-8);
 }
