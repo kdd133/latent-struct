@@ -102,6 +102,29 @@ SparseRealVec prob_xy(const Parameters& theta, const SparseRealVec& x,
   return probs;
 }
 
+SparseRealVec phi_mean_x(const Parameters& theta, const SparseRealVec& x,
+    size_t ny, size_t nz) {
+  const size_t n = theta.w.getDim();
+  const size_t nyz = ny*nz;
+  
+  SparseRealMat Phi_yz(nyz, n);
+  for (size_t y = 0; y < ny; ++y)
+    for (size_t z = 0; z < nz; ++z)
+      row(Phi_yz, y*nz + z) = phi_rep(x, y, z, ny, nz);
+      
+  const SparseRealVec probs_yz = prob_x(theta, x, ny, nz);  
+  SparseRealVec phi_mean(n);
+  axpy_prod(probs_yz, Phi_yz, phi_mean);
+  return phi_mean;
+}
+
+SparseRealVec phi_mean_xy(const Parameters& theta, const SparseRealVec& x,
+    std::size_t y, std::size_t ny, std::size_t nz) {
+  const size_t n = theta.w.getDim();
+  // TODO: Implement this function.
+  return SparseRealVec(n);
+}
+
 SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,
     size_t ny, size_t nz) {
   const size_t n = theta.w.getDim();
@@ -128,6 +151,34 @@ SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,
   axpy_prod(trans(Phi_yz), diag_probs_yz, left);
   SparseRealMat phi2_mean(n, n);
   axpy_prod(left, Phi_yz, phi2_mean);
+  
+  return phi2_mean - outer_prod(phi_mean, phi_mean);
+}
+
+SparseRealMat phi_Cov_xy(const Parameters& theta, const SparseRealVec& x,
+    size_t y, size_t ny, size_t nz) {
+  const size_t n = theta.w.getDim();
+  
+  SparseRealMat Phi_z(nz, n);
+  for (size_t z = 0; z < nz; ++z)
+    row(Phi_z, z) = phi_rep(x, y, z, ny, nz);
+    
+  const SparseRealVec probs_z = prob_xy(theta, x, y, ny, nz);
+  
+  // Compute probs_z*Phi_z and store the result in phi_mean.
+  SparseRealVec phi_mean(n);
+  axpy_prod(probs_z, Phi_z, phi_mean);
+  
+  // Create a diagonal matrix from the entries of the vector probs_z.
+  diagonal_matrix<double> diag_probs_z(nz);
+  for (size_t i = 0; i < nz; ++i)
+    diag_probs_z(i, i) = probs_z(i);
+    
+  // Compute Phi_z'*diag(probs_z)*Phi_z and store the result in phi2_mean.
+  SparseRealMat left(n, nz);
+  axpy_prod(trans(Phi_z), diag_probs_z, left);
+  SparseRealMat phi2_mean(n, n);
+  axpy_prod(left, Phi_z, phi2_mean);
   
   return phi2_mean - outer_prod(phi_mean, phi_mean);
 }

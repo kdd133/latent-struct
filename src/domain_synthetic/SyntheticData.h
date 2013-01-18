@@ -27,9 +27,18 @@ SparseRealVec prob_x(const Parameters& theta, const SparseRealVec& x,
 
 SparseRealVec prob_xy(const Parameters& theta, const SparseRealVec& x,
     std::size_t y, std::size_t ny, std::size_t nz);
+
+SparseRealVec phi_mean_x(const Parameters& theta, const SparseRealVec& x,
+    std::size_t ny, std::size_t nz);
     
+SparseRealVec phi_mean_xy(const Parameters& theta, const SparseRealVec& x,
+    std::size_t y, std::size_t ny, std::size_t nz);
+
 SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,
     std::size_t ny, std::size_t nz);
+    
+SparseRealMat phi_Cov_xy(const Parameters& theta, const SparseRealVec& x,
+    std::size_t y, std::size_t ny, std::size_t nz);
 
 double log_sum_exp(const SparseRealVec& x);
 
