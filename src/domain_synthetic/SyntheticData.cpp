@@ -7,10 +7,14 @@
  * Copyright (c) 2012 Kenneth Dwyer
  */
 
+#include "Dataset.h"
+#include "Example.h"
 #include "SparsePattern.h"
 #include "SyntheticData.h"
 #include "Ublas.h"
 #include <assert.h>
+#include <boost/numeric/ublas/banded.hpp>
+#include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -21,6 +25,7 @@
 
 using namespace boost;
 using namespace std;
+using numeric::ublas::diagonal_matrix;
 using numeric::ublas::scalar_vector;
 
 namespace synthetic {
@@ -83,6 +88,48 @@ SparseRealVec prob_x(const Parameters& theta, const SparseRealVec& x, size_t ny,
   vec_exp(probs);
   assert(abs(vec_sum(probs)) - 1 < 1e-8); // verify that entries sum to 1
   return probs;
+}
+
+SparseRealVec prob_xy(const Parameters& theta, const SparseRealVec& x,
+    size_t y, size_t ny, size_t nz) {
+  SparseRealVec probs(nz);
+  for (size_t z = 0; z < nz; ++z)
+    probs(z) = theta.innerProd(phi_rep(x, y, z, ny, nz));
+  const double A = log_sum_exp(probs);
+  probs -= scalar_vector<double>(probs.size(), A);
+  vec_exp(probs);
+  assert(abs(vec_sum(probs)) - 1 < 1e-8); // verify that entries sum to 1
+  return probs;
+}
+
+SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,
+    size_t ny, size_t nz) {
+  const size_t n = theta.w.getDim();
+  const size_t nyz = ny*nz;
+  
+  SparseRealMat Phi_yz(nyz, n);  
+  for (size_t y = 0; y < ny; ++y)
+    for (size_t z = 0; z < nz; ++z)
+      row(Phi_yz, y*nz + z) = phi_rep(x, y, z, ny, nz);
+  
+  const SparseRealVec probs_yz = prob_x(theta, x, ny, nz);
+  
+  // Compute probs_yz*Phi_yz and store the result in phi_mean.
+  SparseRealVec phi_mean(n);
+  axpy_prod(probs_yz, Phi_yz, phi_mean);
+  
+  // Create a diagonal matrix from the entries of the vector probs_yz.
+  diagonal_matrix<double> diag_probs_yz(nyz);
+  for (size_t i = 0; i < nyz; ++i)
+    diag_probs_yz(i, i) = probs_yz(i);
+
+  // Compute Phi_yz'*diag(probs_yz)*Phi_yz and store the result in phi2_mean.
+  SparseRealMat left(n, nyz);
+  axpy_prod(trans(Phi_yz), diag_probs_yz, left);
+  SparseRealMat phi2_mean(n, n);
+  axpy_prod(left, Phi_yz, phi2_mean);
+  
+  return phi2_mean - outer_prod(phi_mean, phi_mean);
 }
 
 double log_sum_exp(const SparseRealVec& x) {

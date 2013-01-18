@@ -29,17 +29,40 @@ BOOST_AUTO_TEST_CASE(testSynthetic)
   
   // Test the prob_x function.
   const SparseRealVec probs_yz = prob_x(theta, x, ny, nz);
+  BOOST_CHECK_EQUAL(probs_yz.size(), 4);
   BOOST_CHECK_CLOSE(probs_yz[0], 0.4376522764387575, 1e-8);
   BOOST_CHECK_CLOSE(probs_yz[1], 0.1061399003986655, 1e-8);
   BOOST_CHECK_CLOSE(probs_yz[2], 0.3408439356034873, 1e-8);
   BOOST_CHECK_CLOSE(probs_yz[3], 0.1153638875590894, 1e-8);
   
+  // Test the prob_xy function.
+  size_t y = 1;
+  const SparseRealVec probs_z = prob_xy(theta, x, y, ny, nz);
+  BOOST_CHECK_EQUAL(probs_z.size(), 2);
+  BOOST_CHECK_CLOSE(probs_z[0], 0.7471242672706696, 1e-8);
+  BOOST_CHECK_CLOSE(probs_z[1], 0.2528757327293304, 1e-8);
+  
+  // Test the phi_Cov_x function.
+  const SparseRealMat cov_yz = phi_Cov_x(theta, x, ny, nz);
+  BOOST_CHECK_EQUAL(cov_yz.size1(), dim);
+  BOOST_CHECK_EQUAL(cov_yz.size2(), dim);
+  BOOST_CHECK_CLOSE(cov_yz(1,1), 0.2461127613667308, 1e-8);
+  BOOST_CHECK_SMALL(cov_yz(3,4), 1e-8);
+  BOOST_CHECK_CLOSE(cov_yz(11,11), 0.4082202440253727, 1e-8);
+  double sum = 0;
+  for (size_t i = 0; i < dim; ++i)
+    for (size_t j = 0; j < dim; ++j)
+      sum += cov_yz(i,j);
+  BOOST_CHECK_SMALL(sum, 1e-8);
+  
   // Test the cumsum function.
   const SparseRealVec cumsum_x = cumsum(x);
+  BOOST_CHECK_EQUAL(cumsum_x.size(), 3);
   BOOST_CHECK_CLOSE(cumsum_x[0], 0, 1e-8);
   BOOST_CHECK_CLOSE(cumsum_x[1], 1, 1e-8);
   BOOST_CHECK_CLOSE(cumsum_x[2], 3, 1e-8);
   const SparseRealVec cumsum_probs = cumsum(probs_yz);
+  BOOST_CHECK_EQUAL(cumsum_probs.size(), 4);
   BOOST_CHECK_CLOSE(cumsum_probs[0], 0.4376522764387575, 1e-8);
   BOOST_CHECK_CLOSE(cumsum_probs[1], 0.5437921768374229, 1e-8);
   BOOST_CHECK_CLOSE(cumsum_probs[2], 0.8846361124409103, 1e-8);

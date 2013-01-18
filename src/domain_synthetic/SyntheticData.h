@@ -24,7 +24,13 @@ SparseRealVec phi_rep(const SparseRealVec& x, std::size_t y, std::size_t z,
       
 SparseRealVec prob_x(const Parameters& theta, const SparseRealVec& x,
     std::size_t ny, std::size_t nz);
+
+SparseRealVec prob_xy(const Parameters& theta, const SparseRealVec& x,
+    std::size_t y, std::size_t ny, std::size_t nz);
     
+SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,
+    std::size_t ny, std::size_t nz);
+
 double log_sum_exp(const SparseRealVec& x);
 
 SparseRealVec& vec_exp(SparseRealVec& x);
