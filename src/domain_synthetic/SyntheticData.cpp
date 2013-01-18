@@ -121,8 +121,15 @@ SparseRealVec phi_mean_x(const Parameters& theta, const SparseRealVec& x,
 SparseRealVec phi_mean_xy(const Parameters& theta, const SparseRealVec& x,
     std::size_t y, std::size_t ny, std::size_t nz) {
   const size_t n = theta.w.getDim();
-  // TODO: Implement this function.
-  return SparseRealVec(n);
+  
+  SparseRealMat Phi_z(nz, n);
+    for (size_t z = 0; z < nz; ++z)
+      row(Phi_z, z) = phi_rep(x, y, z, ny, nz);
+      
+  const SparseRealVec probs_z = prob_xy(theta, x, y, ny, nz);  
+  SparseRealVec phi_mean(n);
+  axpy_prod(probs_z, Phi_z, phi_mean);
+  return phi_mean;
 }
 
 SparseRealMat phi_Cov_x(const Parameters& theta, const SparseRealVec& x,

@@ -56,10 +56,10 @@ BOOST_AUTO_TEST_CASE(testSynthetic)
   BOOST_CHECK_EQUAL(phi_mean_z.size(), dim);
   for (size_t i = 0; i < 7; ++i)
     BOOST_CHECK_SMALL(phi_mean_z[i], 1e-8);
-  BOOST_CHECK_CLOSE(phi_mean_z[7], 0.7471, 1e-8);
-  BOOST_CHECK_CLOSE(phi_mean_z[8], 1.4942, 1e-8);
-  BOOST_CHECK_CLOSE(phi_mean_z[11], 0.5058, 1e-8);
-  BOOST_CHECK_CLOSE(norm_2(phi_mean_z), 1.7637, 1e-8);
+  BOOST_CHECK_CLOSE(phi_mean_z[7], 0.7471242672706696, 1e-8);
+  BOOST_CHECK_CLOSE(phi_mean_z[8], 1.494248534541339, 1e-8);
+  BOOST_CHECK_CLOSE(phi_mean_z[11], 0.505751465458660, 1e-8);
+  BOOST_CHECK_CLOSE(norm_2(phi_mean_z), 1.763718808297017, 1e-8);
 
   // Test the phi_Cov_x function.
   const SparseRealMat cov_yz = phi_Cov_x(theta, x, ny, nz);
