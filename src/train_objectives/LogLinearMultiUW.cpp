@@ -93,14 +93,19 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiUW::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
+  const int n = theta.w.getDim();
   LogVec logFeatsU;
+  RealVec featsU(n);
+  RealVec wMinusU(n);
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      assert(0); // This hasn't been tested yet!
-      double yScore = model.expectedFeatures(theta.u, logFeatsU, x, y, false);
-      yScore += theta.w.innerProd(logFeatsU) - theta.u.innerProd(logFeatsU);
+      const double massU = model.expectedFeatures(theta.u, logFeatsU, x, y,
+          true);
+      ublas_util::convertVec(logFeatsU, featsU);
+      ublas_util::subtractWeightVectors(theta.w, theta.u, wMinusU);
+      const double yScore = inner_prod(wMinusU, featsU) + massU;
       scores.setScore(id, y, yScore);
     }
   }
