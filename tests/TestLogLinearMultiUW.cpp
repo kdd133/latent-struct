@@ -4,6 +4,9 @@
 #include "Alphabet.h"
 #include "BiasFeatureGen.h"
 #include "Dataset.h"
+#include "Example.h"
+#include "Label.h"
+#include "LabelScoreTable.h"
 #include "LbfgsOptimizer.h"
 #include "LogLinearMulti.h"
 #include "LogLinearMultiUW.h"
@@ -13,6 +16,7 @@
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
+#include <boost/foreach.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
 #include <boost/shared_ptr.hpp>
@@ -146,7 +150,39 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   // relatively flat along the u dimension at the optimum). We verify this by
   // setting u=w in the test below and making sure the objective value does not
   // decrease, and finally we set u=0 and check that the value does increase.
-  
+
+  // Count the number of prediction errors that each model makes on the training
+  // data. We expect them to be the same.
+  const int t = trainData.numExamples();
+  const int k = trainData.getLabelSet().size();
+  LabelScoreTable yHat(t, k);
+  objective.predict(theta, trainData, yHat);
+  LabelScoreTable yHatW(t, k);
+  objectiveW.predict(thetaW, trainData, yHatW);  
+  int errors = 0, errorsW = 0;  
+  BOOST_FOREACH(const Example& ex, trainData.getExamples()) {
+    const size_t id = ex.x()->getId();
+    const Label yi = ex.y();
+    if (yHat.getScore(id, 0) > yHat.getScore(id, 1)) {
+      if (yi == 1)
+        errors++;
+    }
+    else {
+      if (yi == 0)
+        errors++;
+    }
+    if (yHatW.getScore(id, 0) > yHatW.getScore(id, 1)) {
+      if (yi == 1)
+        errorsW++;
+    }
+    else {
+      if (yi == 0)
+        errorsW++;
+    }
+  }  
+  BOOST_CHECK_EQUAL(errors, 4);
+  BOOST_CHECK_EQUAL(errors, errorsW);
+
   // If we now set u=w (using the optimal w found above), we should not
   // observe a change in the objective value. If we did, it would mean that
   // our optimization algorithm is not finding the best (w,u) parameters.
