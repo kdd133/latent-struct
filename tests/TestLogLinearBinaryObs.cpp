@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinaryObs)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 686);
   
-  Parameters W(d);
+  Parameters W = objective.getDefaultParameters(d);
   
   // set the feature weight for bias class y=1 to one
   int index = alphabet->lookup("1_Bias", false);

@@ -48,24 +48,33 @@ class TrainingObjective {
     virtual bool isBinary() const = 0;
     
     // Does this objective learn separate parameters for latent variable
-    // imputation and classification;
+    // imputation and classification?
     virtual bool isUW() const {
       return false; // false by default
+    }
+    
+    // The purpose of this method is to let the caller know how many parameters
+    // this objective will learn, based on the given number of features.
+    virtual Parameters getDefaultParameters(std::size_t numFeatures) const {
+      if (isUW())
+        return Parameters(numFeatures, numFeatures);
+      else
+        return Parameters(numFeatures);
     }
     
     void setComputeAverageLoss(bool state) {
       _computeAverageLoss = state;
     }
     
-    Model& getModel(size_t modelNum) {
+    Model& getModel(std::size_t modelNum) {
       return _models[modelNum];
     }
     
-    size_t getNumModels() const {
+    std::size_t getNumModels() const {
       return _models.size();
     }
     
-    void gatherFeatures(size_t& maxFvs, size_t& totalFvs);
+    void gatherFeatures(std::size_t& maxFvs, std::size_t& totalFvs);
     
     void combineAndLockAlphabets();
     
@@ -107,7 +116,7 @@ class TrainingObjective {
       
     virtual void gatherFeaturesPart(Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, size_t& maxFvs, size_t& totalFvs);
+      const Label maxLabel, std::size_t& maxFvs, std::size_t& totalFvs);
 };
 
 #endif

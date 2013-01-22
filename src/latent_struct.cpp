@@ -544,14 +544,10 @@ initial weights")
   assert(tolerances.size() > 0);
   
   // Set the initial parameters.
-  Parameters theta0;
-  if (objective->isUW()) {
-    theta0 = Parameters(d, d);
-    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet, fgenLat);
-  }
-  else
-    theta0 = Parameters(d);
+  Parameters theta0 = objective->getDefaultParameters(d);
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet, fgenLat);
+  if (theta0.hasU())
+    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet, fgenLat);
 
   // Train weights for each combination of the beta and tolerance parameters.
   // Note that the fsts (if caching is enabled) will be reused after being
@@ -564,10 +560,7 @@ initial weights")
       assert(beta > 0); // by definition, these should be positive values
       assert(tol > 0);
       
-      if (objective->isUW())
-        weightVectors.push_back(Parameters(d, d));
-      else
-        weightVectors.push_back(Parameters(d));
+      weightVectors.push_back(objective->getDefaultParameters(d));
 
       Parameters& theta = weightVectors.back();
       theta.setParams(theta0); 
@@ -587,7 +580,7 @@ initial weights")
         else
           cout << "Warning: Unable to read " << weightsFnameW.str() << endl;
           
-        if (weightsFileIsGood && objective->isUW())
+        if (weightsFileIsGood && theta.hasU())
         {
           if (!theta.u.read(weightsFnameU.str(), alphabet->size())) {
             cout << "Warning: Unable to read " << weightsFnameU.str() << endl;

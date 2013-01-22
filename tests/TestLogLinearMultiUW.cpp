@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   const int numFeats = alphabet->size();
   BOOST_REQUIRE_EQUAL(numFeats, 8);
   
-  Parameters theta(numFeats, numFeats);
+  Parameters theta = objective.getDefaultParameters(numFeats);
   const int d = theta.getTotalDim();
   
   // Set the weights to random values, but set the w and u weights to be equal.

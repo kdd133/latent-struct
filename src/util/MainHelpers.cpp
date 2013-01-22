@@ -93,7 +93,7 @@ void evaluateMultipleWeightVectors(const vector<Parameters>& weightVectors,
               << y << endl;
           // FIXME: Will it always be the case that a U-W objective uses *only*
           // the u parameters to impute the latent variables?
-          if (objective.isUW())
+          if (params.hasU())
             model.printAlignment(alignOut, params.u, *ex.x(), y);
           else
             model.printAlignment(alignOut, params.w, *ex.x(), y);

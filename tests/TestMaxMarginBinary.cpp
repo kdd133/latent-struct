@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 4);
   
-  Parameters W(d);
+  Parameters W = objective.getDefaultParameters(d);
 
   // Set the weights to some random values.
   shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1, 33);
