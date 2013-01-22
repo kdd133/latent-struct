@@ -16,12 +16,15 @@
 #include <string>
 
 class Dataset;
+class Regularizer;
 class TrainingObjective;
 
 class EmOptimizer : public Optimizer {
 
   public:
-    EmOptimizer(TrainingObjective& objective, boost::shared_ptr<Optimizer> opt);
+    EmOptimizer(boost::shared_ptr<TrainingObjective> objective,
+                boost::shared_ptr<Regularizer> regularizer,
+                boost::shared_ptr<Optimizer> opt);
     
     virtual ~EmOptimizer() {}
 
@@ -29,8 +32,6 @@ class EmOptimizer : public Optimizer {
       double tolerance) const;
 
     virtual int processOptions(int argc, char** argv);
-    
-    virtual void setBeta(double beta);
     
     static const std::string& name() {
       static const std::string _name = "EM";

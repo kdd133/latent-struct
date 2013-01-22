@@ -11,6 +11,7 @@
 #include "LogLinearMulti.h"
 #include "LogLinearMultiUW.h"
 #include "Parameters.h"
+#include "RegularizerNone.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -27,7 +28,7 @@ using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
 {
-  const int argc = 10;
+  const int argc = 9;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
   argv[1] = (char*) "--order=0";
@@ -38,7 +39,6 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   argv[6] = (char*) "--no-normalize";
   argv[7] = (char*) "--bias-no-normalize";
   argv[8] = (char*) "--no-final-arc-feats";
-  argv[9] = (char*) "--lbfgs-no-regularization";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -61,9 +61,10 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
     BOOST_REQUIRE_EQUAL(ret, 0);
     models.push_back(model);
   }
-  LogLinearMultiUW objective(trainData, models); // objective now owns models
+  shared_ptr<TrainingObjective> objective(new LogLinearMultiUW(trainData,
+      models)); // Note: objective now owns models
   size_t maxNumFvs = 0, totalNumFvs = 0;
-  objective.gatherFeatures(maxNumFvs, totalNumFvs);
+  objective->gatherFeatures(maxNumFvs, totalNumFvs);
   BOOST_REQUIRE(maxNumFvs > 0 && totalNumFvs > 0);
   
   BOOST_CHECK(!alphabet->isLocked());
@@ -71,7 +72,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   const int numFeats = alphabet->size();
   BOOST_REQUIRE_EQUAL(numFeats, 8);
   
-  Parameters theta = objective.getDefaultParameters(numFeats);
+  Parameters theta = objective->getDefaultParameters(numFeats);
   const int d = theta.getTotalDim();
   
   // Set the weights to random values, but set the w and u weights to be equal.
@@ -90,7 +91,8 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
     BOOST_REQUIRE_EQUAL(ret, 0);
     modelsW.push_back(model);
   }
-  LogLinearMulti objectiveW(trainData, modelsW);
+  shared_ptr<TrainingObjective> objectiveW(new LogLinearMulti(trainData,
+      modelsW));
   Parameters thetaW(numFeats);
   BOOST_REQUIRE(!thetaW.hasU());
   thetaW.setWeights(samples.get(), numFeats);
@@ -98,12 +100,12 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   // Get the function value and gradient for LogLinearMulti.
   RealVec gradFvW(numFeats);
   double fvalW;
-  objectiveW.valueAndGradient(thetaW, fvalW, gradFvW);
+  objectiveW->valueAndGradient(thetaW, fvalW, gradFvW);
   
   // Get the function value and gradient for LogLinearMultiUW. 
   RealVec gradFv(d);
   double fval;
-  objective.valueAndGradient(theta, fval, gradFv);
+  objective->valueAndGradient(theta, fval, gradFv);
   
   // Since we set w == u above, the function values and the w portion of the
   // gradients should be equal.
@@ -111,25 +113,27 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   for (int i = 0; i < theta.w.getDim(); ++i)
     BOOST_CHECK_CLOSE(gradFvW[i], gradFv[i], 1e-8);
 
+  shared_ptr<Regularizer> reg(new RegularizerNone());
+
   // Find the optimal (w,u) parameters for LogLinearMultiUW.
   const double tol = 1e-6;
   double fvalOpt = 0.0;
   {
-    LbfgsOptimizer opt(objective);
+    LbfgsOptimizer opt(objective, reg);
     ret = opt.processOptions(argc, argv);
     BOOST_REQUIRE_EQUAL(0, ret);
     Optimizer::status status = opt.train(theta, fvalOpt, tol);
     BOOST_CHECK_EQUAL(status, Optimizer::CONVERGED);
     BOOST_REQUIRE_EQUAL(theta.w.getDim(), theta.u.getDim());
   }  
-  objective.valueAndGradient(theta, fval, gradFv);
+  objective->valueAndGradient(theta, fval, gradFv);
   BOOST_CHECK_CLOSE(fval, fvalOpt, 1e-8);
   BOOST_CHECK_CLOSE(fval, 0.4332885345693386, 1e-8);
 
   // Find the optimal w parameters for LogLinearMulti.
   double fvalOptW = 0.0;
   {
-    LbfgsOptimizer opt(objectiveW);
+    LbfgsOptimizer opt(objectiveW, reg);
     ret = opt.processOptions(argc, argv);
     BOOST_REQUIRE_EQUAL(0, ret);
     Optimizer::status status = opt.train(thetaW, fvalOptW, tol);
@@ -156,9 +160,9 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   const int t = trainData.numExamples();
   const int k = trainData.getLabelSet().size();
   LabelScoreTable yHat(t, k);
-  objective.predict(theta, trainData, yHat);
+  objective->predict(theta, trainData, yHat);
   LabelScoreTable yHatW(t, k);
-  objectiveW.predict(thetaW, trainData, yHatW);  
+  objectiveW->predict(thetaW, trainData, yHatW);  
   int errors = 0, errorsW = 0;  
   BOOST_FOREACH(const Example& ex, trainData.getExamples()) {
     const size_t id = ex.x()->getId();
@@ -188,13 +192,13 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   // our optimization algorithm is not finding the best (w,u) parameters.
   double fval_setUtoW = 0.0;
   theta.u.setWeights(theta.w.getWeights(), theta.w.getDim());
-  objective.valueAndGradient(theta, fval_setUtoW, gradFv);
+  objective->valueAndGradient(theta, fval_setUtoW, gradFv);
   BOOST_CHECK_CLOSE(fvalOpt, fval_setUtoW, 1e-5);
   
   // Just as a sanity check, let's set u=0 and check that the function value
   // increases. If this weren't the case, u would appear to be meaningless!
   double fval_zeroU;
   theta.u.zero();
-  objective.valueAndGradient(theta, fval_zeroU, gradFv);
+  objective->valueAndGradient(theta, fval_zeroU, gradFv);
   BOOST_CHECK(fval_zeroU > 2 * fvalOpt); // let's look for at least a doubling
 }

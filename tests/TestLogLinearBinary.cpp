@@ -7,6 +7,7 @@
 #include "LbfgsOptimizer.h"
 #include "LogLinearBinary.h"
 #include "Parameters.h"
+#include "RegularizerL2.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -52,9 +53,10 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinary)
   bool badFile = Utility::loadDataset(reader, "he_tiny", trainData);
   BOOST_REQUIRE(!badFile);
   
-  LogLinearBinary objective(trainData, models);
+  shared_ptr<TrainingObjective> objective(new LogLinearBinary(trainData,
+      models));
   size_t maxNumFvs = 0, totalNumFvs = 0;
-  objective.gatherFeatures(maxNumFvs, totalNumFvs);
+  objective->gatherFeatures(maxNumFvs, totalNumFvs);
   BOOST_REQUIRE(maxNumFvs > 0 && totalNumFvs > 0);
   
   BOOST_CHECK(!alphabet->isLocked());
@@ -62,7 +64,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinary)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 4);
   
-  Parameters W = objective.getDefaultParameters(d);
+  Parameters W = objective->getDefaultParameters(d);
   
   // set the feature weight for bias class y=1 to one
   int index = alphabet->lookup("1_Bias", false);
@@ -72,24 +74,25 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinary)
   
   RealVec gradFv(d);
   double fval;
-  objective.valueAndGradient(W, fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
   BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
   BOOST_CHECK_CLOSE(1.12714370334, gradFv[1], 1e-8);
   BOOST_CHECK_CLOSE(0.91161441403, gradFv[2], 1e-8);
   BOOST_CHECK_CLOSE(0.39367847911, gradFv[3], 1e-8);
   
-  LbfgsOptimizer opt(objective);
+  const double beta = 0.1;
+  shared_ptr<Regularizer> l2(new RegularizerL2(beta));
+  BOOST_REQUIRE_EQUAL(l2->getBeta(), beta);
+  LbfgsOptimizer opt(objective, l2);
   ret = opt.processOptions(argc, argv);
-  BOOST_REQUIRE_EQUAL(0, ret);
-  opt.setBeta(0.1);
-  BOOST_REQUIRE_EQUAL(opt.getBeta(), 0.1);
+  BOOST_REQUIRE_EQUAL(0, ret); 
   
   double fvalOpt = 0.0;
   Optimizer::status status = opt.train(W, fvalOpt, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
   
-  objective.valueAndGradient(W, fval, gradFv);
-  Utility::addRegularizationL2(W, opt.getBeta(), fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv);
+  l2->addRegularization(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.67917812871, fval, 1e-8);
 }

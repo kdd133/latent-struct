@@ -54,17 +54,6 @@ bool Utility::loadDataset(const InputReader& reader, string fileName,
   return false;
 }
 
-// Add L2 regularization.
-void Utility::addRegularizationL2(const Parameters& theta, const double beta,
-    double& fval, RealVec& grad) {
-  assert(beta > 0.0);
-  const int d = theta.getTotalDim();
-  assert(d == grad.size());
-  fval += beta/2 * theta.squaredL2Norm();
-  for (size_t i = 0; i < d; ++i)
-    grad(i) += theta.getWeight(i) * beta; // add beta*theta to gradient
-}
-
 void Utility::evaluate(const vector<Parameters>& weightVectors,
     TrainingObjective& obj, const Dataset& evalData,
     const vector<string>& identifiers, const vector<string>& fnames,

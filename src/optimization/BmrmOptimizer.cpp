@@ -14,12 +14,14 @@
 #include "BmrmOptimizer.h"
 #include "Model.h"
 #include "Optimizer.h"
+#include "Regularizer.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
-//#include <boost/numeric/ublas/io.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector_expression.hpp>
 #include <boost/numeric/ublas/vector.hpp>
@@ -34,15 +36,17 @@
 #include <string>
 #include <uQuadProg++.hh>
 
+using namespace boost;
 using namespace std;
 
-BmrmOptimizer::BmrmOptimizer(TrainingObjective& objective) :
-    Optimizer(objective, 1e-4), _maxIters(250), _quiet(false),
+BmrmOptimizer::BmrmOptimizer(shared_ptr<TrainingObjective> objective,
+                             shared_ptr<Regularizer> regularizer) :
+    Optimizer(objective, regularizer), _maxIters(250), _quiet(false),
     _noShrinking(false) {
 }
 
 int BmrmOptimizer::processOptions(int argc, char** argv) {
-  namespace opt = boost::program_options;
+  namespace opt = program_options;
   opt::options_description options(name() + " options");
   options.add_options()
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
@@ -64,15 +68,16 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
 
 Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     double tol) const {
-  namespace ublas = boost::numeric::ublas;
+  namespace ublas = numeric::ublas;
   const size_t d = w.getTotalDim();
   assert(d > 0);
+  const double beta = _regularizer->getBeta();
   
   const double TINY = 1e-6; // Add this value to D to ensure pos-def.
   const double ALPHA_TOL = 1e-12; // Value below which alpha is considered zero
 
   // Some variables we'll need to reuse inside the main loop.
-  boost::ptr_deque<RealVec> grads;
+  ptr_deque<RealVec> grads;
   RealVec b(1);
   RealMat G(1, 1);
   RealMat copyG(1, 1);
@@ -87,8 +92,8 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   w.zero();
   
   // Compute the initial objective value and gradient.
-  _objective.valueAndGradient(w, Remp, grad_t);
-  min_Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
+  _objective->valueAndGradient(w, Remp, grad_t);
+  min_Jw = (0.5 * beta * w.squaredL2Norm()) + Remp;
   double Jw = 0; // initialized in the loop
   
   if (!_quiet)
@@ -96,7 +101,7 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   
   bool converged = false;
   for (size_t t = 1; t <= _maxIters; t++) {
-    boost::timer::cpu_timer timer;
+    timer::cpu_timer timer;
     
     // Add the next column to the matrix "A", which we'll actually represent as
     // a ptr_vector of column vectors.
@@ -114,7 +119,7 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     G.resize(bs, bs, true); // Note: true --> preserve existing entries
     const size_t j = bs -1;
     for (size_t i = 0; i < bs; i++) {
-      const double temp = ublas::inner_prod(grads[i], grads[j]) / _beta;
+      const double temp = ublas::inner_prod(grads[i], grads[j]) / beta;
       if (i == j)
         G(i, j) = temp + TINY; // Add a small value to diag to ensure pos-def.
       else {
@@ -150,7 +155,7 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     try {
       JwCP = uQuadProgPP::solve_quadprog(G, b, CE, ce0, CI, ci0, alpha);
     }
-    catch (exception& e) {
+    catch (std::exception& e) {
       cout << "uQuadProgPP threw an exception: " << e.what() << endl;
       return Optimizer::FAILURE;
     }
@@ -166,14 +171,14 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     wTemp = alpha(0) * grads[0];
     for (size_t i = 1; i < bs; i++)
       wTemp += alpha(i) * grads[i];
-    wTemp /= -_beta;
+    wTemp /= -beta;
     
     // Set the entries W in our model to wTemp.
     w.setWeights(wTemp.data().begin(), d);
     
     // Recompute the objective value and gradient.
-    _objective.valueAndGradient(w, Remp, grad_t);
-    Jw = (0.5 * _beta * w.squaredL2Norm()) + Remp;
+    _objective->valueAndGradient(w, Remp, grad_t);
+    Jw = (0.5 * beta * w.squaredL2Norm()) + Remp;
     
     if (Jw < min_Jw)
       min_Jw = Jw;

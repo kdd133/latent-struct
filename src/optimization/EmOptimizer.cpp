@@ -11,10 +11,12 @@
 #include "Model.h"
 #include "Optimizer.h"
 #include "Parameters.h"
+#include "Regularizer.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/timer/timer.hpp>
 #include <iostream>
 #include <limits>
@@ -24,9 +26,10 @@
 using namespace boost;
 using namespace std;
 
-EmOptimizer::EmOptimizer(TrainingObjective& objective,
-    shared_ptr<Optimizer> opt) :
-    Optimizer(objective, 1e-4), _convexOpt(opt), _maxIters(20),
+EmOptimizer::EmOptimizer(shared_ptr<TrainingObjective> objective,
+                         shared_ptr<Regularizer> regularizer,
+                         shared_ptr<Optimizer> opt) :
+    Optimizer(objective, regularizer), _convexOpt(opt), _maxIters(20),
       _abortOnConsecMaxIters(false), _quiet(false) {
 }
 
@@ -55,7 +58,7 @@ on two consecutive EM iterations")
 
 Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     double tol) const {
-  _objective.initLatentFeatureVectors(w);
+  _objective->initLatentFeatureVectors(w);
   double valPrev = numeric_limits<double>::infinity();
   bool converged = false;  
   bool innerMaxItersPrev = false; // True if inner solver reached max iterations
@@ -64,7 +67,7 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     boost::timer::cpu_timer timer;
     
     // E-step (uses new W)
-    _objective.setLatentFeatureVectors(w);
+    _objective->setLatentFeatureVectors(w);
     
     // M-step (modifies W)
     const Optimizer::status status = _convexOpt->train(w, valCur, tol);
@@ -125,9 +128,4 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     return Optimizer::MAX_ITERS_ALTERNATING;
   }
   return Optimizer::CONVERGED;
-}
-
-void EmOptimizer::setBeta(double beta) {
-  _beta = beta;
-  _convexOpt->setBeta(beta);
 }

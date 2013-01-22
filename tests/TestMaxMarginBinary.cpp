@@ -8,6 +8,7 @@
 #include "EmOptimizer.h"
 #include "MaxMarginBinary.h"
 #include "Parameters.h"
+#include "RegularizerL2.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -54,9 +55,10 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   bool badFile = Utility::loadDataset(reader, "he_tiny", trainData);
   BOOST_REQUIRE(!badFile);
   
-  MaxMarginBinary objective(trainData, models);
+  shared_ptr<TrainingObjective> objective(new MaxMarginBinary(trainData,
+      models));
   size_t maxNumFvs = 0, totalNumFvs = 0;
-  objective.gatherFeatures(maxNumFvs, totalNumFvs);
+  objective->gatherFeatures(maxNumFvs, totalNumFvs);
   BOOST_REQUIRE(maxNumFvs > 0 && totalNumFvs > 0);
   
   BOOST_CHECK(!alphabet->isLocked());
@@ -64,7 +66,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   const int d = alphabet->size();
   BOOST_REQUIRE_EQUAL(d, 4);
   
-  Parameters W = objective.getDefaultParameters(d);
+  Parameters W = objective->getDefaultParameters(d);
 
   // Set the weights to some random values.
   shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1, 33);
@@ -73,7 +75,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   
   RealVec gradFv(d);
   double fval;
-  objective.valueAndGradient(W, fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(2.7189972967528266, fval, 1e-8);
   BOOST_CHECK_CLOSE(-0.1, gradFv[0], 1e-8);
@@ -81,20 +83,22 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   BOOST_CHECK_CLOSE(0.05, gradFv[2], 1e-8);
   BOOST_CHECK_CLOSE(1.95, gradFv[3], 1e-8);
   
-  shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective));
+  const double beta = 0.1;
+  shared_ptr<Regularizer> l2(new RegularizerL2(beta));
+  BOOST_REQUIRE_EQUAL(l2->getBeta(), beta);
+  
+  shared_ptr<Optimizer> convexOpt(new BmrmOptimizer(objective, l2));
   ret = convexOpt->processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(0, ret);
-  EmOptimizer opt(objective, convexOpt);
+  EmOptimizer opt(objective, l2, convexOpt);
   ret = opt.processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(0, ret);
-  opt.setBeta(0.1);
-  BOOST_REQUIRE_EQUAL(opt.getBeta(), 0.1);
   
   double fvalOpt = 0.0;
   Optimizer::status status = opt.train(W, fvalOpt, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
   
-  objective.valueAndGradient(W, fval, gradFv);
-  Utility::addRegularizationL2(W, opt.getBeta(), fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv);
+  l2->addRegularization(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.63012440026923944, fval, 1e-8);
 }

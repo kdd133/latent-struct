@@ -12,15 +12,18 @@
 
 #include "Optimizer.h"
 #include "Parameters.h"
+#include <boost/shared_ptr.hpp>
 #include <string>
 
 class Dataset;
+class Regularizer;
 class TrainingObjective;
 
 class BmrmOptimizer : public Optimizer {
 
   public:
-    BmrmOptimizer(TrainingObjective& objective);
+    BmrmOptimizer(boost::shared_ptr<TrainingObjective> objective,
+                  boost::shared_ptr<Regularizer> regularizer);
     
     virtual ~BmrmOptimizer() {}
 

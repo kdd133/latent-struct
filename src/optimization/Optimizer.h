@@ -11,6 +11,8 @@
 #define _OPTIMIZER_H
 
 #include "Parameters.h"
+#include "Regularizer.h"
+#include <boost/shared_ptr.hpp>
 
 class Dataset;
 class TrainingObjective;
@@ -18,8 +20,9 @@ class TrainingObjective;
 class Optimizer {
 
   public:
-    Optimizer(TrainingObjective& objective, double beta)
-      : _objective(objective), _beta(beta) {}
+    Optimizer(boost::shared_ptr<TrainingObjective> objective,
+              boost::shared_ptr<Regularizer> regularizer)
+      : _objective(objective), _regularizer(regularizer) {}
     
     virtual ~Optimizer() {}
     
@@ -44,24 +47,12 @@ class Optimizer {
 
     virtual int processOptions(int argc, char** argv) = 0;
     
-    double getBeta() const;
-    
-    virtual void setBeta(double beta);
-    
   protected:
   
-    TrainingObjective& _objective;
+    boost::shared_ptr<TrainingObjective> _objective;
     
-    double _beta; // regularization constant
+    boost::shared_ptr<Regularizer> _regularizer;
 
 };
-
-inline double Optimizer::getBeta() const {
-  return _beta;
-}
-
-inline void Optimizer::setBeta(double beta) {
-  _beta = beta;
-}
 
 #endif

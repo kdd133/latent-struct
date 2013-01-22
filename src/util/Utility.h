@@ -29,9 +29,6 @@ class Utility {
     static bool loadDataset(const InputReader& reader, std::string fileName,
       Dataset& dataset);
 
-    static void addRegularizationL2(const Parameters& W, const double beta,
-      double& fval, RealVec& grad);
-        
     static void evaluate(const Parameters& w, TrainingObjective& obj,
       const Dataset& eval, const std::string& identifier,
       const std::string& outFname = "");

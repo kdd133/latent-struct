@@ -11,11 +11,13 @@
 #include "Model.h"
 #include "Optimizer.h"
 #include "Parameters.h"
+#include "Regularizer.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
 #include <iostream>
@@ -24,9 +26,9 @@
 using namespace boost;
 using namespace std;
 
-LbfgsOptimizer::LbfgsOptimizer(TrainingObjective& objective) :
-    Optimizer(objective, 1e-4), _restarts(3), _noRegularization(false),
-    _quiet(false) {
+LbfgsOptimizer::LbfgsOptimizer(shared_ptr<TrainingObjective> objective,
+                               shared_ptr<Regularizer> regularizer) :
+    Optimizer(objective, regularizer), _restarts(3), _quiet(false) {
   lbfgs_parameter_init(&_params);
 }
 
@@ -41,8 +43,6 @@ int LbfgsOptimizer::processOptions(int argc, char** argv) {
     ("max-linesearch",
         opt::value<int>(&_params.max_linesearch)->default_value(5),
         "maximum number of line search iterations")
-    ("lbfgs-no-regularization", opt::bool_switch(&_noRegularization),
-        "disable regularization (regardless of the value of beta)")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("restarts", opt::value<int>(&_restarts)->default_value(3),
         "number of times to restart Lbfgs when it thinks it has converged")
@@ -67,10 +67,9 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   boost::timer::cpu_timer timer;
   
   const LbfgsInstance* inst = (LbfgsInstance*)instance;
-  TrainingObjective& obj = *inst->obj;
+  TrainingObjective* obj = inst->obj;
+  const Regularizer* reg = inst->reg;
   Parameters& theta = *inst->theta;
-  const double beta = inst->beta;
-  const bool regularize = inst->regularize;
   double fval = 0;
   
   // Set our model to the current point x.
@@ -79,9 +78,8 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   // Compute the gradient at the given theta.
   // Note: The above setting of theta updated the model used here by obj.
   RealVec gradFv(d);
-  obj.valueAndGradient(theta, fval, gradFv);
-  if (regularize)
-    Utility::addRegularizationL2(theta, beta, fval, gradFv);
+  obj->valueAndGradient(theta, fval, gradFv);
+  reg->addRegularization(theta, fval, gradFv);
   
   // Copy the new gradient back into g, for return to lbfgs.
   for (int i = 0; i < d; i++)
@@ -115,8 +113,7 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   const int d = theta.getTotalDim();
   assert(d > 0);
   
-  LbfgsInstance inst = { &_objective, &theta, _beta, !_noRegularization,
-      _quiet };
+  LbfgsInstance inst = { _objective.get(), _regularizer.get(), &theta, _quiet };
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
     x[i] = theta.getWeight(i); // set the starting point to be theta

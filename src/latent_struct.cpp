@@ -19,13 +19,13 @@
 #include "EmptyObservedFeatureGen.h"
 #include "Example.h"
 #include "InputReader.h"
-#include "KlementievRothWordFeatureGen.h"
 #include "KlementievRothSentenceFeatureGen.h"
+#include "KlementievRothWordFeatureGen.h"
 #include "Label.h"
 #include "LbfgsOptimizer.h"
 #include "LogLinearBinary.h"
-#include "LogLinearBinaryUnscaled.h"
 #include "LogLinearBinaryObs.h"
+#include "LogLinearBinaryUnscaled.h"
 #include "LogLinearMulti.h"
 #include "MainHelpers.h"
 #include "MaxMarginBinary.h"
@@ -35,14 +35,16 @@
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
 #include "Parameters.h"
+#include "Parameters.h"
 #include "Pattern.h"
+#include "Regularizer.h"
+#include "RegularizerL2.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "SentencePairReader.h"
-#include "WordAlignmentFeatureGen.h"
 #include "StringEditModel.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
-#include "Parameters.h"
+#include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
 #include <algorithm>
 #include <assert.h>
@@ -446,23 +448,25 @@ initial weights")
   // Note: If --help is enabled, the data will not have been loaded
   assert(help || threads == objective->getNumModels());
 
+  shared_ptr<Regularizer> regularizer(new RegularizerL2());
+
   // Initialize the optimizer.
-  shared_ptr<Optimizer> optimizer_;
+  shared_ptr<Optimizer> optInner;
   if (optName == optAuto) {
     // Automatically select an appropriate optimizer for the chosen objective.
     if (istarts_with(objName, "LogLinear"))
-      optimizer_.reset(new LbfgsOptimizer(*objective));
+      optInner.reset(new LbfgsOptimizer(objective, regularizer));
     else if (istarts_with(objName, "MaxMargin"))
-      optimizer_.reset(new BmrmOptimizer(*objective));
+      optInner.reset(new BmrmOptimizer(objective, regularizer));
     else {
       cout << "Automatic optimizer selection failed for " << objName << endl;
       return 1;
     }
   }
   else if (optName == LbfgsOptimizer::name())    
-    optimizer_.reset(new LbfgsOptimizer(*objective));
+    optInner.reset(new LbfgsOptimizer(objective, regularizer));
   else if (optName == BmrmOptimizer::name())
-    optimizer_.reset(new BmrmOptimizer(*objective));
+    optInner.reset(new BmrmOptimizer(objective, regularizer));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized optimizer name was given: "
@@ -470,7 +474,7 @@ initial weights")
       return 1;
     }
   }
-  if (optimizer_->processOptions(argc, argv)) {
+  if (optInner->processOptions(argc, argv)) {
     cout << "Optimizer::processOptions() failed." << endl;
     return 1;
   }
@@ -478,14 +482,14 @@ initial weights")
   // Wrap the optimizer in an EM procedure if requested.
   shared_ptr<Optimizer> optimizer;
   if (optEM) {
-    optimizer.reset(new EmOptimizer(*objective, optimizer_));
+    optimizer.reset(new EmOptimizer(objective, regularizer, optInner));
     if (optimizer->processOptions(argc, argv)) {
       cout << "Optimizer::processOptions() failed." << endl;
       return 1;
     }
   }
   else
-    optimizer = optimizer_; // Note: processOptions has already been called
+    optimizer = optInner; // Note: processOptions has already been called
 
   if (help) {
     cout << options << endl;
@@ -598,7 +602,7 @@ initial weights")
           {
             timer::auto_cpu_timer trainTimer;
             double fval = 0.0; // (not used)
-            optimizer->setBeta(beta);
+            regularizer->setBeta(beta);
             status = optimizer->train(theta, fval, tol);
           }
           if (status == Optimizer::FAILURE) {
