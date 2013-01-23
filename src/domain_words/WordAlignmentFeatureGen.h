@@ -39,7 +39,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
       
     virtual int processOptions(int argc, char** argv);
     
-    virtual double getDefaultFeatureWeight(const std::string& feature) const;
+    virtual double getDefaultFeatureWeight(const std::string& feature,
+      Label label) const;
     
     static const std::string& name() {
       static const std::string _name = "WordAlignment";
@@ -47,7 +48,8 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     }
 
   private:
-    void addFeatureId(const std::string& f, std::set<int>& featureIds) const;
+    void addFeatureId(const std::string& f, Label y, std::set<int>& featureIds)
+      const;
     
     // Extracts a sequence of strings, starting with first and ending with
     // last-1, from the given string vector.

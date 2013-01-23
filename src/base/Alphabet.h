@@ -10,9 +10,11 @@
 #ifndef _ALPHABET_H
 #define _ALPHABET_H
 
+#include "Label.h"
 #include <assert.h>
 #include <boost/unordered_map.hpp>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,7 +32,7 @@ class Alphabet {
     // Otherwise, if addIfAbsent is true, add the string to the alphabet and
     // return its index. If the string is absent and addIfAbsent=false or
     // locked=true, return -1.
-    int lookup(std::string str, bool addIfAbsent = false);
+    int lookup(std::string feat, Label label, bool addIfAbsent);
     
     // Return the string that is associated with the given index.
     std::string reverseLookup(std::size_t index) const;
@@ -40,9 +42,6 @@ class Alphabet {
     // Disallows additions to this alphabet.
     void lock();
   
-    // Allows additions to this alphabet.
-    void unlock();
-  
     size_t size() const;
     
     bool read(const std::string& fname);
@@ -50,6 +49,8 @@ class Alphabet {
     bool write(const std::string& fname) const;
     
     const DictType& getDict() const;
+    
+    void addLabel(Label label);
     
   private:
     
@@ -62,6 +63,10 @@ class Alphabet {
     bool _count;
     
     DictType _counts;
+    
+    std::vector<int> _labelIndices;
+    
+    std::set<Label> _uniqueLabels;
 };
 
 inline std::string Alphabet::reverseLookup(std::size_t index) const {
@@ -73,17 +78,8 @@ inline bool Alphabet::isLocked() const {
   return _locked;
 }
 
-inline void Alphabet::lock() {
-  _locked = true;
-}
-
-inline void Alphabet::unlock() {
-  _locked = false;
-}
-
-inline std::size_t Alphabet::size() const {
-  assert(_entries.size() == _dict.size());
-  return _entries.size();
+inline const Alphabet::DictType& Alphabet::getDict() const {
+  return _dict;
 }
 
 #endif

@@ -12,6 +12,7 @@
 
 #include "Dataset.h"
 #include "Parameters.h"
+#include <set>
 #include <string>
 
 class AlignmentFeatureGen;
@@ -25,8 +26,9 @@ void evaluateMultipleWeightVectors(const std::vector<Parameters>&,
     const Dataset&, TrainingObjective&, const std::string&, int id,
     bool writeFiles, bool writeAlignments, bool cachingEnabled);
 
-void initWeights(WeightVector& w, const std::string& initType,
-    double noiseLevel, int seed, const boost::shared_ptr<Alphabet> alphabet,
+void initWeights(WeightVector& w, const std::string& initType, double noise,
+    int seed, const boost::shared_ptr<Alphabet> alphabet,
+    const std::set<Label>& labels,
     const boost::shared_ptr<const AlignmentFeatureGen> fgen);
 
 #endif

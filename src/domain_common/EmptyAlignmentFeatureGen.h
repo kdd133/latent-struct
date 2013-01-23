@@ -41,7 +41,8 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
       return 0;
     }
     
-    virtual double getDefaultFeatureWeight(const std::string& feature) const {
+    virtual double getDefaultFeatureWeight(const std::string& feature,
+        Label label) const {
       return 0.0;
     }
     

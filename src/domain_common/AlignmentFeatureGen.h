@@ -36,7 +36,8 @@ class AlignmentFeatureGen : public FeatureGen {
       int j, const EditOperation& op,
       const std::vector<AlignmentPart>& editHistory) = 0;
 
-    virtual double getDefaultFeatureWeight(const std::string& feature) const = 0;
+    virtual double getDefaultFeatureWeight(const std::string& feature,
+        Label label) const = 0;
       
     virtual int processOptions(int argc, char** argv) = 0;
 };

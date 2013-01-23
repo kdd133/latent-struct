@@ -136,7 +136,7 @@ Gen need to be updated!\n";
 }
 
 SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
-    Label label, int sourcePos, int targetPos, const EditOperation& op,
+    Label y, int sourcePos, int targetPos, const EditOperation& op,
     const vector<AlignmentPart>& history) {
     
   const int histLen = history.size();
@@ -162,14 +162,12 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
   
   // Extract n-grams of the state sequence (up to the Markov order).
   if (_includeStateNgrams) {
-    stringstream prefix;
-    prefix << label << sep << "S:";
     string s;
     // Here, n=1 represents unigrams, n=2 bigrams, etc.
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       if (!_stateUnigramsOnly || n == 1) {
         s = history[k].opName + s;
-        addFeatureId(prefix.str() + s, featureIds);
+        addFeatureId("S:" + s, y, featureIds);
         s = FeatureGenConstants::OP_SEP + s;
       }
     }
@@ -188,8 +186,6 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
   // the alignment feature would just be ->-; but, the state n-gram feature
   // above already implies this).
   if ((_includeAlignNgrams || _includeCollapsedAlignNgrams) && histLen > 1) {
-    stringstream prefix;
-    prefix << label << sep << "A:";
     string alignNgram;
     // Here, n=1 represents unigrams, n=2 bigrams, etc.
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
@@ -199,11 +195,11 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
       // alignment unigram feature if the operation was a noop.
       if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
           (op.getId() != OpNone::ID || n > 1)) {
-        addFeatureId(prefix.str() + alignNgram, featureIds);
+        addFeatureId("A:" + alignNgram, y, featureIds);
         if (_regexEnabled) {
           const string temp = regex_replace(alignNgram, _regConsonant, C);
           const string alignNgramVC = regex_replace(temp, _regVowel, V);
-          addFeatureId(prefix.str() + alignNgramVC, featureIds);
+          addFeatureId("A:" + alignNgramVC, y, featureIds);
         }
       }
       if (k > left)
@@ -217,8 +213,6 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
   // always redundant, so we omit them in this case.
   if (_includeCollapsedAlignNgrams && !_alignUnigramsOnly && _order > 0 &&
       histLen > 1) {
-    stringstream prefix;
-    prefix << label << sep << "C:";
     string s, t;
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       if (history[k].source != FeatureGenConstants::EPSILON)
@@ -238,11 +232,11 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
       tStrip = regex_replace(tStrip, _regPhraseSepLeadTrail, "");
       string collapsed = sStrip + FeatureGenConstants::OP_SEP + tStrip;
       
-      addFeatureId(prefix.str() + collapsed, featureIds);
+      addFeatureId("C:" + collapsed, y, featureIds);
       if (_regexEnabled) {
         const string temp = regex_replace(collapsed, _regConsonant, C);
         const string collapsedVC = regex_replace(temp, _regVowel, V);
-        addFeatureId(prefix.str() + collapsedVC, featureIds);
+        addFeatureId("C:" + collapsedVC, y, featureIds);
       }
     }
   }
@@ -273,15 +267,13 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
     
     if (edit.source != FeatureGenConstants::EPSILON) {
       stringstream f;
-      f << label << sep << "Bi:" << sourceBi << FeatureGenConstants::OP_SEP
-          << edit.target;
-      addFeatureId(f.str(), featureIds);
+      f << "Bi:" << sourceBi << FeatureGenConstants::OP_SEP << edit.target;
+      addFeatureId(f.str(), y, featureIds);
     }    
     if (edit.target != FeatureGenConstants::EPSILON) {
       stringstream f;
-      f << label << sep << "Bi:" << edit.source << FeatureGenConstants::OP_SEP
-          << targetBi;
-      addFeatureId(f.str(), featureIds);
+      f << "Bi:" << edit.source << FeatureGenConstants::OP_SEP << targetBi;
+      addFeatureId(f.str(), y, featureIds);
     }
   }
   
@@ -307,17 +299,17 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
   return fv;
 }
 
-double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
+double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f,
+    Label label) const {
   typedef tokenizer< char_separator<char> > Tokenizer;
   char_separator<char> delims("_:>"); // FIXME: These shouldn't be hard-coded
   Tokenizer tokens(f, delims);
   Tokenizer::const_iterator it = tokens.begin();
   
   // FIXME: These should be defined somewhere. Are they used by anything else?
-  const string MATCH("1");
-  const string MISMATCH("0");
+  const Label MATCH = 1;
+  const Label MISMATCH = 0;
   
-  const string label = *it++;
   assert(label == MATCH || label == MISMATCH);
   const int sign = (label == MATCH) ? 1 : -1;
   
@@ -382,9 +374,9 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f) const {
   return 0.0;
 }
 
-inline void WordAlignmentFeatureGen::addFeatureId(const string& f,
+inline void WordAlignmentFeatureGen::addFeatureId(const string& f, Label y,
     set<int>& featureIds) const {
-  const int fId = _alphabet->lookup(f, true);
+  const int fId = _alphabet->lookup(f, y, true);
   if (fId == -1)
     return;
   featureIds.insert(fId);

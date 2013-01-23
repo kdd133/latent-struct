@@ -56,9 +56,7 @@ int BiasFeatureGen::processOptions(int argc, char** argv) {
 }
 
 SparseRealVec* BiasFeatureGen::getFeatures(const Pattern& x, const Label y) {  
-  stringstream ss;
-  ss << y << FeatureGenConstants::PART_SEP << kPrefix;
-  const int fId = _alphabet->lookup(ss.str(), true);
+  const int fId = _alphabet->lookup(kPrefix, y, true);
   
   const size_t d = _alphabet->size();
   SparseRealVec* fv = new SparseRealVec(d);

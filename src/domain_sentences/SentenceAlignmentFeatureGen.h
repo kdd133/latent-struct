@@ -12,6 +12,7 @@
 
 #include "AlignmentFeatureGen.h"
 #include "AlignmentPart.h"
+#include "Label.h"
 #include "StateType.h"
 #include "Ublas.h"
 #include <boost/shared_ptr.hpp>
@@ -38,7 +39,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
       
     virtual int processOptions(int argc, char** argv);
     
-    virtual double getDefaultFeatureWeight(const std::string& feature) const;
+    virtual double getDefaultFeatureWeight(const std::string& feature,
+      Label label) const;
     
     static const std::string& name() {
       static const std::string _name = "SentenceAlignment";
@@ -47,7 +49,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
       
   private:
   
-    void addFeatureId(const std::string& f, std::set<int>& featureIds) const;
+    void addFeatureId(const std::string& f, Label y, std::set<int>& featureIds)
+      const;
       
     int _order;
     

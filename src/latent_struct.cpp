@@ -239,8 +239,6 @@ initial weights")
     shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
     if (resumed)
       alphabet = loadedAlphabet;
-    else
-      alphabet->unlock(); // in preparation for feature gathering
       
     // initialize the latent feature generator
     shared_ptr<AlignmentFeatureGen> fgenLat;
@@ -503,7 +501,7 @@ initial weights")
       timer::auto_cpu_timer gatherTimer;
       objective->gatherFeatures(maxNumFvs, totalNumFvs);
       assert(maxNumFvs > 0 && totalNumFvs > 0);
-      objective->combineAndLockAlphabets();
+      objective->combineAndLockAlphabets(trainData.getLabelSet());
     }
   }
   
@@ -549,9 +547,12 @@ initial weights")
   
   // Set the initial parameters.
   Parameters theta0 = objective->getDefaultParameters(d);
-  initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet, fgenLat);
-  if (theta0.hasU())
-    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet, fgenLat);
+  initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
+      trainData.getLabelSet(), fgenLat);
+  if (theta0.hasU()) {
+    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet,
+        trainData.getLabelSet(), fgenLat);
+  }
 
   // Train weights for each combination of the beta and tolerance parameters.
   // Note that the fsts (if caching is enabled) will be reused after being
@@ -568,6 +569,7 @@ initial weights")
 
       Parameters& theta = weightVectors.back();
       theta.setParams(theta0); 
+      cout << theta.w << endl;
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       

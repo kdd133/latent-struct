@@ -21,13 +21,14 @@
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 #include <fstream>
+#include <set>
 #include <vector>
 
 using namespace boost;
 using namespace std;
 
 void initWeights(WeightVector& w, const string& initType, double noiseLevel,
-    int seed, const shared_ptr<Alphabet> alphabet,
+    int seed, const shared_ptr<Alphabet> alphabet, const set<Label>& labels,
     const shared_ptr<const AlignmentFeatureGen> fgen) {
   assert(alphabet->size() == w.getDim());
   w.zero();
@@ -38,9 +39,12 @@ void initWeights(WeightVector& w, const string& initType, double noiseLevel,
       v[i] = 0;    
     if (istarts_with(initType, "heuristic")) {
       const Alphabet::DictType& dict = alphabet->getDict();
-      Alphabet::DictType::const_iterator it; 
-      for (it = dict.begin(); it != dict.end(); it++)
-        v[it->second] += fgen->getDefaultFeatureWeight(it->first);
+      set<Label>::const_iterator labelIt;
+      for (labelIt = labels.begin(); labelIt != labels.end(); ++labelIt) {
+        Alphabet::DictType::const_iterator it; 
+        for (it = dict.begin(); it != dict.end(); it++)
+          v[it->second] += fgen->getDefaultFeatureWeight(it->first, *labelIt);
+      }
     }
     if (iends_with(initType, "noise")) {
       shared_array<double> samples = Utility::generateGaussianSamples(d, 0,

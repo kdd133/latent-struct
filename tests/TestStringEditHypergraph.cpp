@@ -71,13 +71,13 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   
   // Set the weights of Del, Ins, and Sub to -100; implicitly leave Mat to be 0.
   WeightVector W(d);  
-  const int iDel = alphabet->lookup("0_S:Del1");
+  const int iDel = alphabet->lookup("S:Del1", 0, false);
   BOOST_REQUIRE(iDel >= 0);
   W.add(iDel, -100);  
-  const int iIns = alphabet->lookup("0_S:Ins1");
+  const int iIns = alphabet->lookup("S:Ins1", 0, false);
   BOOST_REQUIRE(iIns >= 0);
   W.add(iIns, -100);
-  const int iSub = alphabet->lookup("0_S:Sub11");
+  const int iSub = alphabet->lookup("S:Sub11", 0, false);
   BOOST_REQUIRE(iSub >= 0);
   W.add(iSub, -100);
   
@@ -89,9 +89,9 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
   BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
-  const int iMat = alphabet->lookup("0_S:Mat11");
+  const int iMat = alphabet->lookup("S:Mat11", 0, false);
   BOOST_REQUIRE(iMat >= 0);
-  const int iBias = alphabet->lookup("0_Bias");
+  const int iBias = alphabet->lookup("Bias", 0, false);
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that the (unnormalized) expected value of each feature is correct.  

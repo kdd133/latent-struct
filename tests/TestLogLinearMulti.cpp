@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   Parameters W = objective->getDefaultParameters(d);
   
   // set the feature weight for bias class y=0 to one
-  int index = alphabet->lookup("0_Bias", false);
+  int index = alphabet->lookup("Bias", 0, false);
   BOOST_REQUIRE(index >= 0);
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);

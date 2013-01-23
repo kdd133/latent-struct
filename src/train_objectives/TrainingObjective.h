@@ -76,7 +76,7 @@ class TrainingObjective {
     
     void gatherFeatures(std::size_t& maxFvs, std::size_t& totalFvs);
     
-    void combineAndLockAlphabets();
+    void combineAndLockAlphabets(const std::set<Label>& labels);
     
     static const Label kPositive;
     

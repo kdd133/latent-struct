@@ -182,7 +182,7 @@ void TrainingObjective::gatherFeaturesPart(Model& model,
   }
 }
 
-void TrainingObjective::combineAndLockAlphabets() {
+void TrainingObjective::combineAndLockAlphabets(const set<Label>& labels) {
   shared_ptr<Alphabet> combined(new Alphabet(false, false));
   Alphabet::DictType::const_iterator it;
   for (size_t i = 0; i < getNumModels(); i++) {
@@ -190,11 +190,20 @@ void TrainingObjective::combineAndLockAlphabets() {
     alphabets.push_back(_models[i].getFgenLatent()->getAlphabet());
     alphabets.push_back(_models[i].getFgenObserved()->getAlphabet());
     BOOST_FOREACH(shared_ptr<Alphabet> a, alphabets) {
-      const size_t d = a->size();
-      for (size_t j = 0; j < d; j++)
-        combined->lookup(a->reverseLookup(j), true);
+      // Note: We don't use a->size() here because that would give us the
+      // dimensionality of the space (across all classes), whereas we want the
+      // number of (base) features in this case.
+      const size_t n = a->getDict().size();
+      for (size_t j = 0; j < n; j++)
+        combined->lookup(a->reverseLookup(j), 0, true);
     }
   }
+  // We performed lookups using label 0 above, simply to populate the feature
+  // dictionary. We must also tell the alphabet which class labels exist, so
+  // that it knows how many "copies" of each feature are valid.
+  set<Label>::const_iterator lbl;
+  for (lbl = labels.begin(); lbl != labels.end(); ++lbl)
+    combined->addLabel(*lbl);
   combined->lock();
   for (size_t i = 0; i < getNumModels(); i++) {
     _models[i].getFgenLatent()->setAlphabet(combined);

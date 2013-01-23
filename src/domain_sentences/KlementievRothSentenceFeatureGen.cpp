@@ -134,11 +134,11 @@ SparseRealVec* KlementievRothSentenceFeatureGen::getFeatures(
             subs_target->begin(); subs_target_it != subs_target->end();
             subs_target_it++) {
           stringstream ss;
-          ss << y << FeatureGenConstants::PART_SEP << *subs_source_it <<
-              KlementievRothWordFeatureGen::SUB_JOINER << *subs_target_it;       
+          ss << *subs_source_it << KlementievRothWordFeatureGen::SUB_JOINER <<
+              *subs_target_it;       
           // at test time, the dictionary will be locked, and we don't want
           // to count unseen features; we pretend we never saw them
-          const int fId = _alphabet->lookup(ss.str(), true);
+          const int fId = _alphabet->lookup(ss.str(), y, true);
           if (fId >= 0)
             sub_pair_counts[fId]++;
         }
@@ -150,9 +150,7 @@ SparseRealVec* KlementievRothSentenceFeatureGen::getFeatures(
   // feature generators via command line options. Here, we essentially have
   // a BiasFeatureGen inside of a KlementievRothWordFeatureGen.
   if (_addBias) {
-    stringstream ss;
-    ss << y << FeatureGenConstants::PART_SEP << BiasFeatureGen::kPrefix;
-    const int fId = _alphabet->lookup(ss.str(), true);
+    const int fId = _alphabet->lookup(BiasFeatureGen::kPrefix, y, true);
     if (fId >= 0)
       sub_pair_counts[fId] = 1;
   }

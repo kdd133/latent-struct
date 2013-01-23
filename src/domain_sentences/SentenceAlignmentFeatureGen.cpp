@@ -78,7 +78,7 @@ features of the state sequence")
 }
 
 SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
-    Label label, int iNew, int jNew, const EditOperation& op,
+    Label y, int iNew, int jNew, const EditOperation& op,
     const vector<AlignmentPart>& history) {
     
   // TODO: May want to do the tokenizing in the reader, store in a
@@ -96,7 +96,6 @@ SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
   assert(_order >= 0);
   
   set<int> featureIds;
-  const char* sep = FeatureGenConstants::PART_SEP;
 
   // TODO: See if FastFormat (or some other int2str method) improves efficiency
   // http://stackoverflow.com/questions/191757/c-concatenate-string-and-int
@@ -111,21 +110,16 @@ SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
   
   // Extract n-grams of the state sequence (up to the Markov order).
   if (_includeStateNgrams) {
-    stringstream prefix;
-    prefix << label << sep << "S:";
     string s;
     for (int k = histLen - 1; k >= left; k--) {
       s = history[k].opName + s;
-      addFeatureId(prefix.str() + s, featureIds);
+      addFeatureId("S:" + s, y, featureIds);
       s = FeatureGenConstants::OP_SEP + s;
     }
   }
 
   // These features only fire if we didn't perform a no-op on this arc.
   if (op.getId() != OpNone::ID) {
-    stringstream prefix;
-    prefix << label << sep << "A:";
-    
     if (_includeAlignNgrams) {
       typedef tokenizer<char_separator<char> > Tokenizer;
       char_separator<char> featSep(FeatureGenConstants::WORDFEAT_SEP);
@@ -211,7 +205,7 @@ SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
           // alignment unigram feature if the operation was a noop.
           if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
               (op.getId() != OpNone::ID || n > 1)) {
-            addFeatureId(prefix.str() + ngramFeats[fi], featureIds);
+            addFeatureId("A:" + ngramFeats[fi], y, featureIds);
           }
           ngramFeats[fi] = FeatureGenConstants::PART_SEP + ngramFeats[fi];
         }
@@ -242,13 +236,13 @@ SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
 }
 
 inline double SentenceAlignmentFeatureGen::getDefaultFeatureWeight(
-    const string& f) const {
+    const string& f, Label label) const {
   return 0.0;
 }
 
-inline void SentenceAlignmentFeatureGen::addFeatureId(const string& f,
+inline void SentenceAlignmentFeatureGen::addFeatureId(const string& f, Label y,
     set<int>& featureIds) const {
-  const int fId = _alphabet->lookup(f, true);
+  const int fId = _alphabet->lookup(f, y, true);
   if (fId == -1)
     return;
   featureIds.insert(fId);

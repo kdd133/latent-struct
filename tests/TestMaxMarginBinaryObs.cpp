@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   Parameters W = objective->getDefaultParameters(d);
   
   // set the feature weight for bias class y=1 to one
-  int index = alphabet->lookup("1_Bias", false);
+  int index = alphabet->lookup("Bias", 1, false);
   BOOST_REQUIRE(index >= 0);
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);

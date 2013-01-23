@@ -153,9 +153,6 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
             subs_lo);
     }
     
-    stringstream prefix;
-    prefix << y << FeatureGenConstants::PART_SEP;
-
     // pair each source substring with each target substring
     for (vector<string>::const_iterator subs_source_it = subs_source->begin();
         subs_source_it != subs_source->end(); subs_source_it++)
@@ -165,14 +162,14 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
         phrasePair << *subs_source_it << SUB_JOINER << *subs_target_it;
         // At test time, the alphabet will presumably be locked, and we don't
         // want to count unseen features; so, we pretend we never saw them.
-        int fId = _alphabet->lookup(prefix.str() + phrasePair.str(), true);
+        int fId = _alphabet->lookup(phrasePair.str(), y, true);
         if (fId >= 0)
           sub_pair_counts[fId]++;
           
         if (_regexEnabled) {
           const string temp = regex_replace(phrasePair.str(), _regConsonant, C);
           const string VC = regex_replace(temp, _regVowel, V);
-          fId = _alphabet->lookup(prefix.str() + VC, true);
+          fId = _alphabet->lookup(VC, y, true);
           if (fId >= 0)
             sub_pair_counts[fId]++;
         }
@@ -184,9 +181,7 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
   // feature generators via command line options. Here, we essentially have
   // a BiasFeatureGen inside of a KlementievRothWordFeatureGen.
   if (_addBias) {
-    stringstream ss;
-    ss << y << FeatureGenConstants::PART_SEP << BiasFeatureGen::kPrefix;
-    const int fId = _alphabet->lookup(ss.str(), true);
+    const int fId = _alphabet->lookup(BiasFeatureGen::kPrefix, y, true);
     if (fId >= 0)
       sub_pair_counts[fId] = 1;
   }
