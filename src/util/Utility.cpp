@@ -154,11 +154,14 @@ void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
 void Utility::printResults(const Dataset& evalData,
     LabelScoreTable& labelScores, const string& id, const string& fname) {
     
-  const bool writeFiles = (fname.size() > 0);
+  bool writeFiles = (fname.size() > 0);
   ofstream fout;
   if (writeFiles) {
     fout.open(fname.c_str());
-    assert(fout.good());
+    if (!fout.good()) {
+      cout << "Unable to write " << fname << endl;
+      writeFiles = false;
+    }
   }
   
   const Label yPos = TrainingObjective::kPositive;
