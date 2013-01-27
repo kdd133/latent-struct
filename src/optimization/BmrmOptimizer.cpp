@@ -173,8 +173,6 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
       wTemp += alpha(i) * grads[i];
     wTemp /= -beta;
     
-    cout << w.w << endl;
-    
     // Set the entries W in our model to wTemp.
     w.setWeights(wTemp.data().begin(), d);
     
