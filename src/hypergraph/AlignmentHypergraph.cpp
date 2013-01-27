@@ -272,7 +272,7 @@ void AlignmentHypergraph::addEdge(const int opId, const int destStateTypeId,
   children.push_back(onlyChild);
   
   const int edgeId = _edges.size();
-  const LogWeight edgeWeight(exp(w.innerProd(*fv)));
+  const LogWeight edgeWeight(w.innerProd(*fv), true);
   SparseLogVec* logFv = new SparseLogVec(fv->size());
   ublas_util::convertVec(*fv, *logFv);
   delete fv;
