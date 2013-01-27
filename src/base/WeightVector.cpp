@@ -141,6 +141,10 @@ bool WeightVector::write(const std::string& fname) const {
 
 std::ostream& operator<<(std::ostream& out, const WeightVector& w) {
   out << "[" << w._dim << "](";
+  if (w._dim == 0) {
+    out << "()";
+    return out;
+  }
   for (int index = 0; index < w._dim - 1; index++)
     out << w._weights[index] << ",";
   out << w._weights[w._dim - 1] << ")";
