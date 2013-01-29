@@ -43,6 +43,10 @@ class RegularizerSoftTying : public Regularizer {
     
   private:
   
+    Alphabet* _alphabet;
+  
+    const std::set<Label>* _labels;
+  
     Label _labelSharedW;
     
     Label _labelSharedU;
