@@ -55,6 +55,8 @@ class WeightVector {
     bool write(const std::string& fname) const;
     
     friend std::ostream& operator<<(std::ostream& out, const WeightVector& w);
+    
+    const double& operator[](int index) const;
 
   private:
   

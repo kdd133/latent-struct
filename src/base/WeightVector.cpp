@@ -150,3 +150,7 @@ std::ostream& operator<<(std::ostream& out, const WeightVector& w) {
   out << w._weights[w._dim - 1] << ")";
   return out;
 }
+
+const double& WeightVector::operator[](int index) const {
+  return _weights[index];
+}
