@@ -39,6 +39,7 @@
 #include "Pattern.h"
 #include "Regularizer.h"
 #include "RegularizerL2.h"
+#include "RegularizerSoftTying.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "SentencePairReader.h"
 #include "StringEditModel.h"
@@ -446,7 +447,8 @@ initial weights")
   // Note: If --help is enabled, the data will not have been loaded
   assert(help || threads == objective->getNumModels());
 
-  shared_ptr<Regularizer> regularizer(new RegularizerL2());
+//  shared_ptr<Regularizer> regularizer(new RegularizerL2());
+  shared_ptr<Regularizer> regularizer(new RegularizerSoftTying());
 
   // Initialize the optimizer.
   shared_ptr<Optimizer> optInner;
@@ -547,6 +549,7 @@ initial weights")
   
   // Set the initial parameters.
   Parameters theta0 = objective->getDefaultParameters(d);
+  regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet());
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
       trainData.getLabelSet(), fgenLat);
   if (theta0.hasU()) {

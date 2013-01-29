@@ -210,3 +210,10 @@ void TrainingObjective::combineAndLockAlphabets(const set<Label>& labels) {
     _models[i].getFgenObserved()->setAlphabet(combined);
   }
 }
+
+Parameters TrainingObjective::getDefaultParameters(size_t numFeatures) const {
+  if (isUW())
+    return Parameters(numFeatures, numFeatures);
+  else
+    return Parameters(numFeatures);
+}

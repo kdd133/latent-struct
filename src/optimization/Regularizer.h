@@ -10,6 +10,8 @@
 #ifndef _REGULARIZER_H
 #define _REGULARIZER_H
 
+#include "Alphabet.h"
+#include "Label.h"
 #include "Parameters.h"
 #include "Ublas.h"
 
@@ -23,6 +25,11 @@ class Regularizer {
 
     virtual void addRegularization(const Parameters& theta, double& fval,
         RealVec& grad) const = 0;
+    
+    // Some regularizers may need to store additional parameters (and
+    // corresponding features) beyond what the training objective requires.
+    virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
+        const std::set<Label>& labelSet) { }
         
     double getBeta() const {
       return _beta;

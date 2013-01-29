@@ -55,12 +55,7 @@ class TrainingObjective {
     
     // The purpose of this method is to let the caller know how many parameters
     // this objective will learn, based on the given number of features.
-    virtual Parameters getDefaultParameters(std::size_t numFeatures) const {
-      if (isUW())
-        return Parameters(numFeatures, numFeatures);
-      else
-        return Parameters(numFeatures);
-    }
+    virtual Parameters getDefaultParameters(std::size_t numFeatures) const;
     
     void setComputeAverageLoss(bool state) {
       _computeAverageLoss = state;
