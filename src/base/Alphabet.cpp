@@ -91,13 +91,19 @@ void Alphabet::lock() {
   _locked = true;
 }
 
-std::size_t Alphabet::size() const {
+size_t Alphabet::size() const {
   assert(_entries.size() == _dict.size());
   assert(_uniqueLabels.size() > 0);
   return _entries.size() * _uniqueLabels.size();
 }
 
-bool Alphabet::read(const std::string& fname) {
+size_t Alphabet::numFeaturesPerClass() const {
+  assert(_entries.size() == _dict.size());
+  assert(_uniqueLabels.size() > 0);
+  return _entries.size();
+}
+
+bool Alphabet::read(const string& fname) {
   using namespace boost;
   assert(_entries.size() == 0);
   _counts.clear();

@@ -71,7 +71,9 @@ class TrainingObjective {
     
     void gatherFeatures(std::size_t& maxFvs, std::size_t& totalFvs);
     
-    void combineAndLockAlphabets(const std::set<Label>& labels);
+    // Combines the alphabets from all the models and sets each model's feature
+    // generator(s) to use the combined alphabet; returns the combined alphabet.
+    boost::shared_ptr<Alphabet> combineAlphabets(const std::set<Label>& labels);
     
     static const Label kPositive;
     

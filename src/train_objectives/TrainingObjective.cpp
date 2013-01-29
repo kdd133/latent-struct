@@ -182,7 +182,8 @@ void TrainingObjective::gatherFeaturesPart(Model& model,
   }
 }
 
-void TrainingObjective::combineAndLockAlphabets(const set<Label>& labels) {
+shared_ptr<Alphabet> TrainingObjective::combineAlphabets(
+    const set<Label>& labels) {
   shared_ptr<Alphabet> combined(new Alphabet(false, false));
   Alphabet::DictType::const_iterator it;
   for (size_t i = 0; i < getNumModels(); i++) {
@@ -193,7 +194,7 @@ void TrainingObjective::combineAndLockAlphabets(const set<Label>& labels) {
       // Note: We don't use a->size() here because that would give us the
       // dimensionality of the space (across all classes), whereas we want the
       // number of (base) features in this case.
-      const size_t n = a->getDict().size();
+      const size_t n = a->numFeaturesPerClass();
       for (size_t j = 0; j < n; j++)
         combined->lookup(a->reverseLookup(j), 0, true);
     }
@@ -204,11 +205,11 @@ void TrainingObjective::combineAndLockAlphabets(const set<Label>& labels) {
   set<Label>::const_iterator lbl;
   for (lbl = labels.begin(); lbl != labels.end(); ++lbl)
     combined->addLabel(*lbl);
-  combined->lock();
   for (size_t i = 0; i < getNumModels(); i++) {
     _models[i].getFgenLatent()->setAlphabet(combined);
     _models[i].getFgenObserved()->setAlphabet(combined);
   }
+  return combined;
 }
 
 Parameters TrainingObjective::getDefaultParameters(size_t numFeatures) const {

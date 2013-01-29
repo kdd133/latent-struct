@@ -31,6 +31,11 @@ class RegularizerNone : public Regularizer {
         RealVec& grad) const {
       /** do nothing **/
     }
+    
+    static const std::string& name() {
+      static const std::string _name = "None";
+      return _name;
+    }
 };
 
 #endif

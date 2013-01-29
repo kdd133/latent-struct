@@ -44,6 +44,8 @@ class Alphabet {
   
     size_t size() const;
     
+    size_t numFeaturesPerClass() const;
+    
     bool read(const std::string& fname);
     
     bool write(const std::string& fname) const;

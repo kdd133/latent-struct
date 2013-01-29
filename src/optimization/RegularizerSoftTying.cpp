@@ -94,7 +94,7 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   // do not add the label to the label set, so that the learner is unaware of
   // the dummy label. Repeat for the u model (latent variable imputation model)
   // if present.
-  const size_t n = alphabet.size();
+  const size_t n = alphabet.numFeaturesPerClass();
   _labelSharedW = ++maxLabel;
   alphabet.addLabel(_labelSharedW);
   theta.w.reAlloc(n * (labelSet.size() + 1));

@@ -39,6 +39,7 @@
 #include "Pattern.h"
 #include "Regularizer.h"
 #include "RegularizerL2.h"
+#include "RegularizerNone.h"
 #include "RegularizerSoftTying.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "SentencePairReader.h"
@@ -99,6 +100,7 @@ int main(int argc, char** argv) {
   string objName(blank);
   string optName(blank);
   string readerName(blank);
+  string regName(blank);
   string trainFilename(blank);
   string weightsInit(blank);
   vector<double> betas;
@@ -133,6 +135,9 @@ int main(int argc, char** argv) {
   readerMsg << "reader that parses lines from input file {" <<
       CognatePairReader::name() << CMA << SentencePairReader::name() << CMA <<
       WordPairReader::name() << "}";  
+  stringstream regMsg;
+  regMsg << "type of regularization {" << RegularizerL2::name() << CMA <<
+      RegularizerSoftTying::name() << CMA << RegularizerNone::name() << "}";
   
   opt::options_description options("Main options");
   options.add_options()
@@ -170,6 +175,8 @@ scoring alignment for each eval example to a file (requires --eval); note: \
 this operation is relatively slow, since it does not make use of multi-\
 threading or fst caching")
     ("reader", opt::value<string>(&readerName), readerMsg.str().c_str())
+    ("regularizer", opt::value<string>(&regName)->default_value(
+        RegularizerL2::name()), regMsg.str().c_str())
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
 negative examples (implies --keep-all-positives)")
@@ -215,6 +222,12 @@ initial weights")
     return 1;
   }
   
+  if (istarts_with(objName, "MaxMargin") && regName != RegularizerL2::name()) {
+    cout << "Invalid arguments: MaxMargin objectives must use L2 " <<
+        "regularization at this time.\n" << options << endl;
+    return 1;
+  }
+  
   if (!iends_with(dirPath, "/"))
     dirPath += "/";
     
@@ -229,7 +242,6 @@ initial weights")
       cout << "Error: Unable to read " << alphabetFname << endl;
       return 1;
     }
-    loadedAlphabet->lock();
     resumed = true;
     cout << "Warning: Found existing output files in " << dirPath <<
         ", so treating this as a resumed run. Any evaluation output files " <<
@@ -447,8 +459,21 @@ initial weights")
   // Note: If --help is enabled, the data will not have been loaded
   assert(help || threads == objective->getNumModels());
 
-//  shared_ptr<Regularizer> regularizer(new RegularizerL2());
-  shared_ptr<Regularizer> regularizer(new RegularizerSoftTying());
+  // Initialize the regularizer.
+  shared_ptr<Regularizer> regularizer;
+  if (regName == RegularizerNone::name())
+    regularizer.reset(new RegularizerNone());
+  else if (regName == RegularizerL2::name())
+    regularizer.reset(new RegularizerL2());
+  else if (regName == RegularizerSoftTying::name())
+    regularizer.reset(new RegularizerSoftTying());
+  else {
+    if (!help) {
+      cout << "Invalid arguments: An unrecognized regularizer name was given: "
+          << regName << endl << options << endl;
+      return 1;
+    }
+  }
 
   // Initialize the optimizer.
   shared_ptr<Optimizer> optInner;
@@ -503,7 +528,7 @@ initial weights")
       timer::auto_cpu_timer gatherTimer;
       objective->gatherFeatures(maxNumFvs, totalNumFvs);
       assert(maxNumFvs > 0 && totalNumFvs > 0);
-      objective->combineAndLockAlphabets(trainData.getLabelSet());
+      objective->combineAlphabets(trainData.getLabelSet());
     }
   }
   
@@ -514,12 +539,11 @@ initial weights")
   shared_ptr<Alphabet> alphabet = fgenLat->getAlphabet();
   assert(alphabet == fgenObs->getAlphabet()); // Assume the alphabet is shared
   
-  const int d = alphabet->size();
-  if (d == 0) {
+  if (alphabet->size() == 0) {
     cout << "Error: No features were found!\n";
     return 1;
   }
-  cout << "Extracted " << d << " features\n";  
+  cout << "Extracted " << alphabet->size() << " features\n";  
 
   // If an output directory was specfied, save the alphabet and options.
   if (writeFiles && !resumed) {
@@ -548,8 +572,11 @@ initial weights")
   assert(tolerances.size() > 0);
   
   // Set the initial parameters.
-  Parameters theta0 = objective->getDefaultParameters(d);
+  Parameters theta0 = objective->getDefaultParameters(alphabet->size());
+  // Note: The call to setupParameters may modify theta0 and alphabet, such
+  // that, e.g., alphabet->size() may subsequently return a different value.
   regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet());
+  alphabet->lock(); // We can lock the Alphabet at this point.
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
       trainData.getLabelSet(), fgenLat);
   if (theta0.hasU()) {
@@ -568,11 +595,11 @@ initial weights")
       assert(beta > 0); // by definition, these should be positive values
       assert(tol > 0);
       
-      weightVectors.push_back(objective->getDefaultParameters(d));
+      weightVectors.push_back(objective->getDefaultParameters(
+          alphabet->size()));
 
       Parameters& theta = weightVectors.back();
       theta.setParams(theta0); 
-      cout << theta.w << endl;
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       
