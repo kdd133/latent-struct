@@ -474,6 +474,10 @@ initial weights")
       return 1;
     }
   }
+  if (regularizer->processOptions(argc, argv)) {
+    cout << "Regularizer::processOptions() failed." << endl;
+    return 1;
+  }
 
   // Initialize the optimizer.
   shared_ptr<Optimizer> optInner;

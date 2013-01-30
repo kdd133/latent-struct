@@ -46,7 +46,16 @@ class RegularizerSoftTying : public Regularizer {
       return _name;
     }
     
+    virtual int processOptions(int argc, char** argv);
+    
   private:
+  
+    // Note: The _beta value (from the parent class) will be ignored, other
+    // than being used to initialize these variables in the constructor.
+    double _betaW;
+    double _betaSharedW;
+    double _betaU;
+    double _betaSharedU;
   
     Alphabet* _alphabet;
   

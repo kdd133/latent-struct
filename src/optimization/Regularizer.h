@@ -31,6 +31,10 @@ class Regularizer {
     virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
         const std::set<Label>& labelSet) { }
         
+    virtual int processOptions(int argc, char** argv) {
+      return 0;
+    }
+
     double getBeta() const {
       return _beta;
     }

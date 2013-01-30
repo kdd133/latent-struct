@@ -13,25 +13,49 @@
 #include "RegularizerSoftTying.h"
 #include "Ublas.h"
 #include <assert.h>
+#include <boost/program_options.hpp>
 #include <set>
 #include <string>
 
 using namespace std;
 
-// TODO: Add the ability to specify distinct hyperparameter values for each
-// class (i.e., beta_k).
-// At least, we need to be able to specify different values for regularizing
-// w and u.
 RegularizerSoftTying::RegularizerSoftTying(double beta) : Regularizer(beta),
+  _betaW(beta), _betaSharedW(10*beta), _betaU(beta), _betaSharedU(10*beta),
   _alphabet(0), _labels(0), _labelSharedW(-1), _labelSharedU(-1) {
+}
+
+int RegularizerSoftTying::processOptions(int argc, char** argv) {
+  namespace opt = boost::program_options;
+  opt::options_description options(name() + " options");
+  options.add_options()
+    ("beta-w", opt::value<double>(&_betaW),
+        "regularization coefficient for class-specific parameters in w model")
+    ("beta-u", opt::value<double>(&_betaU),
+        "regularization coefficient for class-specific parameters in u model")
+    ("beta-shared-w", opt::value<double>(&_betaSharedW),
+        "regularization coefficient for shared parameters in w model")
+    ("beta-shared-u", opt::value<double>(&_betaSharedU),
+        "regularization coefficient for shared parameters in u model")
+  ;
+  opt::variables_map vm;
+  opt::store(opt::command_line_parser(argc, argv).options(options)
+      .allow_unregistered().run(), vm);
+  opt::notify(vm);
+  
+  if (vm.count("help")) {
+    cout << options << endl;
+    return 0;
+  }
+  return 0;
 }
 
 void RegularizerSoftTying::addRegularization(const Parameters& theta,
     double& fval, RealVec& grad) const {
-  assert(_beta > 0.0);
+  assert(_betaW > 0 && _betaU > 0 && _betaSharedW > 0 && _betaSharedU > 0);
   assert(_labelSharedW > 0);
   assert(_labelSharedU > 0 || !theta.hasU());
   assert(_alphabet && _labels);
+  assert(theta.getTotalDim() == grad.size());
   
   const Alphabet::DictType& featMap = _alphabet->getDict();
   Alphabet::DictType::const_iterator featIt;
@@ -47,30 +71,28 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
       int fid0 = _alphabet->lookup(f, _labelSharedW, false);
       assert(fid >= 0);
       const double diffW = theta.w[fid] - theta.w[fid0];
-      fval += _beta/2 * (diffW * diffW);
-      grad(fid) += _beta * diffW; // add beta*(w^y - w^0) to the gradient
-      grad(fid0) -= _beta * diffW; // update the shared gradient (note the sign)
+      fval += _betaW/2 * (diffW * diffW);
+      grad(fid) += _betaW * diffW; // add beta*(w^y - w^0) to the gradient
+      grad(fid0) -= _betaSharedW * diffW; // update shared gradient (note sign)
       if (theta.hasU()) {
         fid0 = _alphabet->lookup(f, _labelSharedU, false);
         const double diffU = theta.u[fid] - theta.u[fid0];
-        fval += _beta/2 * (diffU * diffU);
-        grad(fid) += _beta * diffU;
-        grad(fid0) -= _beta * diffU;
+        fval += _betaU/2 * (diffU * diffU);
+        grad(fid) += _betaU * diffU;
+        grad(fid0) -= _betaSharedU * diffU;
       }
     }
   }
   
   // Regularize the shared parameters toward zero using an L2 norm penalty.
-  const int d = theta.getTotalDim();
-  assert(d == grad.size());
   for (featIt = featMap.begin(); featIt != featMap.end(); ++featIt) {
     int fid0 = _alphabet->lookup(featIt->first, _labelSharedW, false);
-    fval += _beta/2 * (theta.w[fid0] * theta.w[fid0]);
-    grad(fid0) += _beta * theta.w[fid0]; // add beta*w to gradient
+    fval += _betaSharedW/2 * (theta.w[fid0] * theta.w[fid0]);
+    grad(fid0) += _betaSharedW * theta.w[fid0]; // add beta*w to gradient
     if (theta.hasU()) {
       fid0 = _alphabet->lookup(featIt->first, _labelSharedU, false);
-      fval += theta.u[fid0] * theta.u[fid0];
-      grad(fid0) += _beta * theta.u[fid0];
+      fval += _betaSharedU/2 * (theta.u[fid0] * theta.u[fid0]);
+      grad(fid0) += _betaSharedU * theta.u[fid0];
     }
   }
 }
