@@ -21,7 +21,7 @@ using namespace std;
 
 RegularizerSoftTying::RegularizerSoftTying(double beta) : Regularizer(beta),
   _betaW(beta), _betaSharedW(10*beta), _betaU(beta), _betaSharedU(10*beta),
-  _alphabet(0), _labels(0), _labelSharedW(-1), _labelSharedU(-1) {
+  _alphabet(0), _labels(0), _labelShared(-1) {
 }
 
 int RegularizerSoftTying::processOptions(int argc, char** argv) {
@@ -52,14 +52,17 @@ int RegularizerSoftTying::processOptions(int argc, char** argv) {
 void RegularizerSoftTying::addRegularization(const Parameters& theta,
     double& fval, RealVec& grad) const {
   assert(_betaW > 0 && _betaU > 0 && _betaSharedW > 0 && _betaSharedU > 0);
-  assert(_labelSharedW > 0);
-  assert(_labelSharedU > 0 || !theta.hasU());
+  assert(_labelShared > 0);
   assert(_alphabet && _labels);
   assert(theta.getTotalDim() == grad.size());
   
   const Alphabet::DictType& featMap = _alphabet->getDict();
   Alphabet::DictType::const_iterator featIt;
   set<Label>::const_iterator labelIt;
+  
+  // If this is a w-u model, we need to offset the indices for the u portion of
+  // the gradient.
+  const int offsetU = theta.w.getDim();
   
   // Regularize the parameters for each class toward the shared parameters
   // using an L2 norm penalty.
@@ -68,31 +71,29 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
     for (featIt = featMap.begin(); featIt != featMap.end(); ++featIt) {
       const string& f = featIt->first;
       const int fid = _alphabet->lookup(f, y, false);
-      int fid0 = _alphabet->lookup(f, _labelSharedW, false);
+      const int fid0 = _alphabet->lookup(f, _labelShared, false);
       assert(fid >= 0);
       const double diffW = theta.w[fid] - theta.w[fid0];
       fval += _betaW/2 * (diffW * diffW);
       grad(fid) += _betaW * diffW; // add beta*(w^y - w^0) to the gradient
-      grad(fid0) -= _betaSharedW * diffW; // update shared gradient (note sign)
+      grad(fid0) -= _betaW * diffW; // update shared gradient (note sign)
       if (theta.hasU()) {
-        fid0 = _alphabet->lookup(f, _labelSharedU, false);
         const double diffU = theta.u[fid] - theta.u[fid0];
         fval += _betaU/2 * (diffU * diffU);
-        grad(fid) += _betaU * diffU;
-        grad(fid0) -= _betaSharedU * diffU;
+        grad(offsetU + fid) += _betaU * diffU;
+        grad(offsetU + fid0) -= _betaU * diffU;
       }
     }
   }
   
   // Regularize the shared parameters toward zero using an L2 norm penalty.
   for (featIt = featMap.begin(); featIt != featMap.end(); ++featIt) {
-    int fid0 = _alphabet->lookup(featIt->first, _labelSharedW, false);
+    const int fid0 = _alphabet->lookup(featIt->first, _labelShared, false);
     fval += _betaSharedW/2 * (theta.w[fid0] * theta.w[fid0]);
     grad(fid0) += _betaSharedW * theta.w[fid0]; // add beta*w to gradient
     if (theta.hasU()) {
-      fid0 = _alphabet->lookup(featIt->first, _labelSharedU, false);
       fval += _betaSharedU/2 * (theta.u[fid0] * theta.u[fid0]);
-      grad(fid0) += _betaSharedU * theta.u[fid0];
+      grad(offsetU + fid0) += _betaSharedU * theta.u[fid0];
     }
   }
 }
@@ -114,15 +115,11 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   
   // Add a dummy label for the shared parameters to the alphabet. Note that we
   // do not add the label to the label set, so that the learner is unaware of
-  // the dummy label. Repeat for the u model (latent variable imputation model)
-  // if present.
+  // the dummy label.
   const size_t n = alphabet.numFeaturesPerClass();
-  _labelSharedW = ++maxLabel;
-  alphabet.addLabel(_labelSharedW);
+  _labelShared = ++maxLabel;
+  alphabet.addLabel(_labelShared);
   theta.w.reAlloc(n * (labelSet.size() + 1));
-  if (theta.hasU()) {
-    _labelSharedU = ++maxLabel;
-    alphabet.addLabel(_labelSharedU);
+  if (theta.hasU())
     theta.u.reAlloc(n * (labelSet.size() + 1));
-  }
 }

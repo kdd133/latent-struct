@@ -19,5 +19,5 @@ void RegularizerL2::addRegularization(const Parameters& theta, double& fval,
   assert(d == grad.size());
   fval += _beta/2 * theta.squaredL2Norm();
   for (size_t i = 0; i < d; ++i)
-    grad(i) += theta.getWeight(i) * _beta; // add beta*theta to gradient
+    grad(i) += theta[i] * _beta; // add beta*theta to gradient
 }

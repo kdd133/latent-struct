@@ -61,9 +61,7 @@ class RegularizerSoftTying : public Regularizer {
   
     const std::set<Label>* _labels;
   
-    Label _labelSharedW;
-    
-    Label _labelSharedU;
+    Label _labelShared;
 };
 
 #endif
