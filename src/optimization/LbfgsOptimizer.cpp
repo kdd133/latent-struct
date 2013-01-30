@@ -116,7 +116,7 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   LbfgsInstance inst = { _objective.get(), _regularizer.get(), &theta, _quiet };
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
-    x[i] = theta.getWeight(i); // set the starting point to be theta
+    x[i] = theta[i]; // set the starting point to be theta
 
   lbfgsfloatval_t objVal = 0.0;
   int ret = -1;

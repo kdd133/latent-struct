@@ -22,14 +22,14 @@ BOOST_AUTO_TEST_CASE(testParameters)
   shared_array<double> values = Utility::generateGaussianSamples(len, 0, 3, 0);
   theta.setWeights(values.get(), len);
   for (int i = 0; i < len; ++i) {
-    BOOST_CHECK_EQUAL(theta.getWeight(i), values[i]);
+    BOOST_CHECK_EQUAL(theta[i], values[i]);
   }
   
   // Test the add method.
   shared_array<double> toAdd = Utility::generateGaussianSamples(len, 0, 3, 1);
   for (int i = 0; i < len; ++i) {
     theta.add(i, toAdd[i]);
-    BOOST_CHECK_CLOSE(theta.getWeight(i), values[i] + toAdd[i], 1e-8);
+    BOOST_CHECK_CLOSE(theta[i], values[i] + toAdd[i], 1e-8);
   }
 
   // Test the squaredL2Norm method.
@@ -55,9 +55,8 @@ BOOST_AUTO_TEST_CASE(testParameters)
   shared_array<double> values2 = Utility::generateGaussianSamples(len, 0, 1, 3);
   theta2.setWeights(values2.get(), len);
   theta.setParams(theta2);
-  for (int i = 0; i < len; ++i) {
-    BOOST_CHECK_EQUAL(theta2.getWeight(i), values2[i]);
-  }
+  for (int i = 0; i < len; ++i)
+    BOOST_CHECK_EQUAL(theta2[i], values2[i]);
 
   // Test the zero method.
   theta.zero();

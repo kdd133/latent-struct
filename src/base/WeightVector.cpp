@@ -152,5 +152,6 @@ std::ostream& operator<<(std::ostream& out, const WeightVector& w) {
 }
 
 const double& WeightVector::operator[](int index) const {
+  assert(index < _dim);
   return _weights[index];
 }

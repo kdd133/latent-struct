@@ -31,14 +31,14 @@ bool Parameters::hasU() const {
   return u.getDim() > 0;
 }
 
-double Parameters::getWeight(int index) const {
+const double& Parameters::operator[](int index) const {
   if (hasU() && index >= w.getDim()) {
     assert(index - w.getDim() >= 0);
-    return u.getWeight(index - w.getDim());
+    return u[index - w.getDim()];
   }
   else {
     assert(index >= 0);
-    return w.getWeight(index);
+    return w[index];
   }
 }
 

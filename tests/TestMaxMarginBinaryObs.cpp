@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   int index = alphabet->lookup("Bias", 1, false);
   BOOST_REQUIRE(index >= 0);
   W.add(index, 1.0);
-  BOOST_REQUIRE_EQUAL(W.getWeight(index), 1.0);
+  BOOST_REQUIRE_EQUAL(W[index], 1.0);
   
   RealVec gradFv(d);
   double fval;

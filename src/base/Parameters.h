@@ -36,8 +36,6 @@ public:
   
   bool hasU() const;
   
-  double getWeight(int index) const;
-  
   double innerProd(const RealVec& fv) const;
   
   void setParams(const Parameters& other);
@@ -47,6 +45,8 @@ public:
   double squaredL2Norm() const;
   
   void zero();
+  
+  const double& operator[](int index) const;
 };
 
 #endif
