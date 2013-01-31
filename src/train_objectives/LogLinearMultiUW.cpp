@@ -27,6 +27,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   
   const int n = theta.w.getDim();    // i.e., the number of features
   const int d = theta.getTotalDim(); // i.e., the length of the [w u] vector
+  assert(theta.hasU());
   assert(n > 0 && n == theta.u.getDim());
   assert(d == gradFv.size());
   
