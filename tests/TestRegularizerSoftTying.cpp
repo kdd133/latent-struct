@@ -62,8 +62,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   
   double fval = 0;
   RealVec grad(theta.getTotalDim());
-  for (size_t i = 0; i < grad.size(); ++i)
-    grad(i) = 0;
+  grad.clear();
   regularizer.addRegularization(theta, fval, grad);
   
   BOOST_CHECK_CLOSE(fval, 34.789210713823, 1e-8);
