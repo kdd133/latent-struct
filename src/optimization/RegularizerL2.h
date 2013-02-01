@@ -18,7 +18,7 @@ class RegularizerL2 : public Regularizer {
 
   public:
 
-    RegularizerL2(double beta = 1e-4) : Regularizer(beta) { }
+    RegularizerL2(double beta = 1e-4);
 
     virtual ~RegularizerL2() {}
 
@@ -29,6 +29,16 @@ class RegularizerL2 : public Regularizer {
       static const std::string _name = "L2";
       return _name;
     }
+    
+    virtual int processOptions(int argc, char** argv);
+    
+  private:
+  
+    // Note: The _beta value (from the parent class) will be ignored if either
+    // _betaW > 0 or _betaU > 0. If _betaW == 0 and _betaU > 0, the w parameters
+    // will not be regularized, and vice versa.
+    double _betaW;
+    double _betaU;
 };
 
 #endif
