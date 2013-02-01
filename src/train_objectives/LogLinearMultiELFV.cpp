@@ -30,11 +30,20 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   const int d = theta.getTotalDim(); // i.e., the length of the [w u] vector
   assert(theta.hasU());
   
-  std::vector<RealVec> feats(k, LogVec(n));
-  LogVec logFeats; // call to expectedFeatures will allocate/resize
-  RealVec featsTotal(d);
-  double mass_y;
+  std::vector<RealVec> phiBar(k, LogVec(n));
+  std::vector<RealMat> cov(k, RealMat(n, n));
+  LogMat logCooc;  // call to expectedFeatureCoocurrences will allocate/resize
+  LogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
+  RealVec phiBar_sumY(n);
+  RealMat cooc(n, n);
+  RealMat covTotal(n, n);
+  RealVec gradU(n);
   double massTotal;
+  
+  // Copy theta.w into RealVec w.
+  RealVec w(n);
+  for (size_t i = 0; i < n; ++i)
+    w(i) = theta.w[i];
   
   funcVal = 0;
   gradFv.clear();
@@ -44,29 +53,56 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     const Label yi = it->y();
     
     massTotal = 0;
-    featsTotal.clear();
+    phiBar_sumY.clear();
+    covTotal.clear();
     
     for (Label y = 0; y < k; y++) {      
-      // Note: The last argument is true b/c we want normalized features.
-      model.expectedFeatures(theta.u, logFeats, xi, y, true);
+      // Get the (normalized) log expected features and coocurrences. 
+      model.expectedFeatureCooccurrences(theta.u, logCooc, logFeats, xi, y);
+      assert(logCooc.size1() == n && logCooc.size2() == n);
       assert(logFeats.size() == n);
-      ublas_util::convertVec(logFeats, feats[y]);
-      mass_y = exp(theta.w.innerProd(feats[y]));
+      
+      // Exponentiate the log values.
+      ublas_util::convertMat(logCooc, cooc);
+      ublas_util::convertVec(logFeats, phiBar[y]);
+      
+      const double mass_y = exp(theta.w.innerProd(phiBar[y]));
       massTotal += mass_y;
-      featsTotal += mass_y * feats[y];
+      phiBar_sumY += mass_y * phiBar[y];
+      cov[y] = cooc - outer_prod(phiBar[y], phiBar[y]);
+      covTotal += mass_y * cov[y];
     }
     
+    // Normalize the counts.
+    phiBar_sumY /= massTotal;
+    covTotal /= massTotal;
+
+    // Compute w'*covTotal and store the result in gradU.
+    axpy_prod(w, covTotal, gradU, true);  // true --> do gradU.clear() first
+    axpy_prod(-w, cov[yi], gradU, false); // false --> add -w'*cov[yi] to gradU
+
     // Update the function value.
-    funcVal += log(massTotal) - theta.w.innerProd(feats[yi]);
+    funcVal += log(massTotal) - theta.w.innerProd(phiBar[yi]);
     
     // Update the gradient wrt w.
-    featsTotal /= massTotal;    
-    subrange(gradFv, 0, n) += featsTotal - feats[yi];
+    subrange(gradFv, 0, n) += phiBar_sumY - phiBar[yi];    
+    
+    // Update the gradient wrt u.
+    subrange(gradFv, n, d) += gradU;
   }
 }
 
 void LogLinearMultiELFV::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-
+  LogVec logFeats;
+  for (Dataset::iterator it = begin; it != end; ++it) {
+    const Pattern& x = *it->x();
+    const size_t id = x.getId();
+    for (Label y = 0; y < k; y++) {
+      model.expectedFeatures(theta.u, logFeats, x, y, true);
+      const double yScore = theta.w.innerProd(logFeats);
+      scores.setScore(id, y, yScore);
+    }
+  }
 }
