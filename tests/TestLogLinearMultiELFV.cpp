@@ -10,7 +10,7 @@
 #include "LbfgsOptimizer.h"
 #include "LogLinearMultiELFV.h"
 #include "Parameters.h"
-#include "RegularizerNone.h"
+#include "RegularizerL2.h"
 #include "StringEditModel.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
   for (int i = 0; i < theta.w.getDim(); ++i)
     BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-8);
 
-  shared_ptr<Regularizer> reg(new RegularizerNone());
+  shared_ptr<Regularizer> reg(new RegularizerL2(0.01));
 
   // Find the optimal (w,u) parameters for LogLinearMultiELFV.
   const double tol = 1e-4;
@@ -104,9 +104,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
     BOOST_CHECK_EQUAL(status, Optimizer::CONVERGED);
     BOOST_REQUIRE_EQUAL(theta.w.getDim(), theta.u.getDim());
   }  
-  objective->valueAndGradient(theta, fval, gradFv);
-  BOOST_CHECK_CLOSE(fval, fvalOpt, 1e-8);
-  BOOST_CHECK_CLOSE(fval, 0.4289112505307218, 1e-8);
+  BOOST_CHECK_CLOSE(fvalOpt, 0.517689895351953, 1e-8);
 
   // Count the number of prediction errors that the model makes on the training
   // data. We expect them to be the same.

@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   regularizer.addRegularization(theta, fval, grad);
   
   BOOST_CHECK_CLOSE(fval, 34.789210713823, 1e-8);
-  double checkedGrad[40] = {
+  const double checkedGrad[40] = {
       -0.212627,-0.236395,-0.0475705,-0.207021,-0.467987,
       -0.194789,-0.527839,-0.0717731,-0.0785243,-0.0233812,
       -0.0768941,-0.311786,-0.119205,0.233733,-0.0992638,
