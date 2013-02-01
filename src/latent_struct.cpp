@@ -27,6 +27,8 @@
 #include "LogLinearBinaryObs.h"
 #include "LogLinearBinaryUnscaled.h"
 #include "LogLinearMulti.h"
+#include "LogLinearMultiELFV.h"
+#include "LogLinearMultiUW.h"
 #include "MainHelpers.h"
 #include "MaxMarginBinary.h"
 #include "MaxMarginBinaryObs.h"
@@ -126,6 +128,7 @@ int main(int argc, char** argv) {
   objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
+      LogLinearMultiELFV::name() << CMA << LogLinearMultiUW::name() << CMA <<
       MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
@@ -433,6 +436,10 @@ initial weights")
   shared_ptr<TrainingObjective> objective;
   if (objName == LogLinearMulti::name())
     objective.reset(new LogLinearMulti(trainData, models));
+  else if (objName == LogLinearMultiELFV::name())
+    objective.reset(new LogLinearMultiELFV(trainData, models));
+  else if (objName == LogLinearMultiUW::name())
+    objective.reset(new LogLinearMultiUW(trainData, models));
   else if (objName == LogLinearBinary::name())
     objective.reset(new LogLinearBinary(trainData, models));
   else if (objName == LogLinearBinaryUnscaled::name())
