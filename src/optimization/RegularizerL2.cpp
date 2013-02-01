@@ -21,9 +21,9 @@ int RegularizerL2::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("beta-w", opt::value<double>(&_betaW),
+    ("w-beta", opt::value<double>(&_betaW),
         "regularization coefficient for w")
-    ("beta-u", opt::value<double>(&_betaU),
+    ("u-beta", opt::value<double>(&_betaU),
         "regularization coefficient for u")
   ;
   opt::variables_map vm;

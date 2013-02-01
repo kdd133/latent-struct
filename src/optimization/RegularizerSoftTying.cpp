@@ -28,13 +28,13 @@ int RegularizerSoftTying::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   options.add_options()
-    ("beta-w", opt::value<double>(&_betaW),
+    ("w-beta", opt::value<double>(&_betaW),
         "regularization coefficient for class-specific parameters in w model")
-    ("beta-u", opt::value<double>(&_betaU),
+    ("u-beta", opt::value<double>(&_betaU),
         "regularization coefficient for class-specific parameters in u model")
-    ("beta-shared-w", opt::value<double>(&_betaSharedW),
+    ("shared-w-beta", opt::value<double>(&_betaSharedW),
         "regularization coefficient for shared parameters in w model")
-    ("beta-shared-u", opt::value<double>(&_betaSharedU),
+    ("shared-u-beta", opt::value<double>(&_betaSharedU),
         "regularization coefficient for shared parameters in u model")
   ;
   opt::variables_map vm;
