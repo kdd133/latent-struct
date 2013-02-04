@@ -103,7 +103,8 @@ public:
     pe_re_se *= keBarP; // = keBarP * pe_re_se
     
     x.rBar += pe_se;
-    x.tBar += (pe_re_se + pe_se_keBarR);
+    x.tBar += pe_re_se;
+    x.tBar += pe_se_keBarR;
   }
   
   static void finalizeInsideOutsideResult(InsideOutsideResult& result,
