@@ -71,7 +71,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     // Compute the matrix of feature covariances.
     ublas_util::convertVec(logFeatsU_yi, feats);
     ublas_util::convertMat(logCoocU_yi, covU_yi);
-    covU_yi = covU_yi - outer_prod(feats, feats);
+    covU_yi -= outer_prod(feats, feats);
     
     // Compute covU_yi' * (u-w) and store the result in gradU.
     axpy_prod(uMinusW, covU_yi, gradU, true);
