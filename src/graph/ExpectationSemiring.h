@@ -71,7 +71,7 @@ public:
     LogWeight Z;
     LogVec rBar;
     LogVec sBar;
-    LogMat tBar;
+    SparseLogMat tBar;
   } InsideOutsideResult;
   
   static void initInsideOutsideAccumulator(const std::size_t d,
