@@ -76,8 +76,8 @@ public:
   
   static void initInsideOutsideAccumulator(const std::size_t d,
       InsideOutsideResult& result) {
-    result.rBar.resize(d);
-    result.tBar.resize(d, d);
+    result.rBar.resize(d, false);
+    result.tBar.resize(d, d, false);
   }
   
   static void accumulate(InsideOutsideResult& x,
