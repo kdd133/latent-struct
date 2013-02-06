@@ -89,7 +89,6 @@ public:
     SparseLogVec& se = re;
     
     SparseLogMat pe_re_se = outer_prod(re, se);
-    pe_re_se *= pe;
     
     const SparseLogVec& keBarR = keBar.fv();
     
@@ -100,7 +99,7 @@ public:
     const LogWeight& keBarP = keBar.score();
     
     pe_se *= keBarP;    // = keBarP * pe_se
-    pe_re_se *= keBarP; // = keBarP * pe_re_se
+    pe_re_se *= (keBarP * pe); // = keBarP * pe_re_se
     
     x.rBar += pe_se;
     x.tBar += pe_re_se;
