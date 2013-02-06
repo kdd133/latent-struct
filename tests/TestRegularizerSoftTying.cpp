@@ -18,10 +18,10 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   const int argc = 5;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
-  argv[1] = (char*) "--beta-w=0.1";
-  argv[2] = (char*) "--beta-shared-w=1";
-  argv[3] = (char*) "--beta-u=0.5";
-  argv[4] = (char*) "--beta-shared-u=2";
+  argv[1] = (char*) "--w-beta=0.1";
+  argv[2] = (char*) "--shared-w-beta=1";
+  argv[3] = (char*) "--u-beta=0.5";
+  argv[4] = (char*) "--shared-u-beta=2";
   
   const int numLabels = 3;
   set<Label> labels;
