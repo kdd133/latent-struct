@@ -18,7 +18,7 @@
 
 using namespace boost;
 
-WeightVector::WeightVector(int dim) : _weights(0) {
+WeightVector::WeightVector(int dim) {
   reAlloc(dim);
 }
 

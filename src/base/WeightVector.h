@@ -20,7 +20,7 @@ class LogWeight;
 class WeightVector {
   
   public:
-    WeightVector() : _weights(0), _dim(0), _l2(0) {}
+    WeightVector() : _dim(0), _l2(0) {}
     
     WeightVector(int dim);
     
