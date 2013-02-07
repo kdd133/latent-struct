@@ -49,6 +49,7 @@ namespace ublas_util {
   RealMat& exponentiate(const SparseLogMat& src, RealMat& dest) {
     assert(dest.size1() == src.size1());
     assert(dest.size2() == src.size2());
+    dest.clear();
     SparseLogMat::const_iterator1 it1;
     SparseLogMat::const_iterator2 it2;
     for (it1 = src.begin1(); it1 != src.end1(); ++it1)
