@@ -46,7 +46,7 @@ namespace ublas_util {
   
   RealVec& convertVec(const LogVec& src, RealVec& dest);
   
-  RealMat& convertMat(const LogMat& src, RealMat& dest);
+  RealMat& exponentiate(const SparseLogMat& src, RealMat& dest);
   
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
