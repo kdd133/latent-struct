@@ -11,7 +11,11 @@
 #include "Utility.h"
 #include <assert.h>
 #include <cmath>
+#include <limits>
 #include <ostream>
+
+LogWeight::LogWeight() : _val(-std::numeric_limits<double>::infinity()) {
+}
 
 LogWeight::LogWeight(double value, bool valueIsLog) {
   if (valueIsLog)

@@ -16,7 +16,9 @@
 class LogWeight {
 
   public:
-    explicit LogWeight(double value = 0, bool valueIsLog = false);
+    explicit LogWeight();
+
+    explicit LogWeight(double value, bool valueIsLog = false);
 
     operator double() const { return _val; }
     
