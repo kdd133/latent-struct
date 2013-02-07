@@ -17,7 +17,7 @@
 class LogSemiring {
 
 public:
-  LogSemiring() : _score(LogWeight(0)) { }
+  LogSemiring() : _score(LogWeight()) { }
   
   LogSemiring(LogWeight score) : _score(score) { }
   
@@ -42,7 +42,7 @@ public:
   }
 
   static LogSemiring zero(const size_t numFeatures) {
-    return LogSemiring(LogWeight(0));
+    return LogSemiring(LogWeight());
   }
 
   typedef struct {

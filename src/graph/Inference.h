@@ -34,7 +34,7 @@ class Inference {
 
     static LogWeight logExpectedFeatures(const Graph& g, LogVec& fv); 
         
-    static LogWeight logExpectedFeatureCooccurrences(const Graph& g, LogMat& fm,
+    static LogWeight logExpectedFeatureCooccurrences(const Graph& g, SparseLogMat& fm,
         LogVec& fv);
     
     // Note: maxFeatureVector and viterbiScore will return the same value, but
@@ -99,7 +99,7 @@ double Inference<Semiring>::maxFeatureVector(const Graph& g,
 
 template <class Semiring>
 LogWeight Inference<Semiring>::logExpectedFeatureCooccurrences(const Graph& g,
-    LogMat& fm, LogVec& fv) {
+    SparseLogMat& fm, LogVec& fv) {
   typename Semiring::InsideOutsideResult result;
   insideOutside(g, result);
   fv = result.sBar;
@@ -254,7 +254,7 @@ double Inference<Semiring>::viterbi(const Graph& g,
   
   boost::scoped_array<ViterbiEntry> chart(new ViterbiEntry[g.numNodes()]);
   for (size_t i = 0; i < g.numNodes(); ++i) {
-    chart[i].score = LogWeight(0);
+    chart[i].score = LogWeight();
     chart[i].backPointer = 0;
   }
   chart[g.goal()->getId()].score = LogWeight(1);

@@ -17,7 +17,7 @@
 class ExpectationSemiring {
 
 public:
-  ExpectationSemiring() : _score(LogWeight(0)) { }
+  ExpectationSemiring() : _score(LogWeight()) { }
 
   ExpectationSemiring(LogWeight score) : _score(score) { }
   
@@ -64,7 +64,7 @@ public:
   }
 
   static ExpectationSemiring zero(const size_t numFeatures) {
-    return ExpectationSemiring(LogWeight(0), SparseLogVec(numFeatures));
+    return ExpectationSemiring(LogWeight(), SparseLogVec(numFeatures));
   }
   
   typedef struct {

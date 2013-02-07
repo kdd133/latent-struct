@@ -52,7 +52,7 @@ class Model {
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      LogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
+      SparseLogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
       bool normalize = true) = 0;
       
     // Returns true of the caller assumes ownership of the FeatureVector.

@@ -27,11 +27,11 @@ BOOST_AUTO_TEST_CASE(testLinAlg)
   
   mapped_vector<LogWeight> r = v + v;
   value = r(0); BOOST_CHECK_CLOSE((double)value, 1.79175946922806, 1e-8);
-  value = r(1); BOOST_CHECK_EQUAL((double)value, LogWeight(0));
+  value = r(1); BOOST_CHECK_EQUAL((double)value, LogWeight());
   value = r(2); BOOST_CHECK_CLOSE((double)value, 0.69314718055994, 1e-8);
   
   mapped_vector<LogWeight> s = v * LogWeight(2);
   value = s(0); BOOST_CHECK_CLOSE((double)value, 1.79175946922806, 1e-8);
-  value = s(1); BOOST_CHECK_EQUAL((double)value, LogWeight(0));
+  value = s(1); BOOST_CHECK_EQUAL((double)value, LogWeight());
   value = s(2); BOOST_CHECK_CLOSE((double)value, 0.69314718055994, 1e-8);
 }

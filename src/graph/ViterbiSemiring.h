@@ -18,7 +18,7 @@
 class ViterbiSemiring {
 
 public:
-  ViterbiSemiring() : _score(LogWeight(0)) { }
+  ViterbiSemiring() : _score(LogWeight()) { }
 
   ViterbiSemiring(LogWeight score) : _score(score) { }
   
@@ -43,7 +43,7 @@ public:
   }
 
   static ViterbiSemiring zero(const size_t numFeatures) {
-    return ViterbiSemiring(LogWeight(0));
+    return ViterbiSemiring(LogWeight());
   }
   
   // Although insideOutside() cannot be called with this semiring, we need to

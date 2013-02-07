@@ -76,7 +76,7 @@ class StringEditModel : public Model {
       const Pattern& pattern, const Label label, bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      LogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
+      SparseLogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
       bool normalize = true);
       
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
@@ -592,7 +592,7 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, LogMat& fm,
+      const WeightVector& w, SparseLogMat& fm,
       LogVec& fv, const Pattern& x, const Label y,
       bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
