@@ -32,7 +32,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   
   std::vector<RealVec> phiBar(k, LogVec(n));
   std::vector<RealMat> cov(k, RealMat(n, n));
-  LogMat logCooc;  // call to expectedFeatureCoocurrences will allocate/resize
+  SparseLogMat logCooc;  // call to expectedFeatureCoocurrences will allocate/resize
   LogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
   RealVec phiBar_sumY(n);
   RealMat cooc(n, n);
@@ -63,7 +63,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
       assert(logFeats.size() == n);
       
       // Exponentiate the log values.
-      ublas_util::convertMat(logCooc, cooc);
+      ublas_util::exponentiate(logCooc, cooc);
       ublas_util::convertVec(logFeats, phiBar[y]);
       
       const double mass_y = exp(theta.w.innerProd(phiBar[y]));

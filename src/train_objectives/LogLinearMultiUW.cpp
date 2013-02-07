@@ -33,7 +33,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   
   LogVec logFeatsW(n);
   LogVec logFeatsU_yi;  // call to expectedFeatureCooccurrences will allocate
-  LogMat logCoocU_yi;   // call to expectedFeatureCooccurrences will allocate
+  SparseLogMat logCoocU_yi;   // call to expectedFeatureCooccurrences will allocate
   
   LogVec logFeats;      // call to expectedFeatures will allocate
   RealVec feats(n);
@@ -70,7 +70,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
         
     // Compute the matrix of feature covariances.
     ublas_util::convertVec(logFeatsU_yi, feats);
-    ublas_util::convertMat(logCoocU_yi, covU_yi);
+    ublas_util::exponentiate(logCoocU_yi, covU_yi);
     covU_yi -= outer_prod(feats, feats);
     
     // Compute covU_yi' * (u-w) and store the result in gradU.
