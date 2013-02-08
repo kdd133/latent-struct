@@ -44,9 +44,14 @@ namespace ublas_util {
   
   SparseRealVec& convertVec(const SparseLogVec& src, SparseRealVec& dest);
   
+  SparseRealVec& convertVec(const LogVec& src, SparseRealVec& dest);
+  
   RealVec& convertVec(const LogVec& src, RealVec& dest);
   
   RealMat& exponentiate(const SparseLogMat& src, RealMat& dest);
+  
+  // Perform dest -= vec*vec'
+  void subtractOuterProd(RealMat& dest, const SparseRealVec& vec);
   
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
