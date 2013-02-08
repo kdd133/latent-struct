@@ -39,7 +39,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   SparseRealVec feats(n);
   RealVec gradU(n);
   RealVec uMinusW(n);
-  RealMat covU_yi(n, n);
+  SparseRealMat covU_yi(n, n);
   
   // Compute u-w.
   ublas_util::subtractWeightVectors(theta.u, theta.w, uMinusW);
@@ -71,7 +71,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     // Compute the matrix of feature covariances.
     ublas_util::convertVec(logFeatsU_yi, feats);
     ublas_util::exponentiate(logCoocU_yi, covU_yi);
-    ublas_util::subtractOuterProd(covU_yi, feats);
+    covU_yi -= outer_prod(feats, feats);
     
     // Compute covU_yi' * (u-w) and store the result in gradU.
     axpy_prod(uMinusW, covU_yi, gradU, true);

@@ -56,37 +56,18 @@ namespace ublas_util {
     return dest;
   }
   
-  RealMat& exponentiate(const SparseLogMat& src, RealMat& dest) {
+  SparseRealMat& exponentiate(const SparseLogMat& src, SparseRealMat& dest) {
     assert(dest.size1() == src.size1());
     assert(dest.size2() == src.size2());
     dest.clear();
     SparseLogMat::const_iterator1 it1;
     SparseLogMat::const_iterator2 it2;
+    // We use push_back here to efficiently populate the matrix, row by row.
+    // See http://www.guwi17.de/ublas/matrix_sparse_usage.html for a rationale.
     for (it1 = src.begin1(); it1 != src.end1(); ++it1)
       for (it2 = it1.begin(); it2 != it1.end(); ++it2)
-        dest(it2.index1(), it2.index2()) = exp(*it2);
+        dest.push_back(it2.index1(), it2.index2(), exp(*it2));
     return dest;
-  }
-  
-  void subtractOuterProd(RealMat& dest, const SparseRealVec& vec) {
-    assert(vec.size() == dest.size1());
-    assert(vec.size() == dest.size2());
-    SparseRealVec::const_iterator it1;
-    SparseRealVec::const_iterator it2;
-    size_t i, j;
-    double w_i, w_j, prod;
-    for (it1 = vec.begin(); it1 != vec.end(); ++it1) {
-      i = it1.index();
-      w_i = *it1;
-      for (it2 = it1; it2 != vec.end(); ++it2) {
-        j = it2.index();
-        w_j = *it2;
-        prod = w_i*w_j;
-        dest(i, j) -= prod;
-        if (i != j)
-          dest(j, i) -= prod;
-      }
-    }
   }
   
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
