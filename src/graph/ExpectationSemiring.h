@@ -102,8 +102,8 @@ public:
     pe_re_se *= (keBarP * pe); // = keBarP * pe_re_se
     
     x.rBar += pe_se;
-    x.tBar += pe_re_se;
-    x.tBar += pe_se_keBarR;
+    ublas_util::addLowerTriangular(pe_re_se, x.tBar);
+    ublas_util::addLowerTriangular(pe_se_keBarR, x.tBar);
   }
   
   static void finalizeInsideOutsideResult(InsideOutsideResult& result,
@@ -111,6 +111,18 @@ public:
     // rBar and tBar have (presumably) already been set via accumulation
     result.Z = betaRoot.score();
     result.sBar = betaRoot.fv();
+    
+    // The calls to addLowerTriangular() in accumulate() only incremented the
+    // lower triangular portion of tBar. Here, we fill in the upper portion of
+    // the (symmetric) tBar matrix.
+    SparseLogMat::const_iterator1 it1;
+    SparseLogMat::const_iterator2 it2;
+    for (it1 = result.tBar.begin1(); it1 != result.tBar.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
+          ++it2) {
+        result.tBar(it2.index2(), it2.index1()) = result.tBar(it2.index1(),
+            it2.index2());
+      }
   }
   
 private:

@@ -52,6 +52,10 @@ namespace ublas_util {
   
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
+      
+  // Perform dest += lower(src), where lower(M) returns the lower triangular
+  // portion of M.
+  void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest);
 }
 
 #endif

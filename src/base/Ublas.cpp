@@ -77,4 +77,14 @@ namespace ublas_util {
       dest(i) = w.getWeight(i) - v.getWeight(i);
     return dest;
   }
+  
+  void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest) {
+    assert(dest.size1() == src.size1());
+    assert(dest.size2() == src.size2());
+    SparseLogMat::const_iterator1 it1;
+    SparseLogMat::const_iterator2 it2;
+    for (it1 = src.begin1(); it1 != src.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() <= it2.index1(); ++it2)
+        dest(it2.index1(), it2.index2()) += *it2;
+  }
 }

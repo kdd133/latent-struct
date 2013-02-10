@@ -35,7 +35,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   SparseLogMat logCooc;  // call to expectedFeatureCoocurrences will allocate/resize
   LogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
   RealVec phiBar_sumY(n);
-  RealMat cooc(n, n);
+  SparseRealMat cooc(n, n);
   RealMat covTotal(n, n);
   RealVec gradU(n);
   double massTotal;
