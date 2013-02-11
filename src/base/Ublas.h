@@ -52,6 +52,11 @@ namespace ublas_util {
   
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
+  
+  // Perform dest += lower(scale*(v1*v2')), where lower(M) returns the lower
+  // triangular portion of M.
+  void addOuterProductLowerTriangular(const SparseLogVec& v1,
+      const SparseLogVec& v2, LogWeight scale, SparseLogMat& dest);
       
   // Perform dest += lower(src), where lower(M) returns the lower triangular
   // portion of M.

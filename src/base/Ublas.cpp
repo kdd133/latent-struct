@@ -78,13 +78,29 @@ namespace ublas_util {
     return dest;
   }
   
+  void addOuterProductLowerTriangular(const SparseLogVec& v1,
+      const SparseLogVec& v2, LogWeight scale, SparseLogMat& dest) {
+    assert(v1.size() == v2.size());
+    assert(dest.size1() == v1.size());
+    assert(dest.size2() == v1.size());
+    SparseLogVec::const_iterator it1;
+    SparseLogVec::const_iterator it2;
+    for (it1 = v1.begin(); it1 != v1.end(); ++it1)
+      for (it2 = v2.begin(); it2 != v2.end() && it2.index() <= it1.index();
+          ++it2) {
+        dest(it1.index(), it2.index()) += (*it1) * (*it2) * scale;
+      }
+  }
+  
   void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest) {
     assert(dest.size1() == src.size1());
     assert(dest.size2() == src.size2());
     SparseLogMat::const_iterator1 it1;
     SparseLogMat::const_iterator2 it2;
     for (it1 = src.begin1(); it1 != src.end1(); ++it1)
-      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() <= it2.index1(); ++it2)
+      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() <= it2.index1();
+          ++it2) {
         dest(it2.index1(), it2.index2()) += *it2;
+      }
   }
 }

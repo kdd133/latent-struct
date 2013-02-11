@@ -74,28 +74,20 @@ public:
   
   static void accumulate(InsideOutsideResult& x,
       const ExpectationSemiring& keBar, const Hyperedge& e) {
-    const LogWeight pe = e.getWeight();
-      
     // In our applications, we have re == se
-    SparseLogVec re = *e.getFeatureVector();
-    SparseLogVec& se = re;
-    
-    SparseLogMat pe_re_se = outer_prod(re, se);
-    
+    const SparseLogVec& re = *e.getFeatureVector();
+    const SparseLogVec& se = re;
     const SparseLogVec& keBarR = keBar.fv();
+    const LogWeight pe = e.getWeight();
+    const LogWeight keBarP = keBar.score();
     
-    SparseLogVec& pe_se = se;
-    pe_se *= pe;
-    const SparseLogMat pe_se_keBarR = outer_prod(pe_se, keBarR);
+    SparseLogVec pe_se = pe * se;
     
-    const LogWeight& keBarP = keBar.score();
-    
-    pe_se *= keBarP;    // = keBarP * pe_se
-    pe_re_se *= (keBarP * pe); // = keBarP * pe_re_se
-    
+    ublas_util::addOuterProductLowerTriangular(re, se, keBarP * pe, x.tBar);
+    ublas_util::addOuterProductLowerTriangular(pe_se, keBarR, LogWeight(1),
+        x.tBar);
+    pe_se *= keBarP;
     x.rBar += pe_se;
-    ublas_util::addLowerTriangular(pe_re_se, x.tBar);
-    ublas_util::addLowerTriangular(pe_se_keBarR, x.tBar);
   }
   
   static void finalizeInsideOutsideResult(InsideOutsideResult& result,
@@ -104,9 +96,9 @@ public:
     result.Z = betaRoot.score();
     result.sBar = betaRoot.fv();
     
-    // The calls to addLowerTriangular() in accumulate() only incremented the
-    // lower triangular portion of tBar. Here, we fill in the upper portion of
-    // the (symmetric) tBar matrix.
+    // The calls to addOuterProductLowerTriangular() in accumulate() only
+    // incremented the lower triangular portion of tBar. Here, we fill in the
+    // upper portion of the (symmetric) tBar matrix.
     SparseLogMat::const_iterator1 it1;
     SparseLogMat::const_iterator2 it2;
     for (it1 = result.tBar.begin1(); it1 != result.tBar.end1(); ++it1)

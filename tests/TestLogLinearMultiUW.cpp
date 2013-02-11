@@ -106,6 +106,13 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   RealVec gradFv(d);
   double fval;
   objective->valueAndGradient(theta, fval, gradFv);
+  BOOST_CHECK_CLOSE(fval, 1.7556439545048077, 1e-8);
+  const double checkedGrad[8] = { 0.46434287641057681, 2.0387147255979778,
+      1.9056367355983204, 0.31683516398689121, -0.46434287641057664,
+      -0.6515068509204448, -0.51842886092062412, -1.7040430386649665
+  };
+  for (int i = 0; i < theta.w.getDim(); ++i)
+    BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-8);
   
   // Since we set w == u above, the function values and the w portion of the
   // gradients should be equal.
