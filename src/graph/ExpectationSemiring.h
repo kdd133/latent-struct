@@ -46,16 +46,8 @@ public:
   
   ExpectationSemiring& operator*=(const ExpectationSemiring& toProd) {
     // <p,r> = <p1p2, p1r2 + p2r1>
-    
-    // p1r2 + p2r1
-    _fv *= toProd.score(); // p2r1
-    SparseLogVec r2(toProd.fv());
-    r2 *= _score; // p1r2
-    _fv += r2;
-  
-    // p1p2
-    _score *= toProd.score();
-    
+    _fv = _score * toProd.fv() + toProd.score() * _fv; // p1r2 + p2r1
+    _score *= toProd.score(); // p1p2
     return (*this);
   }
   
