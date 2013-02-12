@@ -47,6 +47,7 @@
 #include <map>
 #include <string>
 
+
 template <typename Graph>
 class StringEditModel : public Model {
 
@@ -72,12 +73,12 @@ class StringEditModel : public Model {
       const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true);
     
-    virtual LogWeight expectedFeatures(const WeightVector& w, LogVec& fv,
+    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true);
     
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      SparseLogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
-      bool normalize = true);
+      SparseLogMat& fm, SparseLogVec& fv, const Pattern& pattern,
+      const Label label, bool normalize = true);
       
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
@@ -93,7 +94,7 @@ class StringEditModel : public Model {
     virtual void emptyCache();
     
     typedef std::pair<size_t, Label> ExampleId;
-
+    
 
   private:
   
@@ -136,8 +137,8 @@ class StringEditModel : public Model {
     // A cache for observed feature vectors.
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
-    Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache, const WeightVector& w,
-        const Pattern& x, const Label y,
+    Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
+        const WeightVector& w, const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
         
     void addZeroOrderStates();
@@ -151,7 +152,8 @@ class StringEditModel : public Model {
 };
 
 template <typename Graph>
-StringEditModel<Graph>::StringEditModel(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
+StringEditModel<Graph>::StringEditModel(
+    boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
     boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
@@ -567,39 +569,46 @@ double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
 
 template <typename Graph>
 double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
-    SparseRealVec& fv, const Pattern& x, const Label y, bool includeObsFeats) {
+    SparseRealVec& fvOut, const Pattern& x, const Label y, bool includeObsFeats) {
   Graph* graph = 0;
   if (includeObsFeats)
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
+  RealVec fv(fvOut.size());
+  fv.clear();
   const double maxScore = Inference<ViterbiSemiring>::maxFeatureVector(
       *graph, fv);
+  fvOut = fv;
   return maxScore;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
-    LogVec& fv, const Pattern& x, const Label y,
-    bool normalize) {
+    SparseLogVec& fvOut, const Pattern& x, const Label y, bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
+  LogVec fv(fvOut.size());
+  fv.clear();
   const LogWeight logZ = Inference<LogSemiring>::logExpectedFeatures(
       *graph, fv);
+  fvOut = fv;
   if (normalize)
-    fv /= logZ;
+    fvOut /= logZ;  
   return logZ;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, SparseLogMat& fm,
-      LogVec& fv, const Pattern& x, const Label y,
-      bool normalize) {
+      const WeightVector& w, SparseLogMat& fm, SparseLogVec& fvOut,
+      const Pattern& x, const Label y, bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
+  LogVec fv(fvOut.size());
+  fv.clear();
   const LogWeight logZ = Inference<ExpectationSemiring>::
       logExpectedFeatureCooccurrences(*graph, fm, fv);
+  fvOut = fv;
   if (normalize) {
-    fv /= logZ;
+    fvOut /= logZ;
     fm /= logZ;
   }
   return logZ;

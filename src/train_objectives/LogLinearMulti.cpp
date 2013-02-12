@@ -25,9 +25,9 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
   const int d = theta.w.getDim();
   
   std::vector<LogWeight> mass(k, LogWeight());
-  std::vector<LogVec> feats(k, LogVec(d));  
-  LogVec featsTotal(d);
-  RealVec temp(d);
+  std::vector<SparseLogVec> feats(k, LogVec(d));  
+  SparseLogVec featsTotal(d);
+  SparseRealVec temp(d);
   
   funcVal = 0;
   gradFv.clear();
@@ -53,8 +53,8 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     feats[yi] /= mass[yi];
 
     // Convert features from log- to real-space, then update gradient
-    gradFv += ublas_util::convertVec(featsTotal, temp);
-    gradFv -= ublas_util::convertVec(feats[yi], temp);
+    gradFv += ublas_util::exponentiate(featsTotal, temp);
+    gradFv -= ublas_util::exponentiate(feats[yi], temp);
 
     // Update function value
     // Note: We want the log, which is why we don't exponentiate.

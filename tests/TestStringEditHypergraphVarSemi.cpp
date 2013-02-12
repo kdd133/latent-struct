@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_REQUIRE(iBias >= 0);
   
   SparseLogMat fm;
-  LogVec fv;
+  SparseLogVec fv;
   LogWeight totalMass = model->expectedFeatureCooccurrences(W, fm, fv, *pair,
       label, false);
   
@@ -96,11 +96,11 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE((double)fv[iIns], -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iDel], -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iSub], -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iMat], -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iBias], -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iIns]), -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iDel]), -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iSub]), -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iMat]), -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iBias]), -300.0000, 1e-4);
   
   // Display the matrix of feature cooccurrences.
 //  fm.print(cout);

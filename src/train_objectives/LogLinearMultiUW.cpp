@@ -31,13 +31,13 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   assert(n > 0 && n == theta.u.getDim());
   assert(d == gradFv.size());
   
-  LogVec logFeatsW(n);
-  LogVec logFeatsU_yi;  // call to expectedFeatureCooccurrences will allocate
+  SparseLogVec logFeatsW(n);
+  SparseLogVec logFeatsU_yi;  // call to expectedFeatureCooccurrences will allocate
   SparseLogMat logCoocU_yi;   // call to expectedFeatureCooccurrences will allocate
   
-  LogVec logFeats;      // call to expectedFeatures will allocate
+  SparseLogVec logFeats;      // call to expectedFeatures will allocate
   SparseRealVec feats(n);
-  RealVec gradU(n);
+  SparseRealVec gradU(n);
   RealVec uMinusW(n);
   SparseRealMat covU_yi(n, n);
   
@@ -62,14 +62,14 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     }    
     // Normalize the expected features under w.
     logFeatsW /= massW;
-    
+
     // Compute the mass, expected features, and feature co-occurrences wrt u.
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.
     LogWeight massU_yi = model.expectedFeatureCooccurrences(theta.u,
         logCoocU_yi, logFeatsU_yi, xi, yi);
         
     // Compute the matrix of feature covariances.
-    ublas_util::convertVec(logFeatsU_yi, feats);
+    ublas_util::exponentiate(logFeatsU_yi, feats);
     ublas_util::exponentiate(logCoocU_yi, covU_yi);
     covU_yi -= outer_prod(feats, feats);
     
@@ -77,8 +77,8 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     axpy_prod(uMinusW, covU_yi, gradU, true);
     
     // Update the gradient wrt w (first, exponentiate features).
-    subrange(gradFv, 0, n) += ublas_util::convertVec(logFeatsW, feats);
-    subrange(gradFv, 0, n) -= ublas_util::convertVec(logFeatsU_yi, feats);
+    subrange(gradFv, 0, n) += ublas_util::exponentiate(logFeatsW, feats);
+    subrange(gradFv, 0, n) -= ublas_util::exponentiate(logFeatsU_yi, feats);
     
     // Update the gradient wrt u.
     subrange(gradFv, n, d) += gradU;
@@ -97,15 +97,15 @@ void LogLinearMultiUW::predictPart(const Parameters& theta, Model& model,
   const int n = theta.w.getDim();
   RealVec wMinusU(n);
   ublas_util::subtractWeightVectors(theta.w, theta.u, wMinusU);
-  LogVec logFeatsU;
-  RealVec featsU(n);
+  SparseLogVec logFeatsU;
+  SparseRealVec featsU(n);
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
       const double massU = model.expectedFeatures(theta.u, logFeatsU, x, y,
           true);
-      ublas_util::convertVec(logFeatsU, featsU);
+      ublas_util::exponentiate(logFeatsU, featsU);
       const double yScore = inner_prod(wMinusU, featsU) + massU;
       scores.setScore(id, y, yScore);
     }

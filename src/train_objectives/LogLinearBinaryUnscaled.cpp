@@ -26,8 +26,8 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
   const int d = theta.w.getDim();
   const int ypos = TrainingObjective::kPositive;
   
-  LogVec feats(d);
-  RealVec temp(d);
+  SparseLogVec feats(d);
+  SparseRealVec temp(d);
   funcVal = 0;
   gradFv.clear();
   
@@ -43,7 +43,7 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
     const double fW = (yi == 1) ? -(double)logMass : (double)logMass;
     funcVal += Utility::log1Plus(exp(fW)); // i.e., exp(fW)
     
-    ublas_util::convertVec(feats, temp);
+    ublas_util::exponentiate(feats, temp);
     gradFv += temp * (-yi * (1 - Utility::sigmoid(-fW)));
   }
 }

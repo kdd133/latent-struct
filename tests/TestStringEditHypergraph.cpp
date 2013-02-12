@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   LogWeight totalMass = model->totalMass(W, *pair, label);
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
-  LogVec fv(d);
+  SparseLogVec fv(d);
   LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
   BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
@@ -95,19 +95,19 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_REQUIRE(iBias >= 0);
   
   // Check that the (unnormalized) expected value of each feature is correct.  
-  BOOST_CHECK_CLOSE((double)fv[iIns], -298.9014, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iDel], -497.9206, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iSub], -398.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iMat], -298.2082, 1e-4);
-  BOOST_CHECK_CLOSE((double)fv[iBias], -300.0000, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iIns]), -298.9014, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iDel]), -497.9206, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iSub]), -398.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iMat]), -298.2082, 1e-4);
+  BOOST_CHECK_CLOSE((double)((LogWeight)fv[iBias]), -300.0000, 1e-4);
 
   // Check that the (normalized) expected value of each feature is correct.
   fv /= totalMass;
-  BOOST_CHECK_CLOSE(exp(fv[iIns]), 3, 1e-4);
-  BOOST_CHECK_SMALL(exp(fv[iDel]), 1e-4);
-  BOOST_CHECK_SMALL(exp(fv[iSub]), 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv[iMat]), 6, 1e-4);
-  BOOST_CHECK_CLOSE(exp(fv[iBias]), 1, 1e-4);
+  BOOST_CHECK_CLOSE(exp(((LogWeight)fv[iIns])), 3, 1e-4);
+  BOOST_CHECK_SMALL(exp(((LogWeight)fv[iDel])), 1e-4);
+  BOOST_CHECK_SMALL(exp(((LogWeight)fv[iSub])), 1e-4);
+  BOOST_CHECK_CLOSE(exp(((LogWeight)fv[iMat])), 6, 1e-4);
+  BOOST_CHECK_CLOSE(exp(((LogWeight)fv[iBias])), 1, 1e-4);
   
   // Check that the Viterbi score is correct.
   double viterbiScore = model->viterbiScore(W, *pair, label);

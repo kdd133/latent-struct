@@ -38,15 +38,13 @@ typedef boost::numeric::ublas::matrix<double> RealMat;
 
 namespace ublas_util {
 
-  SparseLogVec& convertVec(const SparseRealVec& src, SparseLogVec& dest);
+  SparseLogVec& logarithm(const SparseRealVec& src, SparseLogVec& dest);
   
-  LogVec& convertVec(const RealVec& src, LogVec& dest);
+  LogVec& logarithm(const RealVec& src, LogVec& dest);
   
-  SparseRealVec& convertVec(const SparseLogVec& src, SparseRealVec& dest);
+  SparseRealVec& exponentiate(const SparseLogVec& src, SparseRealVec& dest);
   
-  SparseRealVec& convertVec(const LogVec& src, SparseRealVec& dest);
-  
-  RealVec& convertVec(const LogVec& src, RealVec& dest);
+  RealVec& exponentiate(const LogVec& src, RealVec& dest);
   
   SparseRealMat& exponentiate(const SparseLogMat& src, SparseRealMat& dest);
   

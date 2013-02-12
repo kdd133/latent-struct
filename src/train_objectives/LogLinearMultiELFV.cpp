@@ -30,14 +30,14 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   const int d = theta.getTotalDim(); // i.e., the length of the [w u] vector
   assert(theta.hasU());
   
-  std::vector<RealVec> phiBar(k, LogVec(n));
-  std::vector<RealMat> cov(k, RealMat(n, n));
+  std::vector<SparseRealVec> phiBar(k, LogVec(n));
+  std::vector<SparseRealMat> cov(k, RealMat(n, n));
   SparseLogMat logCooc;  // call to expectedFeatureCoocurrences will allocate/resize
-  LogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
-  RealVec phiBar_sumY(n);
+  SparseLogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
+  SparseRealVec phiBar_sumY(n);
   SparseRealMat cooc(n, n);
-  RealMat covTotal(n, n);
-  RealVec gradU(n);
+  SparseRealMat covTotal(n, n);
+  SparseRealVec gradU(n);
   double massTotal;
   
   // Copy theta.w into RealVec w.
@@ -64,7 +64,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
       
       // Exponentiate the log values.
       ublas_util::exponentiate(logCooc, cooc);
-      ublas_util::convertVec(logFeats, phiBar[y]);
+      ublas_util::exponentiate(logFeats, phiBar[y]);
       
       const double mass_y = exp(theta.w.innerProd(phiBar[y]));
       massTotal += mass_y;
@@ -95,7 +95,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiELFV::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  LogVec logFeats;
+  SparseLogVec logFeats;
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();

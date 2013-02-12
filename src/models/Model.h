@@ -48,12 +48,12 @@ class Model {
       bool includeObservedFeaturesArc = true) = 0;
     
     // Returns total mass for this Pattern and Label.
-    virtual LogWeight expectedFeatures(const WeightVector& w, LogVec& fv,
+    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      SparseLogMat& fm, LogVec& fv, const Pattern& pattern, const Label label,
-      bool normalize = true) = 0;
+      SparseLogMat& fm, SparseLogVec& fv, const Pattern& pattern,
+      const Label label, bool normalize = true) = 0;
       
     // Returns true of the caller assumes ownership of the FeatureVector.
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,

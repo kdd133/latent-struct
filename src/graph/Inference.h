@@ -27,6 +27,7 @@
 #include <list>
 #include <stack>
 
+
 template <class Semiring>
 class Inference {
   public:
@@ -34,13 +35,13 @@ class Inference {
 
     static LogWeight logExpectedFeatures(const Graph& g, LogVec& fv); 
         
-    static LogWeight logExpectedFeatureCooccurrences(const Graph& g, SparseLogMat& fm,
-        LogVec& fv);
+    static LogWeight logExpectedFeatureCooccurrences(const Graph& g,
+        SparseLogMat& fm, LogVec& fv);
     
     // Note: maxFeatureVector and viterbiScore will return the same value, but
     // if you only need the score, the viterbiScore function should be slightly
     // more efficient because it does not keep track of back-pointers.    
-    static double maxFeatureVector(const Graph& g, SparseRealVec& fv);
+    static double maxFeatureVector(const Graph& g, RealVec& fv);
     static double viterbiScore(const Graph& g);
         
     // Returns the *reverse* sequence of labels that correspond to the edges
@@ -82,8 +83,7 @@ LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g, LogVec& fv) {
 }
 
 template <class Semiring>
-double Inference<Semiring>::maxFeatureVector(const Graph& g,
-    SparseRealVec& fv) {
+double Inference<Semiring>::maxFeatureVector(const Graph& g, RealVec& fv) {
   std::list<const Hyperedge*> bestPath;
   const double viterbiScore = viterbi(g, bestPath);
   
@@ -92,7 +92,7 @@ double Inference<Semiring>::maxFeatureVector(const Graph& g,
   SparseRealVec temp(fv.size());
   BOOST_FOREACH(const Hyperedge* e, bestPath) {
     assert(e->getChildren().size() == 1); // Only works for graphs at this point
-    fv += ublas_util::convertVec(*e->getFeatureVector(), temp);
+    fv += ublas_util::exponentiate(*e->getFeatureVector(), temp);
   }
   return viterbiScore;
 }
@@ -134,7 +134,7 @@ void Inference<Semiring>::insideOutside(const Graph& g,
   // Run inside() and outside().
   boost::shared_array<Semiring> betas = inside(g);
   boost::shared_array<Semiring> alphas = outside(g, betas);
-    
+  
   Semiring::initInsideOutsideAccumulator(g.numFeatures(), result);
   
   boost::scoped_array<bool> marked(new bool[g.numNodes()]);

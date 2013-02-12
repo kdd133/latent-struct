@@ -14,9 +14,11 @@
 #include "LogWeight.h"
 #include "Ublas.h"
 
+
 class ExpectationSemiring {
 
 public:
+
   ExpectationSemiring() : _score(LogWeight()) { }
 
   ExpectationSemiring(LogWeight score) : _score(score) { }
@@ -108,7 +110,7 @@ public:
             it2.index2());
       }
   }
-  
+
 private:
   LogWeight _score;
   
