@@ -93,8 +93,9 @@ void Alphabet::lock() {
 }
 
 size_t Alphabet::size() const {
-  assert(_entries.size() == _dict.size());
-  assert(_uniqueLabels.size() > 0);
+  assert(_entries.size() == _dict.size()); // These sizes should be in sync.
+  // If there is at least one entry, there had better be at least one label.
+  assert(_entries.size() == 0 || _uniqueLabels.size() > 0);
   return _entries.size() * _uniqueLabels.size();
 }
 
