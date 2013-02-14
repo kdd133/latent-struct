@@ -56,9 +56,13 @@ void LogLinearBinary::valueAndGradientPart(const Parameters& theta, Model& model
     const DictType::const_iterator item = _logSizeZxMap.find(xi.getId());
     if (item == _logSizeZxMap.end()) {
       logSizeZx = model.totalMass(W0, xi, ypos);
+#ifdef NDEBUG
+      _logSizeZxMap.insert(PairType(xi.getId(), logSizeZx));
+#else
       std::pair<DictType::iterator, bool> ret = _logSizeZxMap.insert(
           PairType(xi.getId(), logSizeZx));
       assert(ret.second); // will be false if entry already present in map
+#endif      
     }
     else
       logSizeZx = item->second;

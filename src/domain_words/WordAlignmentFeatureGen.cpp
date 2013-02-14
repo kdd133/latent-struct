@@ -309,8 +309,11 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f,
   // FIXME: These should be defined somewhere. Are they used by anything else?
   const Label MATCH = 1;
   const Label MISMATCH = 0;
-  
-  assert(label == MATCH || label == MISMATCH);
+  if (!(label == MATCH || label == MISMATCH)) {
+    cout << "WordAlignmentFeatureGen::getDefaultFeatureWeight() encountered " <<
+        "an unexpected label\n";
+    return 0.0;
+  }  
   const int sign = (label == MATCH) ? 1 : -1;
   
   // FIXME: This function couples WordAlignmentFeatureGen with

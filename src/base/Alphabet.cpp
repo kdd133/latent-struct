@@ -31,7 +31,11 @@ int Alphabet::lookup(string key, Label label, bool addIfAbsent) {
   }
   else if (addIfAbsent && !_locked) {
     index = _entries.size();
+#ifdef NDEBUG
+    _dict.insert(PairType(key, index));
+#else
     pair<DictType::iterator, bool> ret = _dict.insert(PairType(key, index));
+#endif
     assert(ret.second); // will be false if key already present in _dict
     _entries.push_back(key);
   }
@@ -141,7 +145,8 @@ bool Alphabet::read(const string& fname) {
     string key = *it++;
     assert(it == fields.end());
     pair<DictType::iterator, bool> ret = _dict.insert(PairType(key, index));
-    assert(ret.second); // will be false if key already present in _dict
+    if (!ret.second)
+      return false;
     _entries.push_back(key);
   }
   fin.close();
