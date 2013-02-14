@@ -108,7 +108,7 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
 }
       
 void AlignmentHypergraph::rescore(const WeightVector& w) {
-  BOOST_FOREACH(Hyperedge edge, _edges) {
+  BOOST_FOREACH(Hyperedge& edge, _edges) {
     const LogWeight newWeight(w.innerProd(*edge.getFeatureVector()), true);
     edge.setWeight(newWeight);
   }
