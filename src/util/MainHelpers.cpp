@@ -38,12 +38,15 @@ void initWeights(WeightVector& w, const string& initType, double noiseLevel,
     for (int i = 0; i < d; i++)
       v[i] = 0;    
     if (istarts_with(initType, "heuristic")) {
-      const Alphabet::DictType& dict = alphabet->getDict();
       set<Label>::const_iterator labelIt;
       for (labelIt = labels.begin(); labelIt != labels.end(); ++labelIt) {
-        Alphabet::DictType::const_iterator it; 
-        for (it = dict.begin(); it != dict.end(); it++)
-          v[it->second] += fgen->getDefaultFeatureWeight(it->first, *labelIt);
+        const Alphabet::DictType& dict = alphabet->getDict();
+        Alphabet::DictType::const_iterator it;
+        for (it = dict.begin(); it != dict.end(); ++it) {
+          const int index = alphabet->lookup(it->first, *labelIt, false);
+          assert(index >= 0);
+          v[index] += fgen->getDefaultFeatureWeight(it->first, *labelIt);
+        }
       }
     }
     if (iends_with(initType, "noise")) {
@@ -51,7 +54,6 @@ void initWeights(WeightVector& w, const string& initType, double noiseLevel,
           noiseLevel, seed);
       for (int i = 0; i < d; i++)
         v[i] += samples[i];
-      samples.reset(); // we don't need this array any more
     }
     w.setWeights(v, d);
     delete[] v;
