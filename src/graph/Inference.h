@@ -35,8 +35,8 @@ class Inference {
 
     static LogWeight logExpectedFeatures(const Graph& g, LogVec& fv); 
         
-    static LogWeight logExpectedFeatureCooccurrences(const Graph& g,
-        SparseLogMat& fm, LogVec& fv);
+    static void logExpectedFeatureCooccurrences(const Graph& g,
+        typename Semiring::InsideOutsideResult& result);
     
     // Note: maxFeatureVector and viterbiScore will return the same value, but
     // if you only need the score, the viterbiScore function should be slightly
@@ -98,13 +98,9 @@ double Inference<Semiring>::maxFeatureVector(const Graph& g, RealVec& fv) {
 }
 
 template <class Semiring>
-LogWeight Inference<Semiring>::logExpectedFeatureCooccurrences(const Graph& g,
-    SparseLogMat& fm, LogVec& fv) {
-  typename Semiring::InsideOutsideResult result;
+void Inference<Semiring>::logExpectedFeatureCooccurrences(const Graph& g,
+    typename Semiring::InsideOutsideResult& result) {
   insideOutside(g, result);
-  fv = result.sBar;
-  fm = result.tBar;
-  return result.Z;
 }
 
 template <class Semiring>

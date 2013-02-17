@@ -93,4 +93,13 @@ namespace ublas_util {
         dest(it2.index1(), it2.index2()) += *it2;
       }
   }
+  
+  void setEntriesToZero(SparseLogMat& M) {
+    SparseLogMat::const_iterator1 it1;
+    SparseLogMat::const_iterator2 it2;
+    for (it1 = M.begin1(); it1 != M.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
+        M(it2.index1(), it2.index2()) = LogWeight();
+  }
+
 }

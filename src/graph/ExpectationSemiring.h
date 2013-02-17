@@ -65,13 +65,14 @@ public:
     LogWeight Z;
     LogVec rBar;
     LogVec sBar;
-    SparseLogMat tBar;
+    SparseLogMat* tBar;
   } InsideOutsideResult;
   
   static void initInsideOutsideAccumulator(const std::size_t d,
       InsideOutsideResult& result) {
     result.rBar.resize(d, false);
-    result.tBar.resize(d, d, false);
+//    result.tBar->resize(d, d, false);
+    ublas_util::setEntriesToZero(*result.tBar);
   }
   
   static void accumulate(InsideOutsideResult& x,
@@ -85,9 +86,9 @@ public:
     
     SparseLogVec pe_se = pe * se;
     
-    ublas_util::addOuterProductLowerTriangular(re, se, keBarP * pe, x.tBar);
+    ublas_util::addOuterProductLowerTriangular(re, se, keBarP * pe, *x.tBar);
     ublas_util::addOuterProductLowerTriangular(pe_se, keBarR, LogWeight(1),
-        x.tBar);
+        *x.tBar);
     pe_se *= keBarP;
     x.rBar += pe_se;
   }
@@ -101,13 +102,13 @@ public:
     // The calls to addOuterProductLowerTriangular() in accumulate() only
     // incremented the lower triangular portion of tBar. Here, we fill in the
     // upper portion of the (symmetric) tBar matrix.
+    SparseLogMat& tBar = *result.tBar;
     SparseLogMat::const_iterator1 it1;
     SparseLogMat::const_iterator2 it2;
-    for (it1 = result.tBar.begin1(); it1 != result.tBar.end1(); ++it1)
+    for (it1 = tBar.begin1(); it1 != tBar.end1(); ++it1)
       for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
           ++it2) {
-        result.tBar(it2.index2(), it2.index1()) = result.tBar(it2.index1(),
-            it2.index2());
+        tBar(it2.index2(), it2.index1()) = tBar(it2.index1(), it2.index2());
       }
   }
 

@@ -21,6 +21,8 @@
 #include <boost/numeric/ublas/vector_proxy.hpp>
 #include <vector>
 
+#include <boost/timer/timer.hpp>
+
 void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, RealVec& gradFv) {
@@ -46,6 +48,8 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   
   funcVal = 0;
   gradFv.clear();
+  
+  boost::timer::auto_cpu_timer timer;
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -88,6 +92,9 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     funcVal += inner_prod(uMinusW, feats); // add (u-w)*featsU_yi
     funcVal += massW;
     funcVal -= massU_yi;
+    
+    if (xi.getId() > 250)
+      break;
   }
 }
 

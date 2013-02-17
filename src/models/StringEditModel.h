@@ -137,6 +137,9 @@ class StringEditModel : public Model {
     // A cache for observed feature vectors.
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
+    // A cache for matrices that store feature co-occurrence statistics. 
+    boost::ptr_map<ExampleId, SparseLogMat> _matrixCache;
+    
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
@@ -599,16 +602,29 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, SparseLogMat& fm, SparseLogVec& fvOut,
+      const WeightVector& w, SparseLogMat& fm, SparseLogVec& fv,
       const Pattern& x, const Label y, bool normalize) {
+  const int d = w.getDim();
   Graph* graph = getGraph(_fstCache, w, x, y);
-  LogVec fv(fvOut.size());
-  fv.clear();
-  const LogWeight logZ = Inference<ExpectationSemiring>::
-      logExpectedFeatureCooccurrences(*graph, fm, fv);
-  fvOut = fv;
+  
+  ExpectationSemiring::InsideOutsideResult result;  
+  ExampleId id = std::make_pair(x.getId(), y);
+  typename boost::ptr_map<ExampleId, SparseLogMat>::iterator it =
+      _matrixCache.find(id);
+  if (it == _matrixCache.end()) {
+    result.tBar = new SparseLogMat(d, d);
+    _matrixCache.insert(id, result.tBar);
+  }
+  else
+    result.tBar = it->second;
+  
+  Inference<ExpectationSemiring>::logExpectedFeatureCooccurrences(*graph,
+      result);
+  const LogWeight logZ = result.Z;
+  fv = result.rBar;
+  fm = *result.tBar;
   if (normalize) {
-    fvOut /= logZ;
+    fv /= logZ;
     fm /= logZ;
   }
   return logZ;
@@ -699,6 +715,7 @@ void StringEditModel<Graph>::emptyCache() {
   _fstCache.clear();
   _fstCacheNoObs.clear();
   _fvCacheObs.clear();
+  _matrixCache.clear();
 }
 
 template <typename Graph>

@@ -59,6 +59,8 @@ namespace ublas_util {
   // Perform dest += lower(src), where lower(M) returns the lower triangular
   // portion of M.
   void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest);
+  
+  void setEntriesToZero(SparseLogMat& M);
 }
 
 #endif
