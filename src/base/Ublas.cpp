@@ -60,6 +60,20 @@ namespace ublas_util {
     return dest;
   }
   
+  SparseRealMat& exponentiate(const AccumLogMat& src, SparseRealMat& dest) {
+    assert(dest.size1() == src.size1());
+    assert(dest.size2() == src.size2());
+    dest.clear();
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
+    // We use push_back here to efficiently populate the matrix, row by row.
+    // See http://www.guwi17.de/ublas/matrix_sparse_usage.html for a rationale.
+    for (it1 = src.begin1(); it1 != src.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
+        dest.push_back(it2.index1(), it2.index2(), exp(*it2));
+    return dest;
+  }
+  
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest) {
     assert(w.getDim() == v.getDim() && w.getDim() == dest.size());
@@ -69,7 +83,7 @@ namespace ublas_util {
   }
   
   void addOuterProductLowerTriangular(const SparseLogVec& v1,
-      const SparseLogVec& v2, LogWeight scale, SparseLogMat& dest) {
+      const SparseLogVec& v2, LogWeight scale, AccumLogMat& dest) {
     assert(v1.size() == v2.size());
     assert(dest.size1() == v1.size());
     assert(dest.size2() == v1.size());
@@ -102,4 +116,11 @@ namespace ublas_util {
         M(it2.index1(), it2.index2()) = LogWeight();
   }
 
+  void setEntriesToZero(AccumLogMat& M) {
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
+    for (it1 = M.begin1(); it1 != M.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
+        M(it2.index1(), it2.index2()) = LogWeight();
+  }
 }

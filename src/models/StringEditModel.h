@@ -75,10 +75,10 @@ class StringEditModel : public Model {
     
     virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true);
-    
-    virtual LogWeight expectedFeatureCooccurrences(const WeightVector& w,
-      SparseLogMat& fm, SparseLogVec& fv, const Pattern& pattern,
-      const Label label, bool normalize = true);
+      
+    virtual const AccumLogMat* expectedFeatureCooccurrences(
+      const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
+      const Pattern& pattern, const Label label, bool normalize = true);
       
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
@@ -138,7 +138,7 @@ class StringEditModel : public Model {
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
     // A cache for matrices that store feature co-occurrence statistics. 
-    boost::ptr_map<ExampleId, SparseLogMat> _matrixCache;
+    boost::ptr_map<ExampleId, AccumLogMat> _matrixCache;
     
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
@@ -601,18 +601,18 @@ LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
 }
 
 template <typename Graph>
-LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
-      const WeightVector& w, SparseLogMat& fm, SparseLogVec& fv,
-      const Pattern& x, const Label y, bool normalize) {
+const AccumLogMat* StringEditModel<Graph>::expectedFeatureCooccurrences(
+    const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
+    const Pattern& x, const Label y, bool normalize) {
   const int d = w.getDim();
   Graph* graph = getGraph(_fstCache, w, x, y);
   
   ExpectationSemiring::InsideOutsideResult result;  
   ExampleId id = std::make_pair(x.getId(), y);
-  typename boost::ptr_map<ExampleId, SparseLogMat>::iterator it =
+  typename boost::ptr_map<ExampleId, AccumLogMat>::iterator it =
       _matrixCache.find(id);
   if (it == _matrixCache.end()) {
-    result.tBar = new SparseLogMat(d, d);
+    result.tBar = new AccumLogMat(d, d);
     _matrixCache.insert(id, result.tBar);
   }
   else
@@ -620,14 +620,13 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
   
   Inference<ExpectationSemiring>::logExpectedFeatureCooccurrences(*graph,
       result);
-  const LogWeight logZ = result.Z;
+  logZ = result.Z;
   fv = result.rBar;
-  fm = *result.tBar;
   if (normalize) {
     fv /= logZ;
-    fm /= logZ;
+    *result.tBar /= logZ;
   }
-  return logZ;
+  return result.tBar;
 }
 
 template <typename Graph>

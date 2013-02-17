@@ -35,7 +35,6 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   
   SparseLogVec logFeatsW(n);
   SparseLogVec logFeatsU_yi;  // call to expectedFeatureCooccurrences will allocate
-  SparseLogMat logCoocU_yi;   // call to expectedFeatureCooccurrences will allocate
   
   SparseLogVec logFeats;      // call to expectedFeatures will allocate
   SparseRealVec feats(n);
@@ -69,12 +68,14 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
 
     // Compute the mass, expected features, and feature co-occurrences wrt u.
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.
-    LogWeight massU_yi = model.expectedFeatureCooccurrences(theta.u,
-        logCoocU_yi, logFeatsU_yi, xi, yi);
+    LogWeight massU_yi;
+    const AccumLogMat* logCoocU_yi = model.expectedFeatureCooccurrences(theta.u,
+        massU_yi, logFeatsU_yi, xi, yi);
+    assert(logCoocU_yi);
         
     // Compute the matrix of feature covariances.
     ublas_util::exponentiate(logFeatsU_yi, feats);
-    ublas_util::exponentiate(logCoocU_yi, covU_yi);
+    ublas_util::exponentiate(*logCoocU_yi, covU_yi);
     covU_yi -= outer_prod(feats, feats);
     
     // Compute covU_yi' * (u-w) and store the result in gradU.

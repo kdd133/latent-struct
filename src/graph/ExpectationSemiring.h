@@ -65,7 +65,7 @@ public:
     LogWeight Z;
     LogVec rBar;
     LogVec sBar;
-    SparseLogMat* tBar;
+    AccumLogMat* tBar;
   } InsideOutsideResult;
   
   static void initInsideOutsideAccumulator(const std::size_t d,
@@ -102,9 +102,9 @@ public:
     // The calls to addOuterProductLowerTriangular() in accumulate() only
     // incremented the lower triangular portion of tBar. Here, we fill in the
     // upper portion of the (symmetric) tBar matrix.
-    SparseLogMat& tBar = *result.tBar;
-    SparseLogMat::const_iterator1 it1;
-    SparseLogMat::const_iterator2 it2;
+    AccumLogMat& tBar = *result.tBar;
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
     for (it1 = tBar.begin1(); it1 != tBar.end1(); ++it1)
       for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
           ++it2) {
