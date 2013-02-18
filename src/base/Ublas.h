@@ -39,9 +39,9 @@ typedef boost::numeric::ublas::matrix<double> RealMat;
 
 // A matrix type that is more efficient for += addition; i.e., for accumulating
 // counts.
-typedef boost::numeric::ublas::generalized_vector_of_vector<double,
+typedef boost::numeric::ublas::generalized_vector_of_vector<LogWeight,
     boost::numeric::ublas::row_major, boost::numeric::ublas::vector<
-    boost::numeric::ublas::compressed_vector<double> > > AccumLogMat;
+    boost::numeric::ublas::compressed_vector<LogWeight> > > AccumLogMat;
 
 namespace ublas_util {
 
