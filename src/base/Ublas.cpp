@@ -130,8 +130,9 @@ namespace ublas_util {
         const int i = it2.index1();
         const int j = it2.index2();
         assert(j <= i); // If this fails, L is not lower triangular.
-        b(i) += (*it2) * x[j];   // b_i += A_ij * x_i
-        if (i != j)
+        if (x[j] != 0)
+          b(i) += (*it2) * x[j]; // b_i += A_ij * x_i
+        if (i != j && x[i] != 0)
           b(j) += (*it2) * x[i]; // b_j += A_ij * x_j
       }
     }
