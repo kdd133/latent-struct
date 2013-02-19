@@ -74,6 +74,18 @@ namespace ublas_util {
     return dest;
   }
   
+  AccumRealMat& exponentiate(const AccumLogMat& src, AccumRealMat& dest) {
+    assert(dest.size1() == src.size1());
+    assert(dest.size2() == src.size2());
+    dest.clear();
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
+    for (it1 = src.begin1(); it1 != src.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
+        dest(it2.index1(), it2.index2()) = exp(*it2);
+    return dest;
+  }
+  
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest) {
     assert(w.getDim() == v.getDim() && w.getDim() == dest.size());
@@ -106,6 +118,38 @@ namespace ublas_util {
           ++it2) {
         dest(it2.index1(), it2.index2()) += *it2;
       }
+  }
+  
+  void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
+      SparseRealVec& b) {
+    b.clear();
+    AccumRealMat::const_iterator1 it1;
+    AccumRealMat::const_iterator2 it2;
+    for (it1 = L.begin1(); it1 != L.end1(); ++it1) {
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2) {
+        const int i = it2.index1();
+        const int j = it2.index2();
+        assert(j <= i); // If this fails, L is not lower triangular.
+        b(i) += (*it2) * x[j];   // b_i += A_ij * x_i
+        if (i != j)
+          b(j) += (*it2) * x[i]; // b_j += A_ij * x_j
+      }
+    }
+  }
+  
+  void computeLowerCovarianceMatrix(const AccumLogMat& L, const SparseRealVec& v,
+      AccumRealMat& C) {
+    C.clear();
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
+    for (it1 = L.begin1(); it1 != L.end1(); ++it1) {
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2) {
+        const int i = it2.index1();
+        const int j = it2.index2();
+        assert(j <= i); // If this fails, L is not lower triangular.
+        C(i, j) = exp(*it2) - (v[i] * v[j]);
+      }
+    }
   }
   
   void setEntriesToZero(SparseLogMat& M) {

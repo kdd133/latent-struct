@@ -21,7 +21,8 @@
 #include <boost/numeric/ublas/vector_proxy.hpp>
 #include <vector>
 
-#include <boost/timer/timer.hpp>
+//#define USE_SLOW_GRAD
+
 
 void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -40,15 +41,13 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   SparseRealVec feats(n);
   SparseRealVec gradU(n);
   RealVec uMinusW(n);
-  SparseRealMat covU_yi(n, n);
+  AccumRealMat covU_yi(n, n);
   
   // Compute u-w.
   ublas_util::subtractWeightVectors(theta.u, theta.w, uMinusW);
   
   funcVal = 0;
   gradFv.clear();
-  
-  boost::timer::auto_cpu_timer timer;
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
@@ -70,16 +69,30 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.
     LogWeight massU_yi;
     const AccumLogMat* logCoocU_yi = model.expectedFeatureCooccurrences(theta.u,
-        massU_yi, logFeatsU_yi, xi, yi);
+        massU_yi, logFeatsU_yi, xi, yi, true);
     assert(logCoocU_yi);
         
     // Compute the matrix of feature covariances.
     ublas_util::exponentiate(logFeatsU_yi, feats);
-    ublas_util::exponentiate(*logCoocU_yi, covU_yi);
+#ifdef USE_SLOW_GRAD
+    // Fill in the upper portion of the logCoocU_yi matrix.
+    AccumLogMat logCoocU_yi_full = *logCoocU_yi;
+    AccumLogMat::const_iterator1 it1;
+    AccumLogMat::const_iterator2 it2;
+    for (it1 = logCoocU_yi_full.begin1(); it1 != logCoocU_yi_full.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
+          ++it2)
+        logCoocU_yi_full(it2.index2(), it2.index1()) = *it2;
+        
+    ublas_util::exponentiate(logCoocU_yi_full, covU_yi);
     covU_yi -= outer_prod(feats, feats);
     
     // Compute covU_yi' * (u-w) and store the result in gradU.
     axpy_prod(uMinusW, covU_yi, gradU, true);
+#else   
+    ublas_util::computeLowerCovarianceMatrix(*logCoocU_yi, feats, covU_yi);
+    ublas_util::matrixVectorMultLowerSymmetric(covU_yi, uMinusW, gradU);
+#endif
     
     // Update the gradient wrt w (first, exponentiate features).
     subrange(gradFv, 0, n) += ublas_util::exponentiate(logFeatsW, feats);
@@ -94,8 +107,8 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     funcVal += massW;
     funcVal -= massU_yi;
     
-    if (xi.getId() > 250)
-      break;
+//    if (xi.getId() > 500)
+//      break; // for debugging purposes
   }
 }
 

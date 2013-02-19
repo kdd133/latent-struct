@@ -43,6 +43,10 @@ typedef boost::numeric::ublas::generalized_vector_of_vector<LogWeight,
     boost::numeric::ublas::row_major, boost::numeric::ublas::vector<
     boost::numeric::ublas::compressed_vector<LogWeight> > > AccumLogMat;
 
+typedef boost::numeric::ublas::generalized_vector_of_vector<double,
+    boost::numeric::ublas::row_major, boost::numeric::ublas::vector<
+    boost::numeric::ublas::compressed_vector<double> > > AccumRealMat;
+
 namespace ublas_util {
 
   SparseLogVec& logarithm(const SparseRealVec& src, SparseLogVec& dest);
@@ -57,6 +61,8 @@ namespace ublas_util {
   
   SparseRealMat& exponentiate(const AccumLogMat& src, SparseRealMat& dest);
   
+  AccumRealMat& exponentiate(const AccumLogMat& src, AccumRealMat& dest);
+  
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
   
@@ -68,6 +74,18 @@ namespace ublas_util {
   // Perform dest += lower(src), where lower(M) returns the lower triangular
   // portion of M.
   void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest);
+  
+  // Perform C = lower(exp(L) - x*x'), where L is a lower triangular matrix
+  // containing the logs of the expected feature cooccurrence counts; x is a
+  // vector containing the expected feature counts; lower(A) returns the lower
+  // triangular portion of A.
+  void computeLowerCovarianceMatrix(const AccumLogMat& logExpectedFeatCooc,
+      const SparseRealVec& expectedFeats, AccumRealMat& covarianceMatrix);
+  
+  // Perform b = L*x, where L contains the lower triangular portion of what is
+  // interpreted to be a symmetric matrix.
+  void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
+      SparseRealVec& b);
   
   void setEntriesToZero(SparseLogMat& M);
   

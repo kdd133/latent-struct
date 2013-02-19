@@ -51,11 +51,13 @@ class Model {
     virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
+    // Returns a lower triangular matrix representing the symmetric matrix of
+    // feature cooccurrences.
     virtual const AccumLogMat* expectedFeatureCooccurrences(
       const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
-    // Returns true of the caller assumes ownership of the FeatureVector.
+    // Returns true if the caller assumes ownership of the FeatureVector.
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns) = 0;
       

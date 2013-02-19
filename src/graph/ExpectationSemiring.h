@@ -98,18 +98,6 @@ public:
     // rBar and tBar have (presumably) already been set via accumulation
     result.Z = betaRoot.score();
     result.sBar = betaRoot.fv();
-    
-    // The calls to addOuterProductLowerTriangular() in accumulate() only
-    // incremented the lower triangular portion of tBar. Here, we fill in the
-    // upper portion of the (symmetric) tBar matrix.
-    AccumLogMat& tBar = *result.tBar;
-    AccumLogMat::const_iterator1 it1;
-    AccumLogMat::const_iterator2 it2;
-    for (it1 = tBar.begin1(); it1 != tBar.end1(); ++it1)
-      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
-          ++it2) {
-        tBar(it2.index2(), it2.index1()) = tBar(it2.index1(), it2.index2());
-      }
   }
 
 private:

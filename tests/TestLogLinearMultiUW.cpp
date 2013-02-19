@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   }  
   objective->valueAndGradient(theta, fval, gradFv);
   BOOST_CHECK_CLOSE(fval, fvalOpt, 1e-8);
-  BOOST_CHECK_CLOSE(fval, 0.4332885345693386, 1e-8);
+  BOOST_CHECK_CLOSE(fval, 0.433288532370921, 1e-8);
 
   // Find the optimal w parameters for LogLinearMulti.
   double fvalOptW = 0.0;
