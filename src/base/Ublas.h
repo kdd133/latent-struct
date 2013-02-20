@@ -89,7 +89,7 @@ namespace ublas_util {
   // Perform b = L*x, where L contains the lower triangular portion of what is
   // interpreted to be a symmetric matrix.
   void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
-      SparseRealVec& b);
+      SparseRealVec& b, bool clear_b = true);
       
   void lowerToSymmetric(AccumLogMat& L);
   

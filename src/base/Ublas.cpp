@@ -133,8 +133,9 @@ namespace ublas_util {
   }
   
   void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
-      SparseRealVec& b) {
-    b.clear();
+      SparseRealVec& b, bool clear_b) {
+    if (clear_b)
+      b.clear();
     AccumRealMat::const_iterator1 it1;
     AccumRealMat::const_iterator2 it2;
     for (it1 = L.begin1(); it1 != L.end1(); ++it1) {

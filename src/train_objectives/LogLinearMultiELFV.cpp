@@ -31,7 +31,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   assert(theta.hasU());
   
   std::vector<SparseRealVec> phiBar(k, LogVec(n));
-  std::vector<SparseRealMat> cov(k, RealMat(n, n));
+  std::vector<AccumRealMat> cov(k, AccumRealMat(n, n));
   SparseLogVec logFeats(n);
   SparseRealVec phiBar_sumY(n);
   SparseRealMat cooc(n, n);
@@ -68,7 +68,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
       const double mass_y = exp(theta.w.innerProd(phiBar[y]));
       massTotal += mass_y;
       phiBar_sumY += mass_y * phiBar[y];
-      cov[y] = cooc - outer_prod(phiBar[y], phiBar[y]);
+      ublas_util::computeLowerCovarianceMatrix(cooc, phiBar[y], cov[y]);
       covTotal += mass_y * cov[y];
     }
     
@@ -77,8 +77,10 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     covTotal /= massTotal;
 
     // Compute w'*covTotal and store the result in gradU.
-    axpy_prod(w, covTotal, gradU, true);  // true --> do gradU.clear() first
-    axpy_prod(-w, cov[yi], gradU, false); // false --> add -w'*cov[yi] to gradU
+    // Note: true --> do gradU.clear() first
+    ublas_util::matrixVectorMultLowerSymmetric(covTotal, w, gradU, true);
+    // Note: false --> add -w'*cov[yi] to gradU
+    ublas_util::matrixVectorMultLowerSymmetric(cov[yi], -w, gradU, false);
 
     // Update the function value.
     funcVal += log(massTotal) - theta.w.innerProd(phiBar[yi]);
