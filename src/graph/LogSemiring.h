@@ -47,12 +47,13 @@ public:
 
   typedef struct {
     LogWeight Z;
-    LogVec rBar;
+    SparseLogVec* rBar;
   } InsideOutsideResult;
 
   static void initInsideOutsideAccumulator(const std::size_t d,
       InsideOutsideResult& result) {
-    result.rBar.resize(d);
+    result.rBar->clear();
+    assert(result.rBar->size() == d);
   }
 
   static void accumulate(InsideOutsideResult& x, const LogSemiring& keBar,
@@ -61,7 +62,7 @@ public:
     //    where xe = pe*re
     SparseLogVec pe_re = *e.getFeatureVector();
     pe_re *= e.getWeight() * keBar.score();
-    x.rBar += pe_re;
+    *x.rBar += pe_re;
   }
   
   static void finalizeInsideOutsideResult(InsideOutsideResult& result,

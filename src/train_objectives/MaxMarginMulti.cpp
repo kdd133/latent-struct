@@ -49,7 +49,7 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     double scoreMax(-numeric_limits<double>::infinity());
     Label yMax = 0;
     for (Label y = 0; y < k; y++) {
-      score[y] = Utility::delta(yi,y) + model.maxFeatures(theta.w, feats[y],
+      score[y] = Utility::delta(yi,y) + model.maxFeatures(theta.w, &feats[y],
           xi, y);
       if (score[y] > scoreMax) {
         scoreMax = score[y];
@@ -92,7 +92,7 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     // observed features (if any) being included in the max feature vector.
     // Those do not need to be fixed in order to exploit the semi-convexity
     // property.
-    model.maxFeatures(theta.w, fv, xi, yi, false);
+    model.maxFeatures(theta.w, &fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
     (*_imputedFv) += fv;
   }

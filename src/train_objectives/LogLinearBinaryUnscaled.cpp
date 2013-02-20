@@ -27,7 +27,6 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
   const int ypos = TrainingObjective::kPositive;
   
   SparseLogVec feats(d);
-  SparseRealVec temp(d);
   funcVal = 0;
   gradFv.clear();
   
@@ -37,14 +36,13 @@ void LogLinearBinaryUnscaled::valueAndGradientPart(const Parameters& theta,
     
     // Compute the expected feature vector (normalized).
     //feats.zero(); // not needed because expectedFeatures performs reinit
-    const LogWeight logMass = model.expectedFeatures(theta.w, feats, xi, ypos,
+    const LogWeight logMass = model.expectedFeatures(theta.w, &feats, xi, ypos,
         true);
 
     const double fW = (yi == 1) ? -(double)logMass : (double)logMass;
     funcVal += Utility::log1Plus(exp(fW)); // i.e., exp(fW)
     
-    ublas_util::exponentiate(feats, temp);
-    gradFv += temp * (-yi * (1 - Utility::sigmoid(-fW)));
+    ublas_util::addExponentiated(feats, gradFv, -yi*(1-Utility::sigmoid(-fW)));
   }
 }
 

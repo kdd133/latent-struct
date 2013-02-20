@@ -87,11 +87,11 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraphVarSemi)
   const int iBias = alphabet->lookup("Bias", 0, false);
   BOOST_REQUIRE(iBias >= 0);
   
-  SparseLogVec fv;
-  LogWeight totalMass;
-  const AccumLogMat* fm_ = model->expectedFeatureCooccurrences(W, totalMass, fv,
-      *pair, label, false);
-  const AccumLogMat& fm = *fm_;
+  SparseLogVec fv(d);
+  AccumLogMat fm(d, d);
+  LogWeight totalMass = model->expectedFeatureCooccurrences(W, &fm, &fv, *pair,
+      label, false);
+  ublas_util::lowerToSymmetric(fm); // fill in the upper portion of fm
   
   // Check that the total mass is correct.
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);

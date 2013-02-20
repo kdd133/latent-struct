@@ -21,8 +21,6 @@
 #include <boost/numeric/ublas/vector_proxy.hpp>
 #include <vector>
 
-//#define USE_SLOW_GRAD
-
 
 void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -35,12 +33,13 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   assert(d == gradFv.size());
   
   SparseLogVec logFeatsW(n);
-  SparseLogVec logFeatsU_yi;  // call to expectedFeatureCooccurrences will allocate
+  SparseLogVec logFeatsU_yi(n);
   
-  SparseLogVec logFeats;      // call to expectedFeatures will allocate
+  SparseLogVec logFeats(n);
   SparseRealVec feats(n);
   SparseRealVec gradU(n);
   RealVec uMinusW(n);
+  AccumLogMat logCoocU_yi(n, n);
   AccumRealMat covU_yi(n, n);
   
   // Compute u-w.
@@ -58,7 +57,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     logFeatsW.clear();
     for (Label y = 0; y < k; y++) {      
       // Note: The last argument is false b/c we want unnormalized features.
-      massW += model.expectedFeatures(theta.w, logFeats, xi, y, false);
+      massW += model.expectedFeatures(theta.w, &logFeats, xi, y, false);
       assert(logFeats.size() == n);
       logFeatsW += logFeats;
     }    
@@ -67,32 +66,13 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
 
     // Compute the mass, expected features, and feature co-occurrences wrt u.
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.
-    LogWeight massU_yi;
-    const AccumLogMat* logCoocU_yi = model.expectedFeatureCooccurrences(theta.u,
-        massU_yi, logFeatsU_yi, xi, yi, true);
-    assert(logCoocU_yi);
+    LogWeight massU_yi = model.expectedFeatureCooccurrences(theta.u,
+        &logCoocU_yi, &logFeatsU_yi, xi, yi, true);
         
     // Compute the matrix of feature covariances.
     ublas_util::exponentiate(logFeatsU_yi, feats);
-#ifdef USE_SLOW_GRAD
-    // Fill in the upper portion of the logCoocU_yi matrix.
-    AccumLogMat logCoocU_yi_full = *logCoocU_yi;
-    AccumLogMat::const_iterator1 it1;
-    AccumLogMat::const_iterator2 it2;
-    for (it1 = logCoocU_yi_full.begin1(); it1 != logCoocU_yi_full.end1(); ++it1)
-      for (it2 = it1.begin(); it2 != it1.end() && it2.index2() < it2.index1();
-          ++it2)
-        logCoocU_yi_full(it2.index2(), it2.index1()) = *it2;
-        
-    ublas_util::exponentiate(logCoocU_yi_full, covU_yi);
-    covU_yi -= outer_prod(feats, feats);
-    
-    // Compute covU_yi' * (u-w) and store the result in gradU.
-    axpy_prod(uMinusW, covU_yi, gradU, true);
-#else   
-    ublas_util::computeLowerCovarianceMatrix(*logCoocU_yi, feats, covU_yi);
+    ublas_util::computeLowerCovarianceMatrix(logCoocU_yi, feats, covU_yi);
     ublas_util::matrixVectorMultLowerSymmetric(covU_yi, uMinusW, gradU);
-#endif
     
     // Update the gradient wrt w (first, exponentiate features).
     subrange(gradFv, 0, n) += ublas_util::exponentiate(logFeatsW, feats);
@@ -106,9 +86,6 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     funcVal += inner_prod(uMinusW, feats); // add (u-w)*featsU_yi
     funcVal += massW;
     funcVal -= massU_yi;
-    
-//    if (xi.getId() > 500)
-//      break; // for debugging purposes
   }
 }
 
@@ -118,13 +95,13 @@ void LogLinearMultiUW::predictPart(const Parameters& theta, Model& model,
   const int n = theta.w.getDim();
   RealVec wMinusU(n);
   ublas_util::subtractWeightVectors(theta.w, theta.u, wMinusU);
-  SparseLogVec logFeatsU;
+  SparseLogVec logFeatsU(n);
   SparseRealVec featsU(n);
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      const double massU = model.expectedFeatures(theta.u, logFeatsU, x, y,
+      const double massU = model.expectedFeatures(theta.u, &logFeatsU, x, y,
           true);
       ublas_util::exponentiate(logFeatsU, featsU);
       const double yScore = inner_prod(wMinusU, featsU) + massU;

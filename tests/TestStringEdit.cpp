@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(testStringEdit)
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   SparseLogVec fv(d);
-  LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
+  LogWeight totalMassAlt = model->expectedFeatures(W, &fv, *pair, label, false);
   BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
   const int iMat = alphabet->lookup("S:Mat11", 0, false);

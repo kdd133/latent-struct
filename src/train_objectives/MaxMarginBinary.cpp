@@ -46,7 +46,7 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
     if (yi == -1) {
       feats.clear();
       // gets latent+obs feats
-      z = yi * model.maxFeatures(theta.w, feats, xi, ypos);
+      z = yi * model.maxFeatures(theta.w, &feats, xi, ypos);
       if (z < 1)
         gradFv += -yi * feats;
     }
@@ -78,7 +78,7 @@ void MaxMarginBinary::setLatentFeatureVectorsPart(const Parameters& theta,
       const size_t i = xi.getId();
       // The last argument in the call to maxFeatures is false because we do
       // not want to fix the observed features when computing the objective.
-      model.maxFeatures(theta.w, _imputedFvs[i], xi, yi, false);
+      model.maxFeatures(theta.w, &_imputedFvs[i], xi, yi, false);
     }
   }
 }

@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_CHECK_CLOSE((double)totalMass, -300, 1e-8);
   
   SparseLogVec fv(d);
-  LogWeight totalMassAlt = model->expectedFeatures(W, fv, *pair, label, false);
+  LogWeight totalMassAlt = model->expectedFeatures(W, &fv, *pair, label, false);
   BOOST_CHECK_CLOSE((double)totalMass, (double)totalMassAlt, 1e-8);
   
   const int iMat = alphabet->lookup("S:Mat11", 0, false);
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(testStringEditHypergraph)
   BOOST_CHECK_CLOSE(viterbiScore, -300, 1e-8);
   
   SparseRealVec realFv(d);
-  double maxScore = model->maxFeatures(W, realFv, *pair, label, true);
+  double maxScore = model->maxFeatures(W, &realFv, *pair, label, true);
   BOOST_CHECK_CLOSE(maxScore, viterbiScore, 1e-8);
   
   // Check that values in the max-scoring feature vector are correct.  

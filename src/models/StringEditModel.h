@@ -69,15 +69,15 @@ class StringEditModel : public Model {
     virtual double viterbiScore(const WeightVector& w, const Pattern& pattern,
       const Label label);
   
-    virtual double maxFeatures(const WeightVector& w, SparseRealVec& fv,
+    virtual double maxFeatures(const WeightVector& w, SparseRealVec* fv,
       const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true);
     
-    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
+    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true);
       
-    virtual const AccumLogMat* expectedFeatureCooccurrences(
-      const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
+    virtual LogWeight expectedFeatureCooccurrences(
+      const WeightVector& w, AccumLogMat* fm, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true);
       
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
@@ -136,9 +136,6 @@ class StringEditModel : public Model {
     
     // A cache for observed feature vectors.
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
-    
-    // A cache for matrices that store feature co-occurrence statistics. 
-    boost::ptr_map<ExampleId, AccumLogMat> _matrixCache;
     
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
@@ -572,61 +569,45 @@ double StringEditModel<Graph>::viterbiScore(const WeightVector& w,
 
 template <typename Graph>
 double StringEditModel<Graph>::maxFeatures(const WeightVector& w,
-    SparseRealVec& fvOut, const Pattern& x, const Label y, bool includeObsFeats) {
+    SparseRealVec* fv, const Pattern& x, const Label y, bool includeObsFeats) {
   Graph* graph = 0;
   if (includeObsFeats)
     graph = getGraph(_fstCache, w, x, y, includeObsFeats);
   else
     graph = getGraph(_fstCacheNoObs, w, x, y, includeObsFeats);
-  RealVec fv(fvOut.size());
-  fv.clear();
   const double maxScore = Inference<ViterbiSemiring>::maxFeatureVector(
       *graph, fv);
-  fvOut = fv;
   return maxScore;
 }
 
 template <typename Graph>
 LogWeight StringEditModel<Graph>::expectedFeatures(const WeightVector& w,
-    SparseLogVec& fvOut, const Pattern& x, const Label y, bool normalize) {
+    SparseLogVec* fv, const Pattern& x, const Label y, bool normalize) {
   Graph* graph = getGraph(_fstCache, w, x, y);
-  LogVec fv(fvOut.size());
-  fv.clear();
   const LogWeight logZ = Inference<LogSemiring>::logExpectedFeatures(
       *graph, fv);
-  fvOut = fv;
   if (normalize)
-    fvOut /= logZ;  
+    *fv /= logZ;  
   return logZ;
 }
 
 template <typename Graph>
-const AccumLogMat* StringEditModel<Graph>::expectedFeatureCooccurrences(
-    const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
+LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
+    const WeightVector& w, AccumLogMat* fm, SparseLogVec* fv,
     const Pattern& x, const Label y, bool normalize) {
-  const int d = w.getDim();
   Graph* graph = getGraph(_fstCache, w, x, y);
-  
-  ExpectationSemiring::InsideOutsideResult result;  
-  ExampleId id = std::make_pair(x.getId(), y);
-  typename boost::ptr_map<ExampleId, AccumLogMat>::iterator it =
-      _matrixCache.find(id);
-  if (it == _matrixCache.end()) {
-    result.tBar = new AccumLogMat(d, d);
-    _matrixCache.insert(id, result.tBar);
-  }
-  else
-    result.tBar = it->second;
-  
+    
+  ExpectationSemiring::InsideOutsideResult result;
+  result.rBar = fv;
+  result.tBar = fm;
   Inference<ExpectationSemiring>::logExpectedFeatureCooccurrences(*graph,
       result);
-  logZ = result.Z;
-  fv = result.rBar;
+      
   if (normalize) {
-    fv /= logZ;
-    *result.tBar /= logZ;
+    *fv /= result.Z;
+    *fm /= result.Z;
   }
-  return result.tBar;
+  return result.Z;
 }
 
 template <typename Graph>
@@ -714,7 +695,6 @@ void StringEditModel<Graph>::emptyCache() {
   _fstCache.clear();
   _fstCacheNoObs.clear();
   _fvCacheObs.clear();
-  _matrixCache.clear();
 }
 
 template <typename Graph>

@@ -86,6 +86,18 @@ namespace ublas_util {
     return dest;
   }
   
+  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest) {
+    SparseLogVec::const_iterator it;
+    for (it = src.begin(); it != src.end(); ++it)
+      dest(it.index()) += exp(*it);
+  }
+  
+  void addExponentiated(const SparseLogVec& src, RealVec& dest, double scale) {
+    SparseLogVec::const_iterator it;
+    for (it = src.begin(); it != src.end(); ++it)
+      dest(it.index()) += exp(*it) * scale;
+  }
+  
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest) {
     assert(w.getDim() == v.getDim() && w.getDim() == dest.size());
@@ -151,6 +163,14 @@ namespace ublas_util {
         C(i, j) = exp(*it2) - (v[i] * v[j]);
       }
     }
+  }
+  
+  void lowerToSymmetric(AccumLogMat& L) {
+    const int d = L.size1();
+    assert(d == L.size2());
+    for (size_t i = 0; i < d; ++i)
+      for (size_t j = 0; j < i; ++j)
+        L(j, i) = L(i, j);
   }
   
   void setEntriesToZero(SparseLogMat& M) {

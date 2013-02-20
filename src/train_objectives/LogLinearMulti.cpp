@@ -27,7 +27,6 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
   std::vector<LogWeight> mass(k, LogWeight());
   std::vector<SparseLogVec> feats(k, LogVec(d));  
   SparseLogVec featsTotal(d);
-  SparseRealVec temp(d);
   
   funcVal = 0;
   gradFv.clear();
@@ -43,7 +42,7 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     
     for (Label y = 0; y < k; y++) {
       // Note: The last argument is false b/c we want unnormalized features.
-      mass[y] = model.expectedFeatures(theta.w, feats[y], xi, y, false);
+      mass[y] = model.expectedFeatures(theta.w, &feats[y], xi, y, false);
       featsTotal += feats[y];
       massTotal += mass[y];
     }
@@ -53,8 +52,8 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     feats[yi] /= mass[yi];
 
     // Convert features from log- to real-space, then update gradient
-    gradFv += ublas_util::exponentiate(featsTotal, temp);
-    gradFv -= ublas_util::exponentiate(feats[yi], temp);
+    ublas_util::addExponentiated(featsTotal, gradFv, 1);
+    ublas_util::addExponentiated(feats[yi], gradFv, -1);
 
     // Update function value
     // Note: We want the log, which is why we don't exponentiate.

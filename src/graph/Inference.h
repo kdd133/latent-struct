@@ -33,7 +33,7 @@ class Inference {
   public:
     static LogWeight logPartition(const Graph& g);
 
-    static LogWeight logExpectedFeatures(const Graph& g, LogVec& fv); 
+    static LogWeight logExpectedFeatures(const Graph& g, SparseLogVec* fv); 
         
     static void logExpectedFeatureCooccurrences(const Graph& g,
         typename Semiring::InsideOutsideResult& result);
@@ -41,7 +41,7 @@ class Inference {
     // Note: maxFeatureVector and viterbiScore will return the same value, but
     // if you only need the score, the viterbiScore function should be slightly
     // more efficient because it does not keep track of back-pointers.    
-    static double maxFeatureVector(const Graph& g, RealVec& fv);
+    static double maxFeatureVector(const Graph& g, SparseRealVec* fv);
     static double viterbiScore(const Graph& g);
         
     // Returns the *reverse* sequence of labels that correspond to the edges
@@ -75,24 +75,22 @@ LogWeight Inference<Semiring>::logPartition(const Graph& g) {
 }
 
 template <class Semiring>
-LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g, LogVec& fv) {
+LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g,
+    SparseLogVec* fv) {
   typename Semiring::InsideOutsideResult result;
+  result.rBar = fv;
   insideOutside(g, result);
-  fv = result.rBar;
   return result.Z;
 }
 
 template <class Semiring>
-double Inference<Semiring>::maxFeatureVector(const Graph& g, RealVec& fv) {
+double Inference<Semiring>::maxFeatureVector(const Graph& g, SparseRealVec* fv) {
   std::list<const Hyperedge*> bestPath;
   const double viterbiScore = viterbi(g, bestPath);
-  
-  fv.clear();
-  fv.resize(g.numFeatures());
-  SparseRealVec temp(fv.size());
+  fv->clear();
   BOOST_FOREACH(const Hyperedge* e, bestPath) {
     assert(e->getChildren().size() == 1); // Only works for graphs at this point
-    fv += ublas_util::exponentiate(*e->getFeatureVector(), temp);
+    ublas_util::addExponentiated(*e->getFeatureVector(), *fv);
   }
   return viterbiScore;
 }

@@ -43,18 +43,18 @@ class Model {
     virtual double viterbiScore(const WeightVector& w, const Pattern& pattern,
       const Label label) = 0;
 
-    virtual double maxFeatures(const WeightVector& w, SparseRealVec& fv,
+    virtual double maxFeatures(const WeightVector& w, SparseRealVec* fv,
       const Pattern& pattern, const Label label,
       bool includeObservedFeaturesArc = true) = 0;
     
     // Returns total mass for this Pattern and Label.
-    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec& fv,
+    virtual LogWeight expectedFeatures(const WeightVector& w, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     // Returns a lower triangular matrix representing the symmetric matrix of
     // feature cooccurrences.
-    virtual const AccumLogMat* expectedFeatureCooccurrences(
-      const WeightVector& w, LogWeight& logZ, SparseLogVec& fv,
+    virtual LogWeight expectedFeatureCooccurrences(
+      const WeightVector& w, AccumLogMat* fm, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
     // Returns true if the caller assumes ownership of the FeatureVector.

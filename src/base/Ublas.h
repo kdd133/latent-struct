@@ -63,6 +63,10 @@ namespace ublas_util {
   
   AccumRealMat& exponentiate(const AccumLogMat& src, AccumRealMat& dest);
   
+  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest);
+  
+  void addExponentiated(const SparseLogVec& src, RealVec& dest, double scale);
+  
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
   
@@ -86,6 +90,8 @@ namespace ublas_util {
   // interpreted to be a symmetric matrix.
   void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
       SparseRealVec& b);
+      
+  void lowerToSymmetric(AccumLogMat& L);
   
   void setEntriesToZero(SparseLogMat& M);
   

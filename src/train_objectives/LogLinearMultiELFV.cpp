@@ -32,11 +32,12 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   
   std::vector<SparseRealVec> phiBar(k, LogVec(n));
   std::vector<SparseRealMat> cov(k, RealMat(n, n));
-  SparseLogVec logFeats; // call to expectedFeatureCoocurrences will allocate/resize
+  SparseLogVec logFeats(n);
   SparseRealVec phiBar_sumY(n);
   SparseRealMat cooc(n, n);
   SparseRealMat covTotal(n, n);
   SparseRealVec gradU(n);
+  AccumLogMat logCooc(n, n);
   double massTotal;
   
   // Copy theta.w into RealVec w.
@@ -57,15 +58,11 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     
     for (Label y = 0; y < k; y++) {      
       // Get the (normalized) log expected features and coocurrences. 
-      LogWeight massU_yi;
-      const AccumLogMat* logCooc = model.expectedFeatureCooccurrences(theta.u,
-          massU_yi, logFeats, xi, y);
-      assert(logCooc);
-      assert(logCooc->size1() == n && logCooc->size2() == n);
+      model.expectedFeatureCooccurrences(theta.u, &logCooc, &logFeats, xi, y);
       assert(logFeats.size() == n);
       
       // Exponentiate the log values.
-      ublas_util::exponentiate(*logCooc, cooc);
+      ublas_util::exponentiate(logCooc, cooc);
       ublas_util::exponentiate(logFeats, phiBar[y]);
       
       const double mass_y = exp(theta.w.innerProd(phiBar[y]));
@@ -97,12 +94,12 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiELFV::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  SparseLogVec logFeats;
+  SparseLogVec logFeats(theta.w.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
-      model.expectedFeatures(theta.u, logFeats, x, y, true);
+      model.expectedFeatures(theta.u, &logFeats, x, y, true);
       const double yScore = theta.w.innerProd(logFeats);
       scores.setScore(id, y, yScore);
     }

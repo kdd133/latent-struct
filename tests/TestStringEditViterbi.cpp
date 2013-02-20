@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   BOOST_CHECK_CLOSE((double)viterbiScore, -300, 1e-8);
   
   SparseRealVec fv(d);
-  double maxScore = model->maxFeatures(W, fv, *pair, label, true);
+  double maxScore = model->maxFeatures(W, &fv, *pair, label, true);
   BOOST_CHECK_CLOSE((double)maxScore, (double)viterbiScore, 1e-8);
   
   const int iMat = alphabet->lookup("S:Mat11", 0, false);

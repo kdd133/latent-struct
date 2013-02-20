@@ -63,16 +63,18 @@ public:
   
   typedef struct {
     LogWeight Z;
-    LogVec rBar;
-    LogVec sBar;
+    SparseLogVec* rBar;
+    SparseLogVec* sBar;
     AccumLogMat* tBar;
   } InsideOutsideResult;
   
   static void initInsideOutsideAccumulator(const std::size_t d,
       InsideOutsideResult& result) {
-    result.rBar.resize(d, false);
-//    result.tBar->resize(d, d, false);
-    ublas_util::setEntriesToZero(*result.tBar);
+    result.rBar->clear();
+//  result.sBar = 0; // currently unused
+    result.tBar->clear();
+    assert(result.rBar->size() == d);
+    assert(result.tBar->size1() == d && result.tBar->size2() == d);
   }
   
   static void accumulate(InsideOutsideResult& x,
@@ -90,14 +92,14 @@ public:
     ublas_util::addOuterProductLowerTriangular(pe_se, keBarR, LogWeight(1),
         *x.tBar);
     pe_se *= keBarP;
-    x.rBar += pe_se;
+    *x.rBar += pe_se;
   }
   
   static void finalizeInsideOutsideResult(InsideOutsideResult& result,
       const ExpectationSemiring& betaRoot) {
     // rBar and tBar have (presumably) already been set via accumulation
     result.Z = betaRoot.score();
-    result.sBar = betaRoot.fv();
+//  result.sBar = betaRoot.fv(); // currently not used, so don't bother copying
   }
 
 private:
