@@ -30,7 +30,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   const int d = theta.getTotalDim(); // i.e., the length of the [w u] vector
   assert(theta.hasU());
   
-  std::vector<SparseRealVec> phiBar(k, LogVec(n));
+  std::vector<SparseRealVec> phiBar(k, SparseRealVec(n));
   std::vector<AccumRealMat> cov(k, AccumRealMat(n, n));
   SparseLogVec logFeats(n);
   SparseRealVec phiBar_sumY(n);
@@ -59,7 +59,6 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     for (Label y = 0; y < k; y++) {      
       // Get the (normalized) log expected features and coocurrences. 
       model.expectedFeatureCooccurrences(theta.u, &logCooc, &logFeats, xi, y);
-      assert(logFeats.size() == n);
       
       // Exponentiate the log values.
       ublas_util::exponentiate(logCooc, cooc);
