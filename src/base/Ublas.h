@@ -67,6 +67,10 @@ namespace ublas_util {
   
   void addExponentiated(const SparseLogVec& src, RealVec& dest, double scale);
   
+  // Perform dest += src * scale.
+  void addScaled(const AccumRealMat& src, AccumRealMat& dest, double scale);
+  
+  // Perform dest = w - v.
   RealVec& subtractWeightVectors(const WeightVector& w, const WeightVector& v,
       RealVec& dest);
   

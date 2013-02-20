@@ -34,7 +34,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   std::vector<AccumRealMat> cov(k, AccumRealMat(n, n));
   SparseLogVec logFeats(n);
   SparseRealVec phiBar_sumY(n);
-  SparseRealMat covTotal(n, n);
+  AccumRealMat covTotal(n, n);
   SparseRealVec gradU(n);
   AccumLogMat logCooc(n, n);
   double massTotal;
@@ -66,7 +66,9 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
       massTotal += mass_y;
       phiBar_sumY += mass_y * phiBar[y];
       ublas_util::computeLowerCovarianceMatrix(logCooc, phiBar[y], cov[y]);
-      covTotal += mass_y * cov[y];
+      
+      // Perform covTotal += mass_y * cov[y]
+      ublas_util::addScaled(cov[y], covTotal, mass_y);
     }
     
     // Normalize the counts.

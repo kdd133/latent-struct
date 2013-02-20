@@ -132,6 +132,16 @@ namespace ublas_util {
       }
   }
   
+  void addScaled(const AccumRealMat& src, AccumRealMat& dest, double scale) {
+    assert(dest.size1() == src.size1());
+    assert(dest.size2() == src.size2());
+    AccumRealMat::const_iterator1 it1;
+    AccumRealMat::const_iterator2 it2;
+    for (it1 = src.begin1(); it1 != src.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
+        dest(it2.index1(), it2.index2()) += (*it2) * scale;
+  }
+  
   void matrixVectorMultLowerSymmetric(const AccumRealMat& L, const RealVec& x,
       SparseRealVec& b, bool clear_b) {
     if (clear_b)
