@@ -18,7 +18,7 @@
 
 INCLUDES = -I. -I../src/base -I../src/domain_common -I../src/domain_sentences -I../src/domain_synthetic -I../src/domain_words -I../src/edit_operations -I../src/graph -I../src/hypergraph -I../src/models -I../src/optimization -I../src/train_objectives -I../src/util -I/usr/local/include
 LIBS = -L/usr/local/lib -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem -lboost_unit_test_framework
-CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
+CCFLAGS = -march=native -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 CCDEP = $(CC) $(INCLUDES) -MM
 CCGDB = g++ -O0 $(CCFLAGS)
 CCGDBOBJ = $(CCGDB) $(INCLUDES) -ggdb -c

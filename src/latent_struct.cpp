@@ -556,20 +556,6 @@ initial weights")
   }
   cout << "Extracted " << alphabet->size() << " features\n";  
 
-  // If an output directory was specfied, save the alphabet and options.
-  if (writeFiles && !resumed) {
-    if (!alphabet->write(alphabetFname))
-      cout << "Warning: Unable to write " << alphabetFname << endl;  
-    const string optsFname = dirPath + "options.txt";
-    ofstream optsOut(optsFname.c_str());
-    if (optsOut.good()) {
-      optsOut << optsStream.str();
-      optsOut.close();
-    }
-    else
-      cout << "Warning: Unable to write " << optsFname << endl;
-  }
-
   // Enable caching at this point, if requested.
   if (cachingEnabled) {
     for (size_t i = 0; i < objective->getNumModels(); i++) {
@@ -593,6 +579,20 @@ initial weights")
   if (theta0.hasU()) {
     initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet,
         trainData.getLabelSet(), fgenLat);
+  }
+  
+  // If an output directory was specfied, save the alphabet and options.
+  if (writeFiles && !resumed) {
+    if (!alphabet->write(alphabetFname))
+      cout << "Warning: Unable to write " << alphabetFname << endl;  
+    const string optsFname = dirPath + "options.txt";
+    ofstream optsOut(optsFname.c_str());
+    if (optsOut.good()) {
+      optsOut << optsStream.str();
+      optsOut.close();
+    }
+    else
+      cout << "Warning: Unable to write " << optsFname << endl;
   }
 
   // Train weights for each combination of the beta and tolerance parameters.
