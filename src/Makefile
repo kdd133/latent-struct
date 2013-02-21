@@ -18,8 +18,8 @@
 
 INCLUDES = -I. -Ibase -Idomain_common -Idomain_sentences -Idomain_synthetic -Idomain_words -Iedit_operations -Igraph -Ihypergraph -Imodels -Ioptimization -Itrain_objectives -Iutil -I/usr/local/include
 LIBS = -L/usr/local/lib -ldl -lm -llbfgs -luQuadProgpp -lboost_program_options -lboost_timer -lboost_system -lboost_thread -lboost_regex -lboost_filesystem
-CCFLAGS = -frounding-math -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
-CC = g++ -O3 -DNDEBUG $(CCFLAGS)
+CCFLAGS = -march=native -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
+CC = g++ -Ofast -DNDEBUG $(CCFLAGS)
 CCDEP = $(CC) $(INCLUDES) -MM
 CCOBJ = $(CC) $(INCLUDES) -c
 CCGDB = g++ -O0 $(CCFLAGS)
