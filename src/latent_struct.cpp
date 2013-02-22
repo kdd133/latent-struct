@@ -648,12 +648,15 @@ initial weights")
             regularizer->setBeta(beta);
             status = optimizer->train(theta, fval, tol);
           }
-          if (status == Optimizer::FAILURE) {
-            cout << "Warning: Optimizer returned status " << status << ". " <<
-                "Discarding classifier.\n";
-            weightVectors.pop_back();
-            continue;
-          }
+          // Update: Besides the cost of evaluation, there's no drawback to
+          // keeping classifiers for which the optimizer didn't report
+          // convergence. The status still gets reported below.
+//        if (status == Optimizer::FAILURE) {
+//          cout << "Warning: Optimizer returned status " << status << ". " <<
+//              "Discarding classifier.\n";
+//          weightVectors.pop_back();
+//          continue;
+//        }
           if (!noEarlyGridStop && status == Optimizer::MAX_ITERS_CONVEX) {
             cout << "Warning: Optimizer returned status " << status << ". " <<
                 "Discarding classifier and skipping to next tolerance value.\n";
