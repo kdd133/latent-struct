@@ -19,9 +19,21 @@
 
 using namespace std;
 
+// Finkel and Manning set the domain-specific variance parameter to 1/10 that
+// of the shared variance parameter. This is equivalent to setting the class-
+// specific regularization coefficient to 10 times that of the shared
+// regularization coefficient in our setting, which we adopt as the default.
+
 RegularizerSoftTying::RegularizerSoftTying(double beta) : Regularizer(beta),
-  _betaW(beta), _betaSharedW(10*beta), _betaU(beta), _betaSharedU(10*beta),
+  _betaW(beta), _betaSharedW(0.1*beta), _betaU(beta), _betaSharedU(0.1*beta),
   _alphabet(0), _labels(0), _labelShared(-1) {
+}
+
+void RegularizerSoftTying::setBeta(double beta) {
+  _betaW = beta;
+  _betaU = beta;
+  _betaSharedW = 0.1 * beta;
+  _betaSharedU = 0.1 * beta;
 }
 
 int RegularizerSoftTying::processOptions(int argc, char** argv) {

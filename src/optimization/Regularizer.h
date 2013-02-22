@@ -39,7 +39,7 @@ class Regularizer {
       return _beta;
     }
     
-    void setBeta(double beta) {
+    virtual void setBeta(double beta) {
       _beta = beta;
     }
   

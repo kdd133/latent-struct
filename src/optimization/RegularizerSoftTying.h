@@ -41,6 +41,8 @@ class RegularizerSoftTying : public Regularizer {
     virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
         const std::set<Label>& labelSet);
         
+    virtual void setBeta(double beta);
+        
     static const std::string& name() {
       static const std::string _name = "SoftTying";
       return _name;
