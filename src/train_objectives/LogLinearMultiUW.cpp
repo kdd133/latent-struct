@@ -32,17 +32,15 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
   assert(n > 0 && n == theta.u.getDim());
   assert(d == gradFv.size());
   
+  // These vectors will be reused in the main for loop below.
   SparseLogVec logFeatsW(n);
-  SparseLogVec logFeatsU_yi(n);
-  
+  SparseLogVec logFeatsU_yi(n);  
   SparseLogVec logFeats(n);
   SparseRealVec feats(n);
   SparseRealVec gradU(n);
-  RealVec uMinusW(n);
-  AccumLogMat logCoocU_yi(n, n);
-  AccumRealMat covU_yi(n, n);
   
   // Compute u-w.
+  RealVec uMinusW(n);
   ublas_util::subtractWeightVectors(theta.u, theta.w, uMinusW);
   
   funcVal = 0;
@@ -63,6 +61,12 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     }    
     // Normalize the expected features under w.
     logFeatsW /= massW;
+
+    // We create these matrices inside the loop because they need to be cleared
+    // for each example. It turns out that calling clear() for the
+    // generalized_vector_of_vector type doesn't free all the memory.
+    AccumLogMat logCoocU_yi(n, n);
+    AccumRealMat covU_yi(n, n);
 
     // Compute the mass, expected features, and feature co-occurrences wrt u.
     // Note: logFeatsU_yi and logCoocU_yi will be normalized after this call.

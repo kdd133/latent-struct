@@ -19,6 +19,7 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <cmath>
 #include <vector>
 
@@ -30,14 +31,10 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
   const int d = theta.getTotalDim(); // i.e., the length of the [w u] vector
   assert(theta.hasU());
   
+  // These vectors will be reused in the main for loop below.
   std::vector<SparseRealVec> phiBar(k, SparseRealVec(n));
-  std::vector<AccumRealMat> cov(k, AccumRealMat(n, n));
   SparseLogVec logFeats(n);
-  SparseRealVec phiBar_sumY(n);
-  AccumRealMat covTotal(n, n);
   SparseRealVec gradU(n);
-  AccumLogMat logCooc(n, n);
-  double massTotal;
   
   // Copy theta.w into RealVec w.
   RealVec w(n);
@@ -51,11 +48,17 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     const Pattern& xi = *it->x();
     const Label yi = it->y();
     
-    massTotal = 0;
-    phiBar_sumY.clear();
-    covTotal.clear();
+    double massTotal = 0;
+    SparseRealVec phiBar_sumY(n);
     
-    for (Label y = 0; y < k; y++) {      
+    // We create these matrices inside the loop because they need to be cleared
+    // for each example. It turns out that calling clear() for the
+    // generalized_vector_of_vector type doesn't free all the memory.
+    std::vector<AccumRealMat> cov(k, AccumRealMat(n, n));
+    AccumLogMat logCooc(n, n);
+    AccumRealMat covTotal(n, n);
+    
+    for (Label y = 0; y < k; y++) {
       // Get the (normalized) log expected features and coocurrences. 
       model.expectedFeatureCooccurrences(theta.u, &logCooc, &logFeats, xi, y);
       
