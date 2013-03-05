@@ -143,7 +143,13 @@ commands = []
 for n in xrange(opts.num_trials):
   dir_n = '%s/%s/%03d' % (results_dir, opts.prefix, n)
   options = ['--dir=%s' % dir_n, '--train=%s' % opts.train]
-  options.extend('--%s=%s' % (p,v) for p,v in fixed)
+  
+  for param, val in fixed:
+    if val == 'true':
+      options.append('--%s' % param)
+    elif val != 'false':
+      options.append('--%s=%s' % (param, val))
+
   for param in to_sample:
     arg = param.name
     val = param.sample()
