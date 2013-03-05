@@ -7,19 +7,19 @@
 #
 # Copyright (c) 2013 Kenneth Dwyer
 
-import math
 import optparse
 import os
 import random
 import re
 import sys
+from math import ceil, exp, log
 
 class Hyperparameter:
   def __init__(self, name, type, vals):
     self.name = name
-    if type not in ('f', 'i', 'b', 's'):
-      raise ValueError, 'The type qualifier must be f(float), i(int), b(bool) \
-or s(set).'
+    if type not in ('f', 'i', 'b', 's', 'l'):
+      raise ValueError, 'The type qualifier must be f(float), i(int), b(bool), \
+s(set), or l(logarithmic).'
     self.type = type
     self.vals = vals
     
@@ -41,6 +41,11 @@ or s(set).'
     elif self.type == 's': # set
       assert(len(self.vals) >= 2)
       return random.choice(self.vals)
+    elif self.type == 'l': # logarithmic
+      assert(len(self.vals) == 2)
+      lower, upper = log(float(self.vals[0])), log(float(self.vals[1]))
+      # Note: The uniform function swaps the arguments if lower >= upper.
+      return exp(random.uniform(lower, upper))
     else:
       raise ValueError, 'An unrecognized parameter type was encountered.'
 
@@ -58,7 +63,10 @@ usage = 'Usage: %prog [options] PARAM1:[TYPE1:]VAL1a[,VAL1b,...] \
     b(boolean): there should not be any values (they will be ignored), e.g.,\n\
       align-unigrams-only:b:\n\
     s(set): there must be two or more values, e.g.,\n\
-      weights-init:s:heuristic,noise,zero uniformly chooses one of three values'
+      weights-init:s:heuristic,noise,zero uniformly chooses one of three values\n\
+    l(logarithmic): like f(float), except that the range is transformed into\n\
+      log-space, a sample is drawn uniformly from the resulting range, and\n\
+      the value is exponentiated'
 
 parser = optparse.OptionParser(usage=usage)
 parser.add_option('-e', '--executable', type='string', default='./latent_struct',
@@ -155,7 +163,7 @@ for n in xrange(opts.num_trials):
   commands.append(cmd)
 
 #FIXME: It is possible for the last job to be allocated zero commands.
-cmds_per_job = int(math.ceil(len(commands)/float(opts.num_jobs)))
+cmds_per_job = int(ceil(len(commands)/float(opts.num_jobs)))
 if opts.shuffle:
   random.shuffle(commands)
 it = commands.__iter__()
