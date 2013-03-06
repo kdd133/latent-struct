@@ -248,7 +248,7 @@ initial weights")
     resumed = true;
     cout << "Warning: Found existing output files in " << dirPath <<
         ", so treating this as a resumed run. Any evaluation output files " <<
-        "will be overwritten\n";
+        "will be overwritten.\n";
   }
 
   for (size_t th = 0; th < threads; th++) {

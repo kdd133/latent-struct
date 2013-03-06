@@ -143,9 +143,11 @@ void Inference<Semiring>::insideOutside(const Graph& g,
   while (queue.size() > 0) {
     const Hypernode* v = queue.front();
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      assert(e);
     
       // Enqueue this edge's child node(s). 
       BOOST_FOREACH(const Hypernode* child, e->getChildren()) {
+        assert(child);
         if (!marked[child->getId()]) {
           queue.push_back(child);
           marked[child->getId()] = true;
@@ -158,8 +160,10 @@ void Inference<Semiring>::insideOutside(const Graph& g,
         continue;
         
       Semiring keBar(alphas[v->getId()]);      
-      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+        assert(u);
         keBar *= betas[u->getId()];
+      }
 
       Semiring::accumulate(result, keBar, *e);
     }
@@ -187,6 +191,7 @@ boost::shared_array<Semiring> Inference<Semiring>::inside(const Graph& g) {
   
   // For each node, in reverse topological order...
   BOOST_FOREACH(const Hypernode* v, revTopOrder) {
+    assert(v);
     if (v == g.goal())
       continue; // Skip the goal node, which was handled above.
       
@@ -195,10 +200,13 @@ boost::shared_array<Semiring> Inference<Semiring>::inside(const Graph& g) {
     
     // For each incoming edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      assert(e);
       Semiring k(*e);
       // For each antecedent node...
-      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+        assert(u);
         k *= betas[u->getId()];
+      }
       betas[parentId] += k;
     }
   }
@@ -221,12 +229,15 @@ boost::shared_array<Semiring> Inference<Semiring>::outside(const Graph& g,
   
   // For each node, in topological order...
   BOOST_FOREACH(const Hypernode* v, topOrder) {
+    assert(v);
     // For each outgoing edge...
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      assert(e);
       BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
         Semiring score(*e); // Initialize to the score of the edge
         // Incorporate the product of the sibling beta scores
         BOOST_FOREACH(const Hypernode* w, e->getChildren()) {
+          assert(w && u);
           if (w != u)
             score *= betas[w->getId()];
         }
@@ -254,12 +265,16 @@ double Inference<Semiring>::viterbi(const Graph& g,
   chart[g.goal()->getId()].score = LogWeight(1);
   
   // For each node, in reverse topological order...
-  BOOST_FOREACH(const Hypernode* v, revTopOrder) {  
+  BOOST_FOREACH(const Hypernode* v, revTopOrder) {
+    assert(v);
     BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
+      assert(e);
       LogWeight pathScore = e->getWeight();
       
-      BOOST_FOREACH(const Hypernode* u, e->getChildren())
+      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
+        assert(u);
         pathScore *= chart[u->getId()].score;
+      }
       
       ViterbiEntry& nodeEntry = chart[v->getId()];
       if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
@@ -270,8 +285,10 @@ double Inference<Semiring>::viterbi(const Graph& g,
   }
   
   const Hypernode* v = g.root();
+  assert(v);
   while (v != g.goal()) {
     const Hyperedge* e = chart[v->getId()].backPointer;
+    assert(e);
     assert(e->getChildren().size() == 1); // Only works for graphs at this point
     path.push_back(e);
     v = e->getChildren().front();
@@ -299,7 +316,9 @@ void Inference<Semiring>::getNodesTopologicalOrder(const Graph& g,
   while (u != 0) {
     bool uHasWhiteNeighbour = false;
     BOOST_FOREACH(const Hyperedge* edge, u->getEdges()) {
+      assert(edge);
       BOOST_FOREACH(const Hypernode* v, edge->getChildren()) {
+        assert(v);
         if (nodeColour[v->getId()] == WHITE) {
           uHasWhiteNeighbour = true;
           nodeColour[v->getId()] = GREY;
