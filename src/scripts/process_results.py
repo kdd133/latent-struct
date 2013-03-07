@@ -80,6 +80,7 @@ def read_options(s, results, id):
   # the options are the same for a given id/subfolder (e.g., results/001), so
   # we copy them to the sub id's (e.g., results/001-0, results/001-1) that
   # correspond to this "primary" id
+  id = re.sub(r'\+', '\\+', id) # '+' in the filename/id needs to be escaped
   id_re = re.compile(id + '\-[0-9]+')
   for sub_id in results.keys():
     if id_re.match(sub_id):
