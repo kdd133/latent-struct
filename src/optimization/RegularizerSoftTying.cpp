@@ -63,7 +63,7 @@ int RegularizerSoftTying::processOptions(int argc, char** argv) {
 
 void RegularizerSoftTying::addRegularization(const Parameters& theta,
     double& fval, RealVec& grad) const {
-  assert(_betaW > 0 && _betaU > 0 && _betaSharedW > 0 && _betaSharedU > 0);
+  assert(_betaW >= 0 && _betaU >= 0 && _betaSharedW >= 0 && _betaSharedU >= 0);
   assert(_labelShared > 0);
   assert(_alphabet && _labels);
   assert(theta.getTotalDim() == grad.size());
