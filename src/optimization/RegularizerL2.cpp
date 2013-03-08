@@ -55,10 +55,12 @@ void RegularizerL2::addRegularization(const Parameters& theta, double& fval,
     }
     if (_betaU > 0) {
       assert(theta.hasU());
+      // Note: We need to offset the indices for the u portion of the gradient.
+      const int offsetU = theta.w.getDim();
       const int n = theta.u.getDim();
       fval += _betaU/2 * theta.u.squaredL2Norm();
       for (size_t i = 0; i < n; ++i)
-        grad(i) += theta.u[i] * _betaU;
+        grad(offsetU + i) += theta.u[i] * _betaU;
     }
   }
   else {
