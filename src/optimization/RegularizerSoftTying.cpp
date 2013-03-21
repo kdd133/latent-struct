@@ -25,15 +25,25 @@ using namespace std;
 // regularization coefficient in our setting, which we adopt as the default.
 
 RegularizerSoftTying::RegularizerSoftTying(double beta) : Regularizer(beta),
-  _betaW(beta), _betaSharedW(0.1*beta), _betaU(beta), _betaSharedU(0.1*beta),
+  _betaW(0), _betaSharedW(0), _betaU(0), _betaSharedU(0),
   _alphabet(0), _labels(0), _labelShared(-1) {
+  assert(_beta > 0);
+  setBeta(beta);
 }
 
 void RegularizerSoftTying::setBeta(double beta) {
-  _betaW = beta;
-  _betaU = beta;
-  _betaSharedW = 0.1 * beta;
-  _betaSharedU = 0.1 * beta;
+  // If _beta == 0, we assume that processOptions was called, and do not
+  // override those values. This is an ugly hack that's been put in place b/c
+  // the main function in latent_struct.cpp always calls setBeta.
+  if (_beta > 0) {
+    cout << "RegularizerSoftTying: Setting default beta values relative to " <<
+        "beta=" << beta << endl;
+    _betaW = beta;
+    _betaU = beta;
+    // By default, we don't tie the classification parameters.
+    _betaSharedW = 0; // 0.1 * beta;
+    _betaSharedU = 0.1 * beta;
+  }
 }
 
 int RegularizerSoftTying::processOptions(int argc, char** argv) {
@@ -58,6 +68,34 @@ int RegularizerSoftTying::processOptions(int argc, char** argv) {
     cout << options << endl;
     return 0;
   }
+  
+  // The setBeta method will only set the default relative values if _beta == 0.
+  // In other words, if processOptions is called, and if at least one of the
+  // beta values is set, then setBeta is disabled.
+  if (vm.count("w-beta") || vm.count("u-beta") || vm.count("shared-w-beta") ||
+      vm.count("shared-u-beta")) {
+    _beta = 0; // disable setBeta
+    
+    // We also enforce the rule that if any of the four beta values is set via
+    // the command line, then they must all be set.
+    if (!vm.count("w-beta")) {
+      cout << "RegularizerSoftTying: --w-beta was not specified" << endl;
+      return 1;
+    }
+    if (!vm.count("u-beta")) {
+      cout << "RegularizerSoftTying: --u-beta was not specified" << endl;
+      return 1;
+    }
+    if (!vm.count("shared-w-beta")) {
+      cout << "RegularizerSoftTying: --shared-w-beta was not specified" << endl;
+      return 1;
+    }
+    if (!vm.count("shared-u-beta")) {
+      cout << "RegularizerSoftTying: --shared-u-beta was not specified" << endl;
+      return 1;
+    }
+  }
+  
   return 0;
 }
 

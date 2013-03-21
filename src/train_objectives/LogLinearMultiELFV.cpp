@@ -98,7 +98,7 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
 void LogLinearMultiELFV::predictPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  SparseLogVec logFeats(theta.w.getDim());
+  SparseLogVec logFeats(theta.u.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
