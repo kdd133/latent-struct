@@ -8,6 +8,7 @@
  */
 
 #include "Ublas.h"
+#include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <cmath>
@@ -176,6 +177,17 @@ namespace ublas_util {
     }
   }
   
+  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M,
+      const SparseRealVec& x) {
+    AccumRealMat::iterator1 it1;
+    AccumRealMat::iterator2 it2;
+    for (it1 = M.begin1(); it1 != M.end1(); ++it1)
+      for (it2 = it1.begin(); it2 != it1.end(); ++it2) {
+        const int i = it2.index1();
+        *it2 *= x[i] * (1 - x[i]);
+    }
+  }
+  
   void lowerToSymmetric(AccumLogMat& L) {
     const int d = L.size1();
     assert(d == L.size2());
@@ -198,5 +210,11 @@ namespace ublas_util {
     for (it1 = M.begin1(); it1 != M.end1(); ++it1)
       for (it2 = it1.begin(); it2 != it1.end(); ++it2)
         M(it2.index1(), it2.index2()) = LogWeight();
+  }
+  
+  void applySigmoid(SparseRealVec& x) {
+    SparseRealVec::iterator it;
+    for (it = x.begin(); it != x.end(); ++it)
+      *it = Utility::sigmoid(*it);
   }
 }

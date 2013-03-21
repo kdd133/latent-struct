@@ -89,6 +89,10 @@ namespace ublas_util {
   // triangular portion of A.
   void computeLowerCovarianceMatrix(const AccumLogMat& logExpectedFeatCooc,
       const SparseRealVec& expectedFeats, AccumRealMat& covarianceMatrix);
+      
+  // Scale the ith row of M by x[i]*(1-x[i]).
+  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M,
+      const SparseRealVec& x);
   
   // Perform b = L*x, where L contains the lower triangular portion of what is
   // interpreted to be a symmetric matrix.
@@ -100,6 +104,9 @@ namespace ublas_util {
   void setEntriesToZero(SparseLogMat& M);
   
   void setEntriesToZero(AccumLogMat& M);
+  
+  // Perform, component-wise, x = \sigma(x), where \sigma(x) = 1/(1+exp(-x)).
+  void applySigmoid(SparseRealVec& x);
 }
 
 #endif

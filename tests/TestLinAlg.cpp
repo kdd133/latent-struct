@@ -93,4 +93,24 @@ BOOST_AUTO_TEST_CASE(testLinAlg)
       for (size_t j = 0; j < 3; ++j)
         BOOST_CHECK_CLOSE((double)Cov(i,j), (double)A(i,j), 1e-2);
   }
+  
+  {
+    SparseLogVec logFeats(3);
+    SparseRealVec feats(3);
+    logFeats(0) = LogWeight(-0.5, true);
+    logFeats(1) = LogWeight( 0.3, true);
+    logFeats(2) = LogWeight(-0.1, true);
+    
+    ublas_util::exponentiate(logFeats, feats);
+    BOOST_CHECK_CLOSE((double)feats[0], 0.606530659712633, 1e-8);
+    BOOST_CHECK_CLOSE((double)feats[1], 1.349858807576003, 1e-8);
+    BOOST_CHECK_CLOSE((double)feats[2], 0.904837418035959, 1e-8);
+    
+    ublas_util::applySigmoid(feats);
+    BOOST_CHECK_CLOSE((double)feats[0], 0.647148993051504, 1e-8);
+    BOOST_CHECK_CLOSE((double)feats[1], 0.794106544007045, 1e-8);
+    BOOST_CHECK_CLOSE((double)feats[2], 0.711942578196699, 1e-8);
+    
+    ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(M, x); // TODO
+  }
 }
