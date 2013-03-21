@@ -111,6 +111,20 @@ BOOST_AUTO_TEST_CASE(testLinAlg)
     BOOST_CHECK_CLOSE((double)feats[1], 0.794106544007045, 1e-8);
     BOOST_CHECK_CLOSE((double)feats[2], 0.711942578196699, 1e-8);
     
-    ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(M, x); // TODO
+    AccumRealMat M(3, 3);
+    M.clear();
+    M(0,0) = 1; M(0,1) = 2; M(0,2) = 3;
+    M(1,0) = -1; M(1,2) = -3;
+    M(2,0) = 0; M(2,1) = 0.5;    
+    ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(M, feats);
+    BOOST_CHECK_CLOSE((double)M(0,0), 0.22834717384392825, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(0,1), 0.45669434768785649, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(0,2), 0.68504152153178477, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(1,0), -0.16350134077223155, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(1,1), 0, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(1,2), -0.49050402231669465, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(2,0), 0, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(2,1), 0.10254017177366787, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(2,2), 0, 1e-8);
   }
 }
