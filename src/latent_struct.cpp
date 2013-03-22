@@ -28,6 +28,7 @@
 #include "LogLinearBinaryUnscaled.h"
 #include "LogLinearMulti.h"
 #include "LogLinearMultiELFV.h"
+#include "LogLinearMultiELFV_sigmoid.h"
 #include "LogLinearMultiUW.h"
 #include "MainHelpers.h"
 #include "MaxMarginBinary.h"
@@ -128,8 +129,8 @@ int main(int argc, char** argv) {
   objMsgObs << "objective function {" << LogLinearBinary::name() << CMA <<
       LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
-      LogLinearMultiELFV::name() << CMA << LogLinearMultiUW::name() << CMA <<
-      MaxMarginBinary::name() << CMA <<
+      LogLinearMultiELFV::name() << CMA << LogLinearMultiELFV_sigmoid::name() <<
+      LogLinearMultiUW::name() << CMA << MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
   optMsgObs << "optimization algorithm {" << optAuto << CMA <<
@@ -438,6 +439,8 @@ initial weights")
     objective.reset(new LogLinearMulti(trainData, models));
   else if (objName == LogLinearMultiELFV::name())
     objective.reset(new LogLinearMultiELFV(trainData, models));
+  else if (objName == LogLinearMultiELFV_sigmoid::name())
+    objective.reset(new LogLinearMultiELFV_sigmoid(trainData, models));
   else if (objName == LogLinearMultiUW::name())
     objective.reset(new LogLinearMultiUW(trainData, models));
   else if (objName == LogLinearBinary::name())
@@ -572,6 +575,7 @@ initial weights")
   Parameters theta0 = objective->getDefaultParameters(alphabet->size());
   // Note: The call to setupParameters may modify theta0 and alphabet, such
   // that, e.g., alphabet->size() may subsequently return a different value.
+  assert(0); // FIXME: We should not add another dummy label if the alphabet was loaded.
   regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet());
   alphabet->lock(); // We can lock the Alphabet at this point.
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
