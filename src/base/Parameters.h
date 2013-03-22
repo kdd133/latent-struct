@@ -23,6 +23,8 @@ class Parameters {
 public:
   WeightVector w;
   WeightVector u;
+  WeightVector shared_w;
+  WeightVector shared_u;
   
   Parameters() { }
   Parameters(int dw) : w(dw) { }

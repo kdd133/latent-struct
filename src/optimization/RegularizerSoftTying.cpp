@@ -105,6 +105,8 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
   assert(_labelShared > 0);
   assert(_alphabet && _labels);
   assert(theta.getTotalDim() == grad.size());
+  assert(theta.shared_w.getDim() > 0);
+  assert(!theta.hasU() || theta.shared_u.getDim() == theta.shared_w.getDim());
   
   const Alphabet::DictType& featMap = _alphabet->getDict();
   Alphabet::DictType::const_iterator featIt;
@@ -121,14 +123,14 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
     for (featIt = featMap.begin(); featIt != featMap.end(); ++featIt) {
       const string& f = featIt->first;
       const int fid = _alphabet->lookup(f, y, false);
-      const int fid0 = _alphabet->lookup(f, _labelShared, false);
-      assert(fid >= 0);
-      const double diffW = theta.w[fid] - theta.w[fid0];
+      const int fid0 = _alphabet->getFeatureIndex(f);
+      assert(fid >= 0 && fid0 >= 0);
+      const double diffW = theta.w[fid] - theta.shared_w[fid0];
       fval += _betaW/2 * (diffW * diffW);
       grad(fid) += _betaW * diffW; // add beta*(w^y - w^0) to the gradient
       grad(fid0) -= _betaW * diffW; // update shared gradient (note sign)
       if (theta.hasU()) {
-        const double diffU = theta.u[fid] - theta.u[fid0];
+        const double diffU = theta.u[fid] - theta.shared_u[fid0];
         fval += _betaU/2 * (diffU * diffU);
         grad(offsetU + fid) += _betaU * diffU;
         grad(offsetU + fid0) -= _betaU * diffU;
@@ -138,12 +140,13 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
   
   // Regularize the shared parameters toward zero using an L2 norm penalty.
   for (featIt = featMap.begin(); featIt != featMap.end(); ++featIt) {
-    const int fid0 = _alphabet->lookup(featIt->first, _labelShared, false);
-    fval += _betaSharedW/2 * (theta.w[fid0] * theta.w[fid0]);
-    grad(fid0) += _betaSharedW * theta.w[fid0]; // add beta*w to gradient
+    const int fid0 = _alphabet->getFeatureIndex(featIt->first);
+    assert(fid0 >= 0);
+    fval += _betaSharedW/2 * (theta.shared_w[fid0] * theta.shared_w[fid0]);
+//    grad(fid0) += _betaSharedW * theta.shared_w[fid0]; // add beta*w to gradient
     if (theta.hasU()) {
-      fval += _betaSharedU/2 * (theta.u[fid0] * theta.u[fid0]);
-      grad(offsetU + fid0) += _betaSharedU * theta.u[fid0];
+      fval += _betaSharedU/2 * (theta.shared_u[fid0] * theta.shared_u[fid0]);
+//      grad(offsetU + fid0) += _betaSharedU * theta.shared_u[fid0];
     }
   }
 }
@@ -169,7 +172,7 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   const size_t n = alphabet.numFeaturesPerClass();
   _labelShared = ++maxLabel;
   alphabet.addLabel(_labelShared);
-  theta.w.reAlloc(n * (labelSet.size() + 1));
+  theta.shared_w.reAlloc(n);
   if (theta.hasU())
-    theta.u.reAlloc(n * (labelSet.size() + 1));
+    theta.shared_u.reAlloc(n);
 }

@@ -77,6 +77,16 @@ int Alphabet::lookup(string key, Label label, bool addIfAbsent) {
   return index;
 }
 
+int Alphabet::getFeatureIndex(string key) {
+  int index = -1;
+  DictType::const_iterator it = _dict.find(key);
+  if (it != _dict.end()) {
+    index = it->second;
+    assert(index >= 0);
+  }
+  return index;
+}
+
 void Alphabet::addLabel(Label label) {
   assert(!_locked);
   _uniqueLabels.insert(label);

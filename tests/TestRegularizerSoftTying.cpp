@@ -49,16 +49,24 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   BOOST_CHECK_EQUAL(alphabet.size(), numFeatures * (labels.size() + 1));
   // ... but the number of explicit labels should not change.
   BOOST_CHECK_EQUAL(labels.size(), numLabels);
-  BOOST_CHECK_EQUAL(theta.getTotalDim(), (labels.size() + 1) * numFeatures * 2);
-  const int dim = numFeatures * (labels.size() + 1);
+  BOOST_CHECK_EQUAL(theta.getTotalDim(), labels.size() * numFeatures * 2);
+  const int dim = numFeatures * labels.size();
   BOOST_CHECK_EQUAL(theta.w.getDim(), dim);
   BOOST_CHECK_EQUAL(theta.u.getDim(), dim);
   
+  const int classDim = theta.w.getDim();
+  const int sharedDim = theta.shared_w.getDim();
   shared_array<double> randomWeights = Utility::generateGaussianSamples(
-      theta.w.getDim(), 0, 2, 0);
-  theta.w.setWeights(randomWeights.get(), theta.w.getDim());
-  randomWeights = Utility::generateGaussianSamples(theta.u.getDim(), 0, 1, 1);
-  theta.u.setWeights(randomWeights.get(), theta.u.getDim());
+      classDim + sharedDim, 0, 2, 0);
+  theta.w.setWeights(randomWeights.get(), classDim);
+  theta.shared_w.setWeights(randomWeights.get() + classDim, sharedDim);
+  randomWeights = Utility::generateGaussianSamples(classDim + sharedDim, 0, 1,
+      1);
+  theta.u.setWeights(randomWeights.get(), classDim);
+  theta.shared_u.setWeights(randomWeights.get() + classDim, sharedDim);
+  
+  using namespace std;
+  cout << theta.w << endl << theta.shared_w << endl << theta.u << endl << theta.shared_u << endl;
   
   double fval = 0;
   RealVec grad(theta.getTotalDim());

@@ -54,6 +54,12 @@ class Alphabet {
     
     void addLabel(Label label);
     
+    // Return the index of the given feature in the dictionary. This is not
+    // necessarily the same as the index returned by lookup(), which offsets
+    // the index according to a given label. A value of -1 is returned if the
+    // dictionary does not contain the feature.
+    int getFeatureIndex(std::string feat);
+
   private:
     
     DictType _dict;
