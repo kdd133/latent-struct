@@ -98,8 +98,9 @@ void WeightVector::zero() {
 }
 
 void WeightVector::setWeights(const double* newWeights, int len) {
-  assert(len == _dim);
   assert(newWeights != _weights.get());
+  if (len !=  _dim)
+    reAlloc(len);
   _l2 = 0;
   for (int index = 0; index < _dim; index++) {
     const double update = newWeights[index];
