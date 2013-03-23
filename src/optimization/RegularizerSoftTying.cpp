@@ -104,18 +104,14 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
   assert(_betaW >= 0 && _betaU >= 0 && _betaSharedW >= 0 && _betaSharedU >= 0);
   assert(_labelShared > 0);
   assert(_alphabet && _labels);
-  assert(theta.getTotalDim() == grad.size());
+  assert(theta.getGradientDim() == grad.size());
   assert(theta.shared_w.getDim() > 0);
   assert(!theta.hasU() || theta.shared_u.getDim() == theta.shared_w.getDim());
   
   const Alphabet::DictType& featMap = _alphabet->getDict();
   Alphabet::DictType::const_iterator featIt;
   set<Label>::const_iterator labelIt;
-  
-  // If this is a w-u model, we need to offset the indices for the u portion of
-  // the gradient.
-  const int offsetU = theta.w.getDim();
-  
+
   // Regularize the parameters for each class toward the shared parameters
   // using an L2 norm penalty.
   for (labelIt = _labels->begin(); labelIt != _labels->end(); ++labelIt) {
@@ -127,13 +123,15 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
       assert(fid >= 0 && fid0 >= 0);
       const double diffW = theta.w[fid] - theta.shared_w[fid0];
       fval += _betaW/2 * (diffW * diffW);
-      grad(fid) += _betaW * diffW; // add beta*(w^y - w^0) to the gradient
-      grad(fid0) -= _betaW * diffW; // update shared gradient (note sign)
+      // add beta*(w^y - w^0) to the gradient
+      grad(theta.indexW() + fid) += _betaW * diffW;
+      // update shared gradient (note the sign flip)
+      grad(theta.indexSharedW() + fid0) -= _betaW * diffW;
       if (theta.hasU()) {
         const double diffU = theta.u[fid] - theta.shared_u[fid0];
         fval += _betaU/2 * (diffU * diffU);
-        grad(offsetU + fid) += _betaU * diffU;
-        grad(offsetU + fid0) -= _betaU * diffU;
+        grad(theta.indexU() + fid) += _betaU * diffU;
+        grad(theta.indexSharedU() + fid0) -= _betaU * diffU;
       }
     }
   }
@@ -143,10 +141,11 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
     const int fid0 = _alphabet->getFeatureIndex(featIt->first);
     assert(fid0 >= 0);
     fval += _betaSharedW/2 * (theta.shared_w[fid0] * theta.shared_w[fid0]);
-//    grad(fid0) += _betaSharedW * theta.shared_w[fid0]; // add beta*w to gradient
+    // add beta*w to gradient
+    grad(theta.indexSharedW() + fid0) += _betaSharedW * theta.shared_w[fid0];
     if (theta.hasU()) {
       fval += _betaSharedU/2 * (theta.shared_u[fid0] * theta.shared_u[fid0]);
-//      grad(offsetU + fid0) += _betaSharedU * theta.shared_u[fid0];
+      grad(theta.indexSharedU() + fid0) += _betaSharedU * theta.shared_u[fid0];
     }
   }
 }

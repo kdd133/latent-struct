@@ -26,9 +26,9 @@ public:
   WeightVector shared_w;
   WeightVector shared_u;
   
-  Parameters() { }
-  Parameters(int dw) : w(dw) { }
-  Parameters(int dw, int du) : w(dw), u(du) { }
+  Parameters() { init(); }
+  Parameters(int dw) : w(dw) { init(); }
+  Parameters(int dw, int du) : w(dw), u(du) { init(); }
   
   void add(const int index, const double v);
   
@@ -36,7 +36,16 @@ public:
   // dimensionalities of the component vectors.
   std::size_t getTotalDim() const;
   
+  // The dimensionality of the gradient vector includes the shared parameters,
+  // which are only the concern of the regularizer and are ignored by the
+  // function that computes the objective value and gradient.
+  std::size_t getGradientDim() const;
+  
   bool hasU() const;
+  
+  bool hasSharedW() const;
+  
+  bool hasSharedU() const;
   
   double innerProd(const RealVec& fv) const;
   
@@ -49,6 +58,21 @@ public:
   void zero();
   
   const double& operator[](int index) const;
+  
+  int indexW() const;
+  
+  int indexU() const;
+  
+  int indexSharedW() const;
+  
+  int indexSharedU() const;
+
+private:
+  void init();
+  
+  const static size_t _numWV = 4;
+  
+  WeightVector* _wv[_numWV];
 };
 
 #endif

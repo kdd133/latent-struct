@@ -58,6 +58,14 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   const int sharedDim = theta.shared_w.getDim();
   shared_array<double> randomWeights = Utility::generateGaussianSamples(
       classDim + sharedDim, 0, 2, 0);
+      
+  // Normally, we'd just set the weights as follows. But for the sake of
+  // compatibility with an older version of this test (when the Parameters
+  // layout was [w shared_w u shared_u] vs. [w u shared_w shared_w] now), we go
+  // through the trouble of mapping the same set of initial weights to the new
+  // layout.
+  // theta.setWeights(randomWeights.get(), theta.getGradientDim());
+  
   theta.w.setWeights(randomWeights.get(), classDim);
   theta.shared_w.setWeights(randomWeights.get() + classDim, sharedDim);
   randomWeights = Utility::generateGaussianSamples(classDim + sharedDim, 0, 1,
@@ -65,11 +73,8 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   theta.u.setWeights(randomWeights.get(), classDim);
   theta.shared_u.setWeights(randomWeights.get() + classDim, sharedDim);
   
-  using namespace std;
-  cout << theta.w << endl << theta.shared_w << endl << theta.u << endl << theta.shared_u << endl;
-  
   double fval = 0;
-  RealVec grad(theta.getTotalDim());
+  RealVec grad(theta.getGradientDim());
   grad.clear();
   regularizer.addRegularization(theta, fval, grad);
   
@@ -78,10 +83,10 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
       -0.212627,-0.236395,-0.0475705,-0.207021,-0.467987,
       -0.194789,-0.527839,-0.0717731,-0.0785243,-0.0233812,
       -0.0768941,-0.311786,-0.119205,0.233733,-0.0992638,
-      0.054569,2.63049,-0.122656,-1.64313,2.11468,
       -2.10001,1.78653,-0.922543,-0.201966,0.495507,
       -0.61391,0.331119,1.05686,1.16074,0.526089,
       -0.193771,1.20854,-0.514146,1.39526,-0.186833,
+      0.054569,2.63049,-0.122656,-1.64313,2.11468,
       5.36409,-7.05839,3.209,-6.11022,-1.76948
   };
   for (size_t i = 0; i < 40; ++i)

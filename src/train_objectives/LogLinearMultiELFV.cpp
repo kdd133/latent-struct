@@ -70,9 +70,6 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
       phiBar_sumY += mass_y * phiBar[y];
       ublas_util::computeLowerCovarianceMatrix(logCooc, phiBar[y], cov[y]);
       
-      using namespace std;
-      cout << cov[y] << endl << phiBar[y] << endl;
-      
       // Perform covTotal += mass_y * cov[y]
       ublas_util::addScaled(cov[y], covTotal, mass_y);
     }

@@ -12,14 +12,25 @@
 
 using std::size_t;
 
+void Parameters::init() {
+  assert(_numWV == 4);
+  _wv[0] = &w;
+  _wv[1] = &u;
+  _wv[2] = &shared_w;
+  _wv[3] = &shared_u;
+}
+
 void Parameters::add(const int index, const double v) {
-  if (hasU() && index >= w.getDim()) {
-    assert(index - w.getDim() >= 0);
-    u.add(index - w.getDim(), v);
-  }
-  else {
-    assert(index >= 0);
-    w.add(index, v);
+  assert(index >= 0 && index < getGradientDim());
+  int offset = 0;
+  for (int i = 0; i < _numWV; i++) {
+    if (index < offset + _wv[i]->getDim()) {
+      assert(index - offset >= 0);
+      _wv[i]->add(index - offset, v);
+      break;
+    }
+    else
+      offset += _wv[i]->getDim();
   }
 }
 
@@ -27,67 +38,107 @@ size_t Parameters::getTotalDim() const {
   return w.getDim() + u.getDim();
 }
 
+size_t Parameters::getGradientDim() const {
+  return w.getDim() + u.getDim() + shared_w.getDim() + shared_u.getDim();
+}
+
 bool Parameters::hasU() const {
   return u.getDim() > 0;
 }
 
+bool Parameters::hasSharedW() const {
+  return shared_w.getDim() > 0;
+}
+
+bool Parameters::hasSharedU() const {
+  return shared_u.getDim() > 0;
+}
+
 const double& Parameters::operator[](int index) const {
-  if (hasU() && index >= w.getDim()) {
-    assert(index - w.getDim() >= 0);
-    return u[index - w.getDim()];
+  assert(index >= 0 && index < getGradientDim());
+  int offset = 0;
+  for (int i = 0; i < _numWV; i++) {
+    if (index < offset + _wv[i]->getDim()) {
+      assert(index - offset >= 0);
+      return (*_wv[i])[index - offset];
+    }
+    else
+      offset += _wv[i]->getDim();
   }
-  else {
-    assert(index >= 0);
-    return w[index];
-  }
+  assert(0); // should never reach this point
+  return w[0];
 }
 
 double Parameters::innerProd(const RealVec& fv) const {
-  const int len = fv.size();
-  if (len == w.getDim()) {
-    // w only
-    return w.innerProd(fv);
+  double prod = 0;
+  int fv_j = 0;
+  for (int i = 0; i < _numWV; i++) {
+    if (_wv[i]->getDim() > 0) {
+      if (fv_j + _wv[i]->getDim() > fv.size())
+        break;
+      for (int j = 0; j < _wv[i]->getDim(); j++, fv_j++)
+        prod += fv(fv_j) * (*_wv[i])[j];
+    }
   }
-  else {
-    // w and u
-    assert(hasU() && len == w.getDim() + u.getDim());
-    double prod = 0;
-    for (int i = 0; i < w.getDim(); i++)
-      prod += fv(i) * w.getWeight(i);
-    int fv_i = w.getDim();
-    for (int i = 0; fv_i < len; i++, fv_i++)
-      prod += fv(fv_i) * u.getWeight(i);
-    return prod;
-  }
+  return prod;
 }
 
 void Parameters::setParams(const Parameters& other) {
+  assert(w.getDim() > 0);
   assert(other.w.getDim() == w.getDim());
   assert(other.u.getDim() == u.getDim());
+  assert(other.shared_w.getDim() == shared_w.getDim());
+  assert(other.shared_u.getDim() == shared_u.getDim());
+  
   w.setWeights(other.w.getWeights(), other.w.getDim());
   if (other.hasU())
     u.setWeights(other.u.getWeights(), other.u.getDim());
+  if (other.hasSharedW())
+    shared_w.setWeights(other.shared_w.getWeights(), other.shared_w.getDim());
+  if (other.hasSharedU())
+    shared_u.setWeights(other.shared_u.getWeights(), other.shared_u.getDim());
 }
 
 void Parameters::setWeights(const double* values, int len) {
-  if (len == w.getDim()) {
-    assert(!hasU());
-    // w only
-    w.setWeights(values, w.getDim());
-  }
-  else {
-    // w and u
-    assert(hasU() && len == w.getDim() + u.getDim());
-    w.setWeights(values, w.getDim());
-    u.setWeights(values + w.getDim(), u.getDim());
+  assert(values && len > 0 && len <= getGradientDim());
+  int offset = 0;
+  for (int i = 0; i < _numWV && offset + _wv[i]->getDim() <= len; i++) {
+    const double* first = values + offset; 
+    _wv[i]->setWeights(first, _wv[i]->getDim());
+    offset += _wv[i]->getDim();
   }
 }
 
 double Parameters::squaredL2Norm() const {
-  return w.squaredL2Norm() + u.squaredL2Norm();
+  return w.squaredL2Norm() + u.squaredL2Norm() + shared_w.squaredL2Norm() +
+      shared_u.squaredL2Norm();
 }
 
 void Parameters::zero() {
   w.zero();
   u.zero();
+  shared_w.zero();
+  shared_u.zero();
+}
+
+int Parameters::indexW() const {
+  return 0;
+}
+
+int Parameters::indexU() const {
+  if (!hasU())
+    return -1;
+  return w.getDim();
+}
+
+int Parameters::indexSharedW() const {
+  if (!hasSharedW())
+    return -1;
+  return indexU() + u.getDim();
+}
+
+int Parameters::indexSharedU() const {
+  if (!hasSharedU())
+    return -1;
+  return indexSharedW() + shared_w.getDim();
 }
