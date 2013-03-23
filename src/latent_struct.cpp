@@ -575,7 +575,9 @@ initial weights")
   Parameters theta0 = objective->getDefaultParameters(alphabet->size());
   // Note: The call to setupParameters may modify theta0 and alphabet, such
   // that, e.g., alphabet->size() may subsequently return a different value.
-  assert(0); // FIXME: We should not add another dummy label if the alphabet was loaded.
+  // FIXME: We cannot add another dummy label if an alphabet was loaded that
+  // already had a dummy label added to it.
+  assert(!resumed);
   regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet());
   alphabet->lock(); // We can lock the Alphabet at this point.
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
@@ -614,7 +616,7 @@ initial weights")
           alphabet->size()));
 
       Parameters& theta = weightVectors.back();
-      theta.setParams(theta0); 
+      theta.setParams(theta0); // FIXME: This line is causing an assert failure
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       

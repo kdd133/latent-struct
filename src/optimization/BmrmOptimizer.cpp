@@ -69,7 +69,7 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
 Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     double tol) const {
   namespace ublas = numeric::ublas;
-  const size_t d = w.getTotalDim();
+  const size_t d = w.getDimTotal();
   assert(d > 0);
   const double beta = _regularizer->getBeta();
   

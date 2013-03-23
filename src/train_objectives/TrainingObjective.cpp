@@ -39,11 +39,11 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
     RealVec& gradFv) {
-  assert(gradFv.size() == theta.getTotalDim());
+  assert(gradFv.size() == theta.getDimTotal());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
-  vector<RealVec> grads(numParts, RealVec(theta.getTotalDim()));
+  vector<RealVec> grads(numParts, RealVec(theta.getDimTotal()));
   vector<double> fvals(numParts, 0);
   
   // Compute the function values and gradients.

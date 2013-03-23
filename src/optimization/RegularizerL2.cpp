@@ -40,7 +40,7 @@ int RegularizerL2::processOptions(int argc, char** argv) {
 
 void RegularizerL2::addRegularization(const Parameters& theta, double& fval,
     RealVec& grad) const {
-  const int d = theta.getTotalDim();
+  const int d = theta.getDimTotal();
   assert(d == grad.size());
   
   // Note: The _beta value (from the parent class) will be ignored if either

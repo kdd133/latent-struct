@@ -110,7 +110,7 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
 Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
     double tol) const {
   boost::timer::cpu_timer timer;
-  const int d = theta.getTotalDim();
+  const int d = theta.getDimTotal();
   assert(d > 0);
   
   LbfgsInstance inst = { _objective.get(), _regularizer.get(), &theta, _quiet };

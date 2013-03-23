@@ -30,7 +30,6 @@ using namespace std;
 void initWeights(WeightVector& w, const string& initType, double noiseLevel,
     int seed, const shared_ptr<Alphabet> alphabet, const set<Label>& labels,
     const shared_ptr<const AlignmentFeatureGen> fgen) {
-  assert(alphabet->size() == w.getDim());
   w.zero();
   if (initType != "zero") {
     const int d = w.getDim();

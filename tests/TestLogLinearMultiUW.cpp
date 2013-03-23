@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   BOOST_REQUIRE_EQUAL(numFeats, 8);
   
   Parameters theta = objective->getDefaultParameters(numFeats);
-  const int d = theta.getTotalDim();
+  const int d = theta.getDimTotal();
   
   // Set the weights to random values, but set the w and u weights to be equal.
   shared_array<double> samples = Utility::generateGaussianSamples(numFeats, 0, 1);

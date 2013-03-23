@@ -21,7 +21,7 @@ void Parameters::init() {
 }
 
 void Parameters::add(const int index, const double v) {
-  assert(index >= 0 && index < getGradientDim());
+  assert(index >= 0 && index < getDimTotal());
   int offset = 0;
   for (int i = 0; i < _numWV; i++) {
     if (index < offset + _wv[i]->getDim()) {
@@ -34,11 +34,11 @@ void Parameters::add(const int index, const double v) {
   }
 }
 
-size_t Parameters::getTotalDim() const {
+size_t Parameters::getDimWU() const {
   return w.getDim() + u.getDim();
 }
 
-size_t Parameters::getGradientDim() const {
+size_t Parameters::getDimTotal() const {
   return w.getDim() + u.getDim() + shared_w.getDim() + shared_u.getDim();
 }
 
@@ -55,7 +55,7 @@ bool Parameters::hasSharedU() const {
 }
 
 const double& Parameters::operator[](int index) const {
-  assert(index >= 0 && index < getGradientDim());
+  assert(index >= 0 && index < getDimTotal());
   int offset = 0;
   for (int i = 0; i < _numWV; i++) {
     if (index < offset + _wv[i]->getDim()) {
@@ -85,11 +85,6 @@ double Parameters::innerProd(const RealVec& fv) const {
 
 void Parameters::setParams(const Parameters& other) {
   assert(w.getDim() > 0);
-  assert(other.w.getDim() == w.getDim());
-  assert(other.u.getDim() == u.getDim());
-  assert(other.shared_w.getDim() == shared_w.getDim());
-  assert(other.shared_u.getDim() == shared_u.getDim());
-  
   w.setWeights(other.w.getWeights(), other.w.getDim());
   if (other.hasU())
     u.setWeights(other.u.getWeights(), other.u.getDim());
@@ -97,10 +92,11 @@ void Parameters::setParams(const Parameters& other) {
     shared_w.setWeights(other.shared_w.getWeights(), other.shared_w.getDim());
   if (other.hasSharedU())
     shared_u.setWeights(other.shared_u.getWeights(), other.shared_u.getDim());
+  init();
 }
 
 void Parameters::setWeights(const double* values, int len) {
-  assert(values && len > 0 && len <= getGradientDim());
+  assert(values && len > 0 && len <= getDimTotal());
   int offset = 0;
   for (int i = 0; i < _numWV && offset + _wv[i]->getDim() <= len; i++) {
     const double* first = values + offset; 

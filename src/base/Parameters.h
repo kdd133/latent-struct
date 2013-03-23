@@ -32,14 +32,13 @@ public:
   
   void add(const int index, const double v);
   
-  // Return the "total dimensionality" of the parameters; i.e., the sum of the
-  // dimensionalities of the component vectors.
-  std::size_t getTotalDim() const;
+  // Return the number of w parameters plus the number of u parameters.
+  std::size_t getDimWU() const;
   
   // The dimensionality of the gradient vector includes the shared parameters,
   // which are only the concern of the regularizer and are ignored by the
   // function that computes the objective value and gradient.
-  std::size_t getGradientDim() const;
+  std::size_t getDimTotal() const;
   
   bool hasU() const;
   

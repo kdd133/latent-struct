@@ -19,18 +19,17 @@
 
 using namespace std;
 
-// Finkel and Manning set the domain-specific variance parameter to 1/10 that
-// of the shared variance parameter. This is equivalent to setting the class-
-// specific regularization coefficient to 10 times that of the shared
-// regularization coefficient in our setting, which we adopt as the default.
-
 RegularizerSoftTying::RegularizerSoftTying(double beta) : Regularizer(beta),
   _betaW(0), _betaSharedW(0), _betaU(0), _betaSharedU(0),
-  _alphabet(0), _labels(0), _labelShared(-1) {
+  _alphabet(0), _labels(0) {
   assert(_beta > 0);
   setBeta(beta);
 }
 
+// Finkel and Manning set the domain-specific variance parameter to 1/10 that
+// of the shared variance parameter. This is equivalent to setting the class-
+// specific regularization coefficient to 10 times that of the shared
+// regularization coefficient in our setting, which we adopt as the default.
 void RegularizerSoftTying::setBeta(double beta) {
   // If _beta == 0, we assume that processOptions was called, and do not
   // override those values. This is an ugly hack that's been put in place b/c
@@ -102,9 +101,8 @@ int RegularizerSoftTying::processOptions(int argc, char** argv) {
 void RegularizerSoftTying::addRegularization(const Parameters& theta,
     double& fval, RealVec& grad) const {
   assert(_betaW >= 0 && _betaU >= 0 && _betaSharedW >= 0 && _betaSharedU >= 0);
-  assert(_labelShared > 0);
   assert(_alphabet && _labels);
-  assert(theta.getGradientDim() == grad.size());
+  assert(theta.getDimTotal() == grad.size());
   assert(theta.shared_w.getDim() > 0);
   assert(!theta.hasU() || theta.shared_u.getDim() == theta.shared_w.getDim());
   
@@ -165,12 +163,7 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   _alphabet = &alphabet;
   _labels = &labelSet;
   
-  // Add a dummy label for the shared parameters to the alphabet. Note that we
-  // do not add the label to the label set, so that the learner is unaware of
-  // the dummy label.
   const size_t n = alphabet.numFeaturesPerClass();
-  _labelShared = ++maxLabel;
-  alphabet.addLabel(_labelShared);
   theta.shared_w.reAlloc(n);
   if (theta.hasU())
     theta.shared_u.reAlloc(n);

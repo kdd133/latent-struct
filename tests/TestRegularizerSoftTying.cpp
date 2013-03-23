@@ -45,11 +45,9 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   regularizer.processOptions(argc, argv);
   regularizer.setupParameters(theta, alphabet, labels);
   alphabet.lock();
-  // The call to setupParameters should add a dummy label to alphabet ...
-  BOOST_CHECK_EQUAL(alphabet.size(), numFeatures * (labels.size() + 1));
-  // ... but the number of explicit labels should not change.
+  BOOST_CHECK_EQUAL(alphabet.size(), numFeatures * labels.size());
   BOOST_CHECK_EQUAL(labels.size(), numLabels);
-  BOOST_CHECK_EQUAL(theta.getTotalDim(), labels.size() * numFeatures * 2);
+  BOOST_CHECK_EQUAL(theta.getDimTotal(), (labels.size() + 1) * numFeatures * 2);
   const int dim = numFeatures * labels.size();
   BOOST_CHECK_EQUAL(theta.w.getDim(), dim);
   BOOST_CHECK_EQUAL(theta.u.getDim(), dim);
@@ -74,7 +72,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   theta.shared_u.setWeights(randomWeights.get() + classDim, sharedDim);
   
   double fval = 0;
-  RealVec grad(theta.getGradientDim());
+  RealVec grad(theta.getDimTotal());
   grad.clear();
   regularizer.addRegularization(theta, fval, grad);
   

@@ -21,8 +21,8 @@ BOOST_AUTO_TEST_CASE(testParameters)
     BOOST_CHECK(!theta.hasSharedU());
     BOOST_CHECK_EQUAL(theta.w.getDim(), dw);
     BOOST_CHECK_EQUAL(theta.u.getDim(), du);
-    BOOST_CHECK_EQUAL(theta.getTotalDim(), len);
-    BOOST_CHECK_EQUAL(theta.getGradientDim(), len);    
+    BOOST_CHECK_EQUAL(theta.getDimWU(), len);
+    BOOST_CHECK_EQUAL(theta.getDimTotal(), len);    
     BOOST_CHECK_EQUAL(theta.indexW(), 0);
     BOOST_CHECK_EQUAL(theta.indexU(), dw);
     BOOST_CHECK_EQUAL(theta.indexSharedW(), -1);
@@ -88,8 +88,8 @@ BOOST_AUTO_TEST_CASE(testParameters)
     BOOST_CHECK(theta.hasSharedU());
     BOOST_CHECK_EQUAL(theta.w.getDim(), dw);
     BOOST_CHECK_EQUAL(theta.u.getDim(), du);
-    BOOST_CHECK_EQUAL(theta.getTotalDim(), dw + du);
-    BOOST_CHECK_EQUAL(theta.getGradientDim(), len);    
+    BOOST_CHECK_EQUAL(theta.getDimWU(), dw + du);
+    BOOST_CHECK_EQUAL(theta.getDimTotal(), len);    
     BOOST_CHECK_EQUAL(theta.indexW(), 0);
     BOOST_CHECK_EQUAL(theta.indexU(), dw);
     BOOST_CHECK_EQUAL(theta.indexSharedW(), dw + du);
