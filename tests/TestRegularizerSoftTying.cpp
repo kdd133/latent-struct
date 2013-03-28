@@ -3,6 +3,7 @@
 #include "Alphabet.h"
 #include "Label.h"
 #include "Parameters.h"
+#include "RegularizerL2.h"
 #include "RegularizerSoftTying.h"
 #include "Ublas.h"
 #include "Utility.h"
@@ -43,7 +44,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   Parameters theta(alphabet.size(), alphabet.size());
   RegularizerSoftTying regularizer;
   regularizer.processOptions(argc, argv);
-  regularizer.setupParameters(theta, alphabet, labels);
+  regularizer.setupParameters(theta, alphabet, labels, 0);
   alphabet.lock();
   BOOST_CHECK_EQUAL(alphabet.size(), numFeatures * labels.size());
   BOOST_CHECK_EQUAL(labels.size(), numLabels);
@@ -89,4 +90,37 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   };
   for (size_t i = 0; i < 40; ++i)
     BOOST_CHECK_CLOSE(grad[i], checkedGrad[i], 1e-3);
+    
+  // This test verifies that RegularizerSoftTying reduces to RegularizerL2 when
+  // the shared beta values are both set to zero.
+  {
+    const int argc = 5;
+    char* argv[argc];
+    argv[0] = (char*) "latent_struct";
+    argv[1] = (char*) "--w-beta=0.1";
+    argv[2] = (char*) "--shared-w-beta=0";
+    argv[3] = (char*) "--u-beta=0.5";
+    argv[4] = (char*) "--shared-u-beta=0";
+    
+    RegularizerSoftTying regularizerST;
+    regularizerST.processOptions(argc, argv);
+    regularizerST.setupParameters(theta, alphabet, labels, 0);
+    theta.shared_w.zero();
+    theta.shared_u.zero();
+    RealVec gradST(theta.getDimTotal());
+    double fvalST = 0;
+    gradST.clear();
+    regularizerST.addRegularization(theta, fvalST, gradST);
+    
+    RegularizerL2 regularizerL2;
+    regularizerL2.processOptions(argc, argv);
+    RealVec gradL2(theta.getDimTotal());
+    double fvalL2 = 0;
+    gradL2.clear();
+    regularizerL2.addRegularization(theta, fvalL2, gradL2);
+    
+    BOOST_CHECK_CLOSE(fvalST, fvalL2, 1e-8);
+    for (size_t i = 0; i < alphabet.size(); ++i)
+      BOOST_CHECK_CLOSE(gradST[i], gradL2[i], 1e-8);
+  }
 }
