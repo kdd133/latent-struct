@@ -12,6 +12,7 @@
 #include "Parameters.h"
 #include "RegularizerSoftTying.h"
 #include "Ublas.h"
+#include "Utility.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
 #include <set>
@@ -149,7 +150,7 @@ void RegularizerSoftTying::addRegularization(const Parameters& theta,
 }
 
 void RegularizerSoftTying::setupParameters(Parameters& theta,
-    Alphabet& alphabet, const set<Label>& labelSet) {
+    Alphabet& alphabet, const set<Label>& labelSet, int seed) {
   // Deteremine the maximum label value.
   Label maxLabel = -1;
   set<Label>::const_iterator it;
@@ -164,7 +165,15 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   _labels = &labelSet;
   
   const size_t n = alphabet.numFeaturesPerClass();
+  boost::shared_array<double> w0 = Utility::generateGaussianSamples(n, 0,
+      0.01, seed);
   theta.shared_w.reAlloc(n);
-  if (theta.hasU())
+  theta.shared_w.setWeights(w0.get(), n);
+  if (theta.hasU()) {
+    // Note: We increment the seed to avoid symmetry in the parameters.
+    boost::shared_array<double> u0 = Utility::generateGaussianSamples(n, 0,
+        0.01, seed + 1);
     theta.shared_u.reAlloc(n);
+    theta.shared_u.setWeights(u0.get(), n);
+  }
 }

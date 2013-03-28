@@ -29,7 +29,7 @@ class Regularizer {
     // Some regularizers may need to store additional parameters (and
     // corresponding features) beyond what the training objective requires.
     virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
-        const std::set<Label>& labelSet) { }
+        const std::set<Label>& labelSet, int seed) { }
         
     virtual int processOptions(int argc, char** argv) {
       return 0;

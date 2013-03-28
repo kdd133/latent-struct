@@ -39,7 +39,7 @@ class RegularizerSoftTying : public Regularizer {
         RealVec& grad) const;
         
     virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
-        const std::set<Label>& labelSet);
+        const std::set<Label>& labelSet, int seed);
         
     virtual void setBeta(double beta);
         

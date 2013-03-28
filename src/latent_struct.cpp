@@ -578,12 +578,14 @@ initial weights")
   // FIXME: We cannot add another dummy label if an alphabet was loaded that
   // already had a dummy label added to it.
   assert(!resumed);
-  regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet());
+  regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet(),
+      seed);
   alphabet->lock(); // We can lock the Alphabet at this point.
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
       trainData.getLabelSet(), fgenLat);
   if (theta0.hasU()) {
-    initWeights(theta0.u, weightsInit, weightsNoise, seed, alphabet,
+    // Note: We modify the seed to avoid symmetry in the parameters.
+    initWeights(theta0.u, weightsInit, weightsNoise, seed + 1, alphabet,
         trainData.getLabelSet(), fgenLat);
   }
   
