@@ -99,24 +99,25 @@ BOOST_AUTO_TEST_CASE(testLinAlg)
     SparseRealVec feats(3);
     logFeats(0) = LogWeight(-0.5, true);
     logFeats(1) = LogWeight( 0.3, true);
-    logFeats(2) = LogWeight(-0.1, true);
+    //logFeats(2) implicitly set to LogWeight(0) (i.e., -Inf)
     
     ublas_util::exponentiate(logFeats, feats);
     BOOST_CHECK_CLOSE((double)feats[0], 0.606530659712633, 1e-8);
     BOOST_CHECK_CLOSE((double)feats[1], 1.349858807576003, 1e-8);
-    BOOST_CHECK_CLOSE((double)feats[2], 0.904837418035959, 1e-8);
+    BOOST_CHECK_SMALL((double)feats[2], 1e-8);
     
-    ublas_util::applySigmoid(feats);
-    BOOST_CHECK_CLOSE((double)feats[0], 0.647148993051504, 1e-8);
-    BOOST_CHECK_CLOSE((double)feats[1], 0.794106544007045, 1e-8);
-    BOOST_CHECK_CLOSE((double)feats[2], 0.711942578196699, 1e-8);
+    RealVec sigmaFeats(3);
+    ublas_util::sigmoid(feats, sigmaFeats);
+    BOOST_CHECK_CLOSE((double)sigmaFeats[0], 0.647148993051504, 1e-8);
+    BOOST_CHECK_CLOSE((double)sigmaFeats[1], 0.794106544007045, 1e-8);
+    BOOST_CHECK_CLOSE((double)sigmaFeats[2], 0.5, 1e-8);
     
     AccumRealMat M(3, 3);
     M.clear();
     M(0,0) = 1; M(0,1) = 2; M(0,2) = 3;
     M(1,0) = -1; M(1,2) = -3;
-    M(2,0) = 0; M(2,1) = 0.5;    
-    ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(M, feats);
+    M(2,0) = 0; M(2,1) = 0.5;
+    ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(M, sigmaFeats);
     BOOST_CHECK_CLOSE((double)M(0,0), 0.22834717384392825, 1e-8);
     BOOST_CHECK_CLOSE((double)M(0,1), 0.45669434768785649, 1e-8);
     BOOST_CHECK_CLOSE((double)M(0,2), 0.68504152153178477, 1e-8);
@@ -124,7 +125,7 @@ BOOST_AUTO_TEST_CASE(testLinAlg)
     BOOST_CHECK_CLOSE((double)M(1,1), 0, 1e-8);
     BOOST_CHECK_CLOSE((double)M(1,2), -0.49050402231669465, 1e-8);
     BOOST_CHECK_CLOSE((double)M(2,0), 0, 1e-8);
-    BOOST_CHECK_CLOSE((double)M(2,1), 0.10254017177366787, 1e-8);
+    BOOST_CHECK_CLOSE((double)M(2,1), 0.125, 1e-8);
     BOOST_CHECK_CLOSE((double)M(2,2), 0, 1e-8);
   }
 }
