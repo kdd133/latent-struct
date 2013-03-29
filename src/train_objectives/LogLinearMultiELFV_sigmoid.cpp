@@ -32,7 +32,7 @@ void LogLinearMultiELFV_sigmoid::valueAndGradientPart(const Parameters& theta,
   assert(theta.hasU());
   
   // These vectors will be reused in the main for loop below.
-  std::vector<SparseRealVec> phiBar(k, SparseRealVec(n));
+  std::vector<RealVec> sigmaPhiBar(k, RealVec(n));
   SparseLogVec logFeats(n);
   SparseRealVec gradU(n);
   
@@ -63,20 +63,21 @@ void LogLinearMultiELFV_sigmoid::valueAndGradientPart(const Parameters& theta,
       model.expectedFeatureCooccurrences(theta.u, &logCooc, &logFeats, xi, y);
       
       // Exponentiate the log values.
-      ublas_util::exponentiate(logFeats, phiBar[y]);
+      SparseRealVec phiBar(n);
+      ublas_util::exponentiate(logFeats, phiBar);
       
-      // Compute the covariance matrix before applying sigmoid to phiBar[y].
-      ublas_util::computeLowerCovarianceMatrix(logCooc, phiBar[y], cov[y]);
+      // Compute the covariance matrix before applying sigmoid function.
+      ublas_util::computeLowerCovarianceMatrix(logCooc, phiBar, cov[y]);
       
-      // For the remaining computations, we require \sigma(phiBar[y]).
-      ublas_util::applySigmoid(phiBar[y]);
+      // Apply the sigmoid to phiBar; store the result in sigmaPhiBar[y].
+      ublas_util::sigmoid(phiBar, sigmaPhiBar[y]);
       
-      const double mass_y = exp(theta.w.innerProd(phiBar[y]));
+      const double mass_y = exp(theta.w.innerProd(sigmaPhiBar[y]));
       massTotal += mass_y;
-      phiBar_sumY += mass_y * phiBar[y];
+      phiBar_sumY += mass_y * sigmaPhiBar[y];
       
-      // Perform cov[y]_(i,:) *= (phiBar[y]_(i) * (1 - phiBar[y]_(i)))
-      ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(cov[y], phiBar[y]);
+      // Perform cov[y]_(i,:) *= (sigmaPhiBar[y]_(i) * (1 - sigmaPhiBar[y]_(i)))
+      ublas_util::scaleMatrixRowsByVecTimesOneMinusVec(cov[y], sigmaPhiBar[y]);
       
       // Perform covTotal += mass_y * cov[y]
       ublas_util::addScaled(cov[y], covTotal, mass_y);
@@ -93,10 +94,10 @@ void LogLinearMultiELFV_sigmoid::valueAndGradientPart(const Parameters& theta,
     ublas_util::matrixVectorMultLowerSymmetric(cov[yi], -w, gradU, false);
 
     // Update the function value.
-    funcVal += log(massTotal) - theta.w.innerProd(phiBar[yi]);
+    funcVal += log(massTotal) - theta.w.innerProd(sigmaPhiBar[yi]);
     
     // Update the gradient wrt w.
-    subrange(gradFv, 0, n) += phiBar_sumY - phiBar[yi];    
+    subrange(gradFv, 0, n) += phiBar_sumY - sigmaPhiBar[yi];    
     
     // Update the gradient wrt u.
     subrange(gradFv, n, d) += gradU;
@@ -109,14 +110,15 @@ void LogLinearMultiELFV_sigmoid::predictPart(const Parameters& theta, Model& mod
   const int n = theta.u.getDim();
   SparseLogVec logFeats(n);
   SparseRealVec feats(n);
+  RealVec sigmaFeats(n);
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
       model.expectedFeatures(theta.u, &logFeats, x, y, true);
       ublas_util::exponentiate(logFeats, feats);
-      ublas_util::applySigmoid(feats);
-      const double yScore = theta.w.innerProd(feats);
+      ublas_util::sigmoid(feats, sigmaFeats);
+      const double yScore = theta.w.innerProd(sigmaFeats);
       scores.setScore(id, y, yScore);
     }
   }

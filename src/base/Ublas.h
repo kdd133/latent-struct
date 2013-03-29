@@ -91,8 +91,7 @@ namespace ublas_util {
       const SparseRealVec& expectedFeats, AccumRealMat& covarianceMatrix);
       
   // Scale the ith row of M by x[i]*(1-x[i]).
-  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M,
-      const SparseRealVec& x);
+  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M, const RealVec& x);
   
   // Perform b = L*x, where L contains the lower triangular portion of what is
   // interpreted to be a symmetric matrix.
@@ -106,7 +105,10 @@ namespace ublas_util {
   void setEntriesToZero(AccumLogMat& M);
   
   // Perform, component-wise, x = \sigma(x), where \sigma(x) = 1/(1+exp(-x)).
-  void applySigmoid(SparseRealVec& x);
+  // Note: We store the result in a dense vector because zero entries in x yield
+  // sigma(x) = 0.5; i.e., we can't just skip over the zero entries as we do in
+  // some other sparse computations.
+  void sigmoid(const SparseRealVec& x, RealVec& sigma_x);
 }
 
 #endif

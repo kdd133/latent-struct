@@ -177,8 +177,7 @@ namespace ublas_util {
     }
   }
   
-  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M,
-      const SparseRealVec& x) {
+  void scaleMatrixRowsByVecTimesOneMinusVec(AccumRealMat& M, const RealVec& x) {
     AccumRealMat::iterator1 it1;
     AccumRealMat::iterator2 it2;
     for (it1 = M.begin1(); it1 != M.end1(); ++it1)
@@ -189,7 +188,7 @@ namespace ublas_util {
   }
   
   void lowerToSymmetric(AccumLogMat& L) {
-    const int d = L.size1();
+    const size_t d = L.size1();
     assert(d == L.size2());
     for (size_t i = 0; i < d; ++i)
       for (size_t j = 0; j < i; ++j)
@@ -212,9 +211,10 @@ namespace ublas_util {
         M(it2.index1(), it2.index2()) = LogWeight();
   }
   
-  void applySigmoid(SparseRealVec& x) {
-    SparseRealVec::iterator it;
-    for (it = x.begin(); it != x.end(); ++it)
-      *it = Utility::sigmoid(*it);
+  void sigmoid(const SparseRealVec& x, RealVec& sigma_x) {
+    assert(x.size() == sigma_x.size());
+    const size_t d = x.size();
+    for (size_t i = 0; i < d; ++i)
+      sigma_x[i] = Utility::sigmoid(x[i]);
   }
 }
