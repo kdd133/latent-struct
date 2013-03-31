@@ -165,15 +165,22 @@ void RegularizerSoftTying::setupParameters(Parameters& theta,
   _labels = &labelSet;
   
   const size_t n = alphabet.numFeaturesPerClass();
-  boost::shared_array<double> w0 = Utility::generateGaussianSamples(n, 0,
-      0.01, seed);
   theta.shared_w.reAlloc(n);
-  theta.shared_w.setWeights(w0.get(), n);
+  // Initialize theta.shared_w to random values, but only if _betaSharedW has
+  // been set to a positive value. Otherwise, the random initial values will
+  // influence the fval even if _betaSharedW is zero.
+  if (_betaSharedW > 0) {
+    boost::shared_array<double> w0 = Utility::generateGaussianSamples(n, 0,
+      0.01, seed);
+    theta.shared_w.setWeights(w0.get(), n);
+  }
   if (theta.hasU()) {
-    // Note: We increment the seed to avoid symmetry in the parameters.
-    boost::shared_array<double> u0 = Utility::generateGaussianSamples(n, 0,
-        0.01, seed + 1);
     theta.shared_u.reAlloc(n);
-    theta.shared_u.setWeights(u0.get(), n);
+    if (_betaSharedU > 0) {
+      // Note: We increment the seed to avoid symmetry in the parameters.
+      boost::shared_array<double> u0 = Utility::generateGaussianSamples(n, 0,
+          0.01, seed + 1);
+      theta.shared_u.setWeights(u0.get(), n);
+    }
   }
 }
