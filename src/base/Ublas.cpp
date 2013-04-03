@@ -165,14 +165,20 @@ namespace ublas_util {
   void computeLowerCovarianceMatrix(const AccumLogMat& L, const SparseRealVec& v,
       AccumRealMat& C) {
     C.clear();
-    AccumLogMat::const_iterator1 it1;
-    AccumLogMat::const_iterator2 it2;
-    for (it1 = L.begin1(); it1 != L.end1(); ++it1) {
-      for (it2 = it1.begin(); it2 != it1.end(); ++it2) {
-        const int i = it2.index1();
-        const int j = it2.index2();
-        assert(j <= i); // If this fails, L is not lower triangular.
-        C(i, j) = exp(*it2) - (v[i] * v[j]);
+    // Note: We iterate over non-zero entries in the matrix v*v' instead of
+    // iterating over the entries in L because it is possible to have L(i,j)=0
+    // while (v*v')(i,j)!=0. This happens, for example, when a pair of features
+    // never co-occur in an alignment, but do occur separately in distinct
+    // alignments.
+    SparseRealVec::const_iterator it1;
+    SparseRealVec::const_iterator it2;
+    for (it1 = v.begin(); it1 != v.end(); ++it1) {
+      const int i = it1.index();
+      for (it2 = v.begin(); it2 != v.end(); ++it2) {
+        const int j = it2.index();
+        if (j > i)
+          continue;
+        C(i, j) = exp(L(i, j)) - (v[i] * v[j]);
       }
     }
   }
