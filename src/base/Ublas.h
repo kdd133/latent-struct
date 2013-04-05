@@ -100,10 +100,6 @@ namespace ublas_util {
       
   void lowerToSymmetric(AccumLogMat& L);
   
-  void setEntriesToZero(SparseLogMat& M);
-  
-  void setEntriesToZero(AccumLogMat& M);
-  
   // Perform, component-wise, x = \sigma(x), where \sigma(x) = 1/(1+exp(-x)).
   // Note: We store the result in a dense vector because zero entries in x yield
   // sigma(x) = 0.5; i.e., we can't just skip over the zero entries as we do in

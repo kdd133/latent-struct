@@ -201,22 +201,6 @@ namespace ublas_util {
         L(j, i) = L(i, j);
   }
   
-  void setEntriesToZero(SparseLogMat& M) {
-    SparseLogMat::const_iterator1 it1;
-    SparseLogMat::const_iterator2 it2;
-    for (it1 = M.begin1(); it1 != M.end1(); ++it1)
-      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
-        M(it2.index1(), it2.index2()) = LogWeight();
-  }
-
-  void setEntriesToZero(AccumLogMat& M) {
-    AccumLogMat::const_iterator1 it1;
-    AccumLogMat::const_iterator2 it2;
-    for (it1 = M.begin1(); it1 != M.end1(); ++it1)
-      for (it2 = it1.begin(); it2 != it1.end(); ++it2)
-        M(it2.index1(), it2.index2()) = LogWeight();
-  }
-  
   void sigmoid(const SparseRealVec& x, RealVec& sigma_x) {
     assert(x.size() == sigma_x.size());
     const size_t d = x.size();
