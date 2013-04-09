@@ -205,6 +205,9 @@ namespace ublas_util {
     assert(x.size() == sigma_x.size());
     const size_t d = x.size();
     for (size_t i = 0; i < d; ++i)
-      sigma_x[i] = Utility::sigmoid(x[i]);
+      if (x[i] != 0)
+        sigma_x[i] = Utility::sigmoid(x[i]);
+      else
+        sigma_x[i] = 0.5;
   }
 }
