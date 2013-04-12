@@ -42,6 +42,9 @@ class Graph {
     virtual int numFeatures() const = 0;
     
     virtual void clearBuildVariables() = 0;
+    
+    virtual void getNodesTopologicalOrder(std::list<const Hypernode*>& ordering,
+        bool reverse) const;
 };
 
 #endif

@@ -25,7 +25,6 @@
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <list>
-#include <stack>
 
 
 template <class Semiring>
@@ -59,9 +58,6 @@ class Inference {
     
     static double viterbi(const Graph& g, std::list<const Hyperedge*>& bestPath);
     
-    static void getNodesTopologicalOrder(const Graph& g,
-        std::list<const Hypernode*>& ordering, bool reverse = false);
-        
     typedef struct viterbi_entry {
       LogWeight score;
       const Hyperedge* backPointer;
@@ -129,7 +125,7 @@ void Inference<Semiring>::insideOutside(const Graph& g,
   boost::shared_array<Semiring> betas = inside(g);
   boost::shared_array<Semiring> alphas = outside(g, betas);
   
-  Semiring::initInsideOutsideAccumulator(g.numFeatures(), result);
+  Semiring::initInsideOutsideAccumulator(g, result);
   
   boost::scoped_array<bool> marked(new bool[g.numNodes()]);
   for (size_t i = 0; i < g.numNodes(); i++)
@@ -176,7 +172,7 @@ void Inference<Semiring>::insideOutside(const Graph& g,
 template <class Semiring>
 boost::shared_array<Semiring> Inference<Semiring>::inside(const Graph& g) {
   std::list<const Hypernode*> revTopOrder;
-  getNodesTopologicalOrder(g, revTopOrder, true);
+  g.getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == g.numNodes());
   
   const size_t d = g.numFeatures();
@@ -217,7 +213,7 @@ template <class Semiring>
 boost::shared_array<Semiring> Inference<Semiring>::outside(const Graph& g,
     boost::shared_array<Semiring> betas) {
   std::list<const Hypernode*> topOrder;
-  getNodesTopologicalOrder(g, topOrder, false);
+  g.getNodesTopologicalOrder(topOrder, false);
   assert(topOrder.size() == g.numNodes());
   
   const size_t d = g.numFeatures();
@@ -253,7 +249,7 @@ template <class Semiring>
 double Inference<Semiring>::viterbi(const Graph& g,
     std::list<const Hyperedge*>& path) {
   std::list<const Hypernode*> revTopOrder;
-  getNodesTopologicalOrder(g, revTopOrder, true);
+  g.getNodesTopologicalOrder(revTopOrder, true);
   assert(revTopOrder.size() == g.numNodes());
   path.clear();
   
@@ -296,57 +292,6 @@ double Inference<Semiring>::viterbi(const Graph& g,
   
   const double pathScore = chart[g.root()->getId()].score;
   return pathScore;
-}
-
-template <class Semiring>
-void Inference<Semiring>::getNodesTopologicalOrder(const Graph& g,
-    std::list<const Hypernode*>& ordering, bool reverse) {
-  
-  enum colour {BLACK, GREY, WHITE};  
-  boost::scoped_array<int> nodeColour(new int[g.numNodes()]);
-  for (size_t i = 0; i < g.numNodes(); i++)
-    nodeColour[i] = WHITE;
-  
-  std::stack<const Hypernode*> theStack;
-  const Hypernode* u = g.root();
-  nodeColour[u->getId()] = GREY;
-  
-  ordering.clear();
-
-  while (u != 0) {
-    bool uHasWhiteNeighbour = false;
-    BOOST_FOREACH(const Hyperedge* edge, u->getEdges()) {
-      assert(edge);
-      BOOST_FOREACH(const Hypernode* v, edge->getChildren()) {
-        assert(v);
-        if (nodeColour[v->getId()] == WHITE) {
-          uHasWhiteNeighbour = true;
-          nodeColour[v->getId()] = GREY;
-          theStack.push(u);
-          u = v;
-          break;
-        }
-      }
-      if (uHasWhiteNeighbour)
-        break;
-    }
-    
-    if (!uHasWhiteNeighbour) {
-      nodeColour[u->getId()] = BLACK;
-      
-      if (reverse)
-        ordering.push_back(u);
-      else
-        ordering.push_front(u);
-        
-      if (theStack.empty())
-        u = 0;
-      else {
-        u = theStack.top();
-        theStack.pop();
-      }
-    }
-  }
 }
 
 #endif
