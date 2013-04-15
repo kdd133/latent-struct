@@ -50,10 +50,10 @@ public:
     SparseLogVec* rBar;
   } InsideOutsideResult;
 
-  static void initInsideOutsideAccumulator(const std::size_t d,
+  static void initInsideOutsideAccumulator(const Graph& g,
       InsideOutsideResult& result) {
     result.rBar->clear();
-    assert(result.rBar->size() == d);
+    assert(result.rBar->size() == g.numFeatures());
   }
 
   static void accumulate(InsideOutsideResult& x, const LogSemiring& keBar,

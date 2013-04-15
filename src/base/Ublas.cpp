@@ -114,11 +114,13 @@ namespace ublas_util {
     assert(dest.size2() == v1.size());
     SparseLogVec::const_iterator it1;
     SparseLogVec::const_iterator it2;
-    for (it1 = v1.begin(); it1 != v1.end(); ++it1)
+    for (it1 = v1.begin(); it1 != v1.end(); ++it1) {
+      const LogWeight scaled_v1 = (*it1) * scale;
       for (it2 = v2.begin(); it2 != v2.end() && it2.index() <= it1.index();
           ++it2) {
-        dest(it1.index(), it2.index()) += (*it1) * (*it2) * scale;
+        dest(it1.index(), it2.index()) += scaled_v1 * (*it2);
       }
+    }
   }
   
   void addLowerTriangular(const SparseLogMat& src, SparseLogMat& dest) {

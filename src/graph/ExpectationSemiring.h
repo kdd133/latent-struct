@@ -68,13 +68,14 @@ public:
     AccumLogMat* tBar;
   } InsideOutsideResult;
   
-  static void initInsideOutsideAccumulator(const std::size_t d,
+  static void initInsideOutsideAccumulator(const Graph& g,
       InsideOutsideResult& result) {
     result.rBar->clear();
 //  result.sBar = 0; // currently unused
     result.tBar->clear();
-    assert(result.rBar->size() == d);
-    assert(result.tBar->size1() == d && result.tBar->size2() == d);
+    assert(result.rBar->size() == g.numFeatures());
+    assert(result.tBar->size1() == g.numFeatures());
+    assert(result.tBar->size2() == g.numFeatures());
   }
   
   static void accumulate(InsideOutsideResult& x,
@@ -89,8 +90,8 @@ public:
     SparseLogVec pe_se = pe * se;
     
     ublas_util::addOuterProductLowerTriangular(re, se, keBarP * pe, *x.tBar);
-    ublas_util::addOuterProductLowerTriangular(pe_se, keBarR, LogWeight(1),
-        *x.tBar);
+    ublas_util::addOuterProductLowerTriangular(pe_se, keBarR,
+        LogWeight(0, true), *x.tBar);
     pe_se *= keBarP;
     *x.rBar += pe_se;
   }
