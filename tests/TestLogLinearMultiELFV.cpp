@@ -83,13 +83,13 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
   RealVec gradFv(d);
   double fval;
   objective->valueAndGradient(theta, fval, gradFv);
-  BOOST_CHECK_CLOSE(fval, 0.8285285674643136, 1e-8);
+  BOOST_CHECK_CLOSE(fval, 0.8285285674643136, 1e-7);
   const double checkedGrad[8] = { 0.31396735603783266, 1.3557577692589886,
       1.3077399433587242, 0.21493254964414349, -0.31396735603783271,
       -0.40881101770846434, -0.36079319180820008, -1.1618793011946678
   };
   for (int i = 0; i < theta.w.getDim(); ++i)
-    BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-8);
+    BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-7);
 
   shared_ptr<Regularizer> reg(new RegularizerL2(0.01));
 
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
     BOOST_CHECK_EQUAL(status, Optimizer::CONVERGED);
     BOOST_REQUIRE_EQUAL(theta.w.getDim(), theta.u.getDim());
   }  
-  BOOST_CHECK_CLOSE(fvalOpt, 0.517689895351953, 1e-8);
+  BOOST_CHECK_CLOSE(fvalOpt, 0.517689895351953, 1e-6);
 
   // Count the number of prediction errors that the model makes on the training
   // data. We expect them to be the same.

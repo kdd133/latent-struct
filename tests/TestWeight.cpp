@@ -18,7 +18,6 @@ BOOST_AUTO_TEST_CASE(testWeight)
     BOOST_CHECK_EQUAL(log(0), zero);
     BOOST_CHECK_EQUAL(exp(one), 1);
     BOOST_CHECK_EQUAL(log(1), one);
-    BOOST_CHECK_EQUAL(zero, LogWeight(0));
   }
   
   // Test multiplication.

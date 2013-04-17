@@ -50,7 +50,7 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     const Label yi = it->y();
     
     // Compute the mass and the expected features wrt w.
-    LogWeight massW(0);
+    LogWeight massW;
     logFeatsW.clear();
     for (Label y = 0; y < k; y++) {      
       // Note: The last argument is false b/c we want unnormalized features.

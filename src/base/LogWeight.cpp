@@ -21,7 +21,9 @@ LogWeight::LogWeight(double value, bool valueIsLog) {
   if (valueIsLog)
     _val = value;
   else {
-    assert(value >= 0);
+    // 0 should not be passed as an argument when valueIsLog=false, since the
+    // default constructor gives the same result without calling log().
+    assert(value > 0);
     _val = log(value);
   }
 }
@@ -29,7 +31,7 @@ LogWeight::LogWeight(double value, bool valueIsLog) {
 // See Table 3 in Li & Eisner paper titled:
 // "First- and Second-Order Expectation Semirings with Applications..."
 const LogWeight LogWeight::operator+(const LogWeight& w) const {
-  const LogWeight zero(0);
+  const LogWeight zero;
   if ((*this) == zero)
     return w;
   else if (w == zero)
@@ -46,11 +48,13 @@ const LogWeight LogWeight::operator+(const LogWeight& w) const {
       la = w._val;
       lb = _val;
     }
-    const double x = exp(lb - la);
-    
-    LogWeight result;
-    result._val = la + Utility::log1Plus(x);
-    return result;
+    const double negDiff = lb - la;
+    if (negDiff < -20) {
+      // If b is much smaller than a, then ignore b.
+      // See https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations
+      return LogWeight(la, true);
+    }
+    return LogWeight(la + Utility::log1Plus(exp(negDiff)), true);
   }
 }
 
@@ -60,17 +64,13 @@ const LogWeight LogWeight::operator*(const LogWeight& w) const {
   // const LogWeight zero(0);
   // if ((*this) == zero || w == zero)
   //   return zero;
-  LogWeight result;
-  result._val = _val + w._val;
-  return result;
+  return LogWeight(_val + w._val, true);
 }
 
 const LogWeight LogWeight::operator/(const LogWeight& w) const {
   // TODO: Handle the case where the argument is zero. Should division by zero
   // return NaN or throw an exception?
-  LogWeight result;
-  result._val = _val - w._val;
-  return result;
+  return LogWeight(_val - w._val, true);
 }
 
 LogWeight& LogWeight::operator+=(const LogWeight& w) {
@@ -96,7 +96,7 @@ std::ostream& operator<<(std::ostream& out, const LogWeight& w) {
 }
 
 LogWeight sqrt(LogWeight w) {
-  double root = sqrt(exp((double)w));
+  const double root = sqrt(exp((double)w));
   return LogWeight(root);
 }
 

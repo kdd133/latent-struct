@@ -35,7 +35,7 @@ void LogLinearMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     const Pattern& xi = *it->x();
     const Label yi = it->y();
     
-    LogWeight massTotal(0);
+    LogWeight massTotal;
 
     // Note: feats[y] is initially zeroed out by expectedFeatures() 
     featsTotal.clear();
