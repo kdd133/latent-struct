@@ -242,7 +242,7 @@ shared_array<int> Utility::randPerm(int n) {
   for (int i = 0; i < n; ++i)
     numbers[i] = i;
   for (int i = n - 1; i >= 0; --i) {
-    int j = rgen();
+    int j = floor(rgen()*(i+1)); // randomly choose j in [0,i]
     int temp = numbers[j];
     numbers[j] = numbers[i];
     numbers[i] = temp;

@@ -105,7 +105,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   double lowestCost = std::numeric_limits<double>::infinity();
 
   // Get a random ordering for the training examples.
-  shared_array<double> ordering = Utility::randPerm(m);
+  shared_array<int> ordering = Utility::randPerm(m);
   
   for (size_t t = 0; t < T && !guessConverged; ++t)
   {
