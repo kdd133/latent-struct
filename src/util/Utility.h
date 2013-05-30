@@ -50,6 +50,9 @@ class Utility {
     static boost::shared_array<double> generateGaussianSamples(std::size_t n,
       double mean, double stdev, int seed = 0); 
 
+    // Return a random permutation of the integers 0,...,n-1.
+    static boost::shared_array<int> randPerm(int n);
+
   private:
   
     // Call the library function log1p if argument to log1Plus is less than

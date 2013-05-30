@@ -27,6 +27,7 @@
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/program_options.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
+#include <boost/shared_array.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
 #include <exception>
@@ -98,14 +99,14 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // This variable will store a running total of the costs, summed over the last
   // R examples that we've seen/processed.
   double sumCosts = 0;
-
-  // TODO: Shuffle the training examples
-  // e.g., http://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
   
   size_t numExamplesSeen = 0;
   bool guessConverged = false;
   double lowestCost = std::numeric_limits<double>::infinity();
 
+  // Get a random ordering for the training examples.
+  shared_array<double> ordering = Utility::randPerm(m);
+  
   for (size_t t = 0; t < T && !guessConverged; ++t)
   {
 //    timer::cpu_timer timer;
@@ -113,7 +114,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     for (size_t i = 0; i < m; ++i) {
       // compute the gradient and the cost function value for this example
       // (note: the cost returned here does not account for regularization)
-      _objective->valueAndGradientOne(theta, cost, grad, i);
+      _objective->valueAndGradientOne(theta, cost, grad, ordering[i]);
       sumCosts += cost;
       
       // update the parameters based on the computed gradient

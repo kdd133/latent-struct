@@ -21,6 +21,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
+#include <boost/random/uniform_01.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/shared_array.hpp>
 #include <cmath>
@@ -231,4 +232,20 @@ shared_array<double> Utility::generateGaussianSamples(size_t n, double mean,
   for (size_t i = 0; i < n; ++i)
     samples[i] = rgen();
   return samples;
+}
+
+shared_array<int> Utility::randPerm(int n) {
+  mt19937 mt(seed);
+  uniform_01<> uniform01();
+  variate_generator<mt19937, uniform_01<> > rgen(mt, uniform01);
+  shared_array<int> numbers(new int[n]);
+  for (int i = 0; i < n; ++i)
+    numbers[i] = i;
+  for (int i = n - 1; i >= 0; --i) {
+    int j = rgen();
+    int temp = numbers[j];
+    numbers[j] = numbers[i];
+    numbers[i] = temp;
+  }
+  return numbers;
 }
