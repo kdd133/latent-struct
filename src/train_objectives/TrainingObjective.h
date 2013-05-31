@@ -30,8 +30,20 @@ class TrainingObjective {
     
     virtual ~TrainingObjective() {}
   
+    // Return the function value and gradient computed over the entire training
+    // set.
     virtual void valueAndGradient(const Parameters& theta, double& value,
       RealVec& grad);
+      
+    // Return the function value and gradient for the subset of training
+    // examples specified by begin and end.
+    virtual void valueAndGradient(const Parameters& theta,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      double& value, RealVec& grad);
+    
+    // Return the function value and gradient for the ith training example.
+    virtual void valueAndGradientOne(const Parameters& theta, double& value,
+      RealVec& grad, std::size_t i);
     
     virtual void predict(const Parameters& theta, const Dataset& evalData,
       LabelScoreTable& scores);
@@ -67,6 +79,10 @@ class TrainingObjective {
     
     std::size_t getNumModels() const {
       return _models.size();
+    }
+    
+    const Dataset& getDataset() {
+      return _dataset;
     }
     
     void gatherFeatures(std::size_t& maxFvs, std::size_t& totalFvs);

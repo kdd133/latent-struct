@@ -51,7 +51,7 @@ class Utility {
       double mean, double stdev, int seed = 0); 
 
     // Return a random permutation of the integers 0,...,n-1.
-    static boost::shared_array<int> randPerm(int n);
+    static boost::shared_array<int> randPerm(int n, int seed = 0);
 
   private:
   

@@ -17,6 +17,7 @@
 #include <boost/ref.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
+#include <list>
 #include <vector>
 
 using boost::bind;
@@ -35,6 +36,36 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
   }
   assert(_dataset.numExamples() == 0 || // i.e., data not loaded yet
       _dataset.numPartitions() == _models.size());
+}
+
+void TrainingObjective::valueAndGradientOne(const Parameters& theta,
+    double& fval, RealVec& gradFv, size_t i) {
+  assert(gradFv.size() == theta.getDimTotal());
+  assert(i < _dataset.getExamples().size());
+  const Label k = (Label)_dataset.getLabelSet().size();
+  
+  // In order to invoke the valueAndGradientPart function, we must pass it
+  // list<Example> iterators. So, we create a list containing one example.
+  const Example& ex = _dataset.getExamples()[i];
+  list<Example> dataOne;
+  dataOne.push_back(ex);
+  const Dataset::iterator begin = dataOne.begin();
+  const Dataset::iterator end = dataOne.end();
+  
+  fval = 0;
+  gradFv.clear();
+  valueAndGradientPart(theta, _models[0], begin, end, k, fval, gradFv);
+}
+
+void TrainingObjective::valueAndGradient(const Parameters& theta,
+    const Dataset::iterator& begin, const Dataset::iterator& end, double& fval,
+    RealVec& gradFv) {
+  assert(gradFv.size() == theta.getDimTotal());
+  const Label k = (Label)_dataset.getLabelSet().size();
+  
+  fval = 0;
+  gradFv.clear();
+  valueAndGradientPart(theta, _models[0], begin, end, k, fval, gradFv);
 }
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,

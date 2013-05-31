@@ -234,9 +234,9 @@ shared_array<double> Utility::generateGaussianSamples(size_t n, double mean,
   return samples;
 }
 
-shared_array<int> Utility::randPerm(int n) {
+shared_array<int> Utility::randPerm(int n, int seed) {
   mt19937 mt(seed);
-  uniform_01<> uniform01();
+  uniform_01<> uniform01;
   variate_generator<mt19937, uniform_01<> > rgen(mt, uniform01);
   shared_array<int> numbers(new int[n]);
   for (int i = 0; i < n; ++i)
