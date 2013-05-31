@@ -21,17 +21,18 @@ using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testStochasticGradient)
 {
-  const int argc = 9;
+  const int argc = 10;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
   argv[1] = (char*) "--order=0";
   argv[2] = (char*) "--no-align-ngrams";
   argv[3] = (char*) "--no-collapsed-align-ngrams";
   argv[4] = (char*) "--restarts=2";
-  argv[5] = (char*) "--quiet";
+  argv[5] = (char*) "--quietX";
   argv[6] = (char*) "--no-normalize";
   argv[7] = (char*) "--bias-no-normalize";
   argv[8] = (char*) "--no-final-arc-feats";
+  argv[9] = (char*) "--validation=0.4";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));

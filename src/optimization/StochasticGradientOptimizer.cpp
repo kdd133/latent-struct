@@ -20,13 +20,9 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
+#include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/numeric/ublas/io.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/vector_expression.hpp>
-#include <boost/numeric/ublas/vector.hpp>
 #include <boost/program_options.hpp>
-#include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
@@ -35,25 +31,32 @@
 #include <limits>
 #include <stdio.h>
 #include <string>
-#include <uQuadProg++.hh>
 
 using namespace boost;
 using namespace std;
 
 StochasticGradientOptimizer::StochasticGradientOptimizer(shared_ptr<TrainingObjective> objective,
                              shared_ptr<Regularizer> regularizer) :
-    Optimizer(objective, regularizer), _maxIters(250), _quiet(false) {
+    Optimizer(objective, regularizer), _maxIters(250), _eta(0.01),
+    _progressReportUpdates(1000), _quiet(false), _seed(0),
+    _valSetFraction(0.1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   namespace opt = program_options;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("learning-rate", opt::value<double>(&_eta)->default_value(0.01),
+        "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
         "maximum number of iterations")
-//    ("no-shrinking", opt::bool_switch(&_noShrinking),
-//        "disable the shrinking heuristic")
+    ("progress-updates", opt::value<size_t>(&_progressReportUpdates)->
+        default_value(1000), "print a progress report after this many updates")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
+    ("seed", opt::value<int>(&_seed)->default_value(0),
+        "seed for random number generator")
+    ("validation", opt::value<double>(&_valSetFraction)->default_value(0.1),
+        "fraction of training examples to use as a validation set")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -69,24 +72,13 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
 Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     double& costLastR, double tol) const {
   
-  const size_t T = 1000; // maximum number of epochs (passes over the data)
-  double eta = 0.0025;  // learning rate
-  
-  // The idea of the "patience" stopping heuristic is adapted from
-  // http://deeplearning.net/tutorial/mlp.html
-  // process at least this many examples
-  size_t patience = 1000;
-  // when a new minimizer is found, wait this much longer //TODO: clarify this
-  const size_t patienceIncrease = 2;
-  // increase the patience if a relative improvement of this amount is observed
-  const double improvementThreshold = 0.9999;
-  
   // Each time we've seen a multiple of R examples, report the average cost
   // (plus regularization) taken over the last R updates, where the cost of
   // each example is computed prior to the parameter update (gradient step).
-  const size_t R = 100;
+  const size_t R = _progressReportUpdates;
   
-  const size_t m = _objective->getDataset().numExamples();
+  const Dataset& allData = _objective->getDataset(); 
+  const size_t m = allData.numExamples();
   const double beta = _regularizer->getBeta();
   const size_t d = theta.getDimTotal();
   assert(d > 0);
@@ -101,17 +93,34 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   double sumCosts = 0;
   
   size_t numExamplesSeen = 0;
-  bool guessConverged = false;
-  double lowestCost = std::numeric_limits<double>::infinity();
 
-  // Get a random ordering for the training examples.
-  shared_array<int> ordering = Utility::randPerm(m);
+  // Get a random ordering for the examples.
+  shared_array<int> ordering = Utility::randPerm(m, _seed);
   
-  for (size_t t = 0; t < T && !guessConverged; ++t)
-  {
-//    timer::cpu_timer timer;
+  // Split the data into training and validation sets.
+  const size_t mVal = m * _valSetFraction;
+  const size_t mTrain = m - mVal;
+  
+  // Form the validation set using examples with indices[mTrain,...,m-1].
+  Dataset validationData;
+  for (size_t i = mTrain; i < m; ++i)
+    validationData.addExample(allData.getExamples()[ordering[i]]);
     
-    for (size_t i = 0; i < m; ++i) {
+  // Create a data structure that will be used to store the predictions made on
+  // the validation set. 
+  size_t maxId = 0;
+  BOOST_FOREACH(const Example& ex, validationData.getExamples()) {
+    const size_t id = ex.x()->getId();
+    if (id > maxId)
+      maxId = id;
+  }  
+  LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
+  
+  for (size_t t = 0; t < _maxIters; ++t)
+  {
+    timer::cpu_timer timer;
+    
+    for (size_t i = 0; i < mTrain; ++i) {
       // compute the gradient and the cost function value for this example
       // (note: the cost returned here does not account for regularization)
       _objective->valueAndGradientOne(theta, cost, grad, ordering[i]);
@@ -119,33 +128,33 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       
       // update the parameters based on the computed gradient
       for (size_t j = 0; j < d; ++j) {
-        theta.add(j, -eta * (beta*theta[j] + grad[j]));
+        theta.add(j, -_eta * (beta*theta[j] + grad[j]));
       }
       
-      if (++numExamplesSeen % R == 0) {
+      if (!_quiet && ++numExamplesSeen % R == 0) {
         costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
-        cout << name() << " t = " << t << "  fval_last_" << R << " = "
+        cout << name() << ": t = " << t << "  fval_last_" << R << " = "
             << costLastR << endl;
         sumCosts = 0; // reset the running total
-        
-        // FIXME: It doesn't really make sense to check this on the training
-        // data, since we are only considering the last R examples. Thus, if
-        // a particular sequence of R examples are especially "easy", costLastR
-        // will be unusually low, even though the overall objective value may
-        // not have improved proportionally.
-        if (costLastR < lowestCost) {
-          if (costLastR < lowestCost * improvementThreshold) 
-            patience = std::max(patience, numExamplesSeen * patienceIncrease);
-            
-          lowestCost = costLastR; 
-        }
-      }
-      
-      if (numExamplesSeen >= patience) {
-        guessConverged = true;
-        break;
       }
     }
+
+    // Evaluate the performance of model on the held-out data.
+    double accuracy, precision, recall, fscore;
+    LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
+    _objective->predict(theta, validationData, labelScores);
+    Utility::calcPerformanceMeasures(validationData, labelScores, false, "", "",
+      accuracy, precision, recall, fscore);
+      
+    if (!_quiet) {
+      printf("%s: t = %d  acc = %.3f  prec = %.3f  rec = %.3f  fscore = %.3f",
+          name().c_str(), (int)t, accuracy, precision, recall, fscore);
+      cout << "  timer:" << timer.format();
+    }
+    
+    // TODO: Stop if the accuracy or f-score does not improve?
+    // Maybe also cache the previous theta in case it is better than the
+    // current one.
   }
 
   return Optimizer::CONVERGED;

@@ -41,7 +41,16 @@ class StochasticGradientOptimizer : public Optimizer {
     
     std::size_t _maxIters; // maximum number of iterations
     
+    double _eta; // learning rate
+    
+    // print a progress report after this many updates
+    std::size_t _progressReportUpdates; 
+    
     bool _quiet; // suppress optimization output
+    
+    int _seed; // seed for random number generator
+    
+    double _valSetFraction; // fraction of examples to use as validation set
 };
 
 #endif
