@@ -126,8 +126,10 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
   assert(fnames.size() == 0 || numWeightVectors == fnames.size());
   
   for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
-    printResults(evalData, labelScores[wvIndex], identifiers[wvIndex],
-        fnames[wvIndex]);
+    double accuracy, precision, recall, fscore;
+    calcPerformanceMeasures(evalData, labelScores[wvIndex], true,
+        identifiers[wvIndex], fnames[wvIndex],
+        accuracy, precision, recall, fscore);
   }
 }
 
@@ -149,11 +151,16 @@ void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
   
   LabelScoreTable labelScores(maxId + 1, evalData.getLabelSet().size());
   obj.predict(w, evalData, labelScores);
-  printResults(evalData, labelScores, identifier, fname);
+  
+  double accuracy, precision, recall, fscore;
+  calcPerformanceMeasures(evalData, labelScores, true, identifier, fname,
+      accuracy, precision, recall, fscore);
 }
 
-void Utility::printResults(const Dataset& evalData,
-    LabelScoreTable& labelScores, const string& id, const string& fname) {
+void Utility::calcPerformanceMeasures(const Dataset& evalData,
+    LabelScoreTable& labelScores, bool toStdout,
+    const string& id, const string& fname,
+    double& accuracy, double& precision, double& recall, double& fscore) {
     
   bool writeFiles = (fname.size() > 0);
   ofstream fout;
@@ -206,21 +213,22 @@ void Utility::printResults(const Dataset& evalData,
   if (writeFiles)
     fout.close();
 
-  const char* id_ = id.c_str();
   const int t = evalData.numExamples();
   const int correct = t - numErrors;
-  const double accuracy = (double) correct / t;
-  printf("%s-Accuracy: %.4f ( %d of %d )\n", id_, accuracy, correct, t);
-
-  double precision = (pp == 0) ? 0 : (double) ppCorrect / pp;
-  printf("%s-Precision: %.4f ( %d of %d )\n", id_, precision, ppCorrect, pp);
-
-  float recall = (tp == 0) ? 0 : (double) ppCorrect / tp;
-  printf("%s-Recall: %.4f ( %d of %d )\n", id_, recall, ppCorrect, tp);
-
-  double fscore = (precision + recall == 0) ? 0 : 2 * ((precision * recall)
+  
+  accuracy = (double) correct / t;
+  precision = (pp == 0) ? 0 : (double) ppCorrect / pp;
+  recall = (tp == 0) ? 0 : (double) ppCorrect / tp;
+  fscore = (precision + recall == 0) ? 0 : 2 * ((precision * recall)
       / (precision + recall));
-  printf("%s-Fscore: %.4f\n", id_, fscore);
+      
+  if (toStdout) {
+    const char* id_ = id.c_str();
+    printf("%s-Accuracy: %.4f ( %d of %d )\n", id_, accuracy, correct, t);
+    printf("%s-Precision: %.4f ( %d of %d )\n", id_, precision, ppCorrect, pp);
+    printf("%s-Recall: %.4f ( %d of %d )\n", id_, recall, ppCorrect, tp);
+    printf("%s-Fscore: %.4f\n", id_, fscore);
+  }
 }
 
 shared_array<double> Utility::generateGaussianSamples(size_t n, double mean,

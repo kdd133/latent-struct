@@ -37,6 +37,11 @@ class Utility {
       TrainingObjective& obj, const Dataset& evalData,
       const std::vector<std::string>& ids,
       const std::vector<std::string>& fnames, bool enableCache);
+      
+    static void calcPerformanceMeasures(const Dataset& evalData,
+      LabelScoreTable& scores, bool printToStdout,
+      const std::string& identifier, const std::string& fnameOut,
+      double& accuracy, double& precision, double& recall, double& fscore);
         
     static double sigmoid(double a);
     
@@ -58,9 +63,6 @@ class Utility {
     // Call the library function log1p if argument to log1Plus is less than
     // this value.
     static const double log1PlusTiny;
-    
-    static void printResults(const Dataset& evalData, LabelScoreTable& scores,
-      const std::string& id, const std::string& fname);
 };
 
 inline double Utility::sigmoid(double a) {
