@@ -4,7 +4,7 @@
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
- * Copyright (c) 2013 Kenneth Dwyer
+ * Copyright (c) 2012-2013 Kenneth Dwyer
  */
 
 #ifndef _STOCHASTICGRADIENTOPTIMIZER_H

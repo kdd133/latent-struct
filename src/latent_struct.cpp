@@ -46,6 +46,7 @@
 #include "RegularizerSoftTying.h"
 #include "SentenceAlignmentFeatureGen.h"
 #include "SentencePairReader.h"
+#include "StochasticGradientOptimizer.h"
 #include "StringEditModel.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
@@ -134,7 +135,8 @@ int main(int argc, char** argv) {
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
   optMsgObs << "optimization algorithm {" << optAuto << CMA <<
-      BmrmOptimizer::name() << CMA << LbfgsOptimizer::name() << "}";
+      BmrmOptimizer::name() << CMA << LbfgsOptimizer::name() << CMA <<
+      StochasticGradientOptimizer::name() << "}";
   stringstream readerMsg;
   readerMsg << "reader that parses lines from input file {" <<
       CognatePairReader::name() << CMA << SentencePairReader::name() << CMA <<
@@ -506,6 +508,8 @@ initial weights")
     optInner.reset(new LbfgsOptimizer(objective, regularizer));
   else if (optName == BmrmOptimizer::name())
     optInner.reset(new BmrmOptimizer(objective, regularizer));
+  else if (optName == StochasticGradientOptimizer::name())
+    optInner.reset(new StochasticGradientOptimizer(objective, regularizer));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized optimizer name was given: "

@@ -84,7 +84,6 @@ double Parameters::innerProd(const RealVec& fv) const {
 }
 
 void Parameters::setParams(const Parameters& other) {
-  assert(w.getDim() > 0);
   w.setWeights(other.w.getWeights(), other.w.getDim());
   if (other.hasU())
     u.setWeights(other.u.getWeights(), other.u.getDim());

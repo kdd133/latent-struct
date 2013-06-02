@@ -4,7 +4,7 @@
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
- * Copyright (c) 2012 Kenneth Dwyer
+ * Copyright (c) 2012-2013 Kenneth Dwyer
  */
 
 // Some of these checks fail when using, e.g., LogWeight as the element type
@@ -72,11 +72,6 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
 Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     double& costLastR, double tol) const {
   
-  // Each time we've seen a multiple of R examples, report the average cost
-  // (plus regularization) taken over the last R updates, where the cost of
-  // each example is computed prior to the parameter update (gradient step).
-  const size_t R = _progressReportUpdates;
-  
   const Dataset& allData = _objective->getDataset(); 
   const size_t m = allData.numExamples();
   const double beta = _regularizer->getBeta();
@@ -116,6 +111,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   }  
   LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
   
+  double accuracyPrevEpoch = -1;
+  Parameters thetaPrevEpoch;
+  
   for (size_t t = 0; t < _maxIters; ++t)
   {
     timer::cpu_timer timer;
@@ -131,7 +129,11 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         theta.add(j, -_eta * (beta*theta[j] + grad[j]));
       }
       
-      if (!_quiet && ++numExamplesSeen % R == 0) {
+      // Each time we've seen a multiple of R examples, report the average cost
+      // (plus regularization) taken over the last R updates, where the cost of
+      // each example is computed prior to the parameter update (gradient step).
+      if (!_quiet && ++numExamplesSeen % _progressReportUpdates == 0) {
+        const size_t R = _progressReportUpdates;
         costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
         cout << name() << ": t = " << t << "  fval_last_" << R << " = "
             << costLastR << endl;
@@ -141,7 +143,6 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 
     // Evaluate the performance of model on the held-out data.
     double accuracy, precision, recall, fscore;
-    LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
     _objective->predict(theta, validationData, labelScores);
     Utility::calcPerformanceMeasures(validationData, labelScores, false, "", "",
       accuracy, precision, recall, fscore);
@@ -152,9 +153,23 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       cout << "  timer:" << timer.format();
     }
     
-    // TODO: Stop if the accuracy or f-score does not improve?
-    // Maybe also cache the previous theta in case it is better than the
-    // current one.
+    // If the accuracy after the current epoch is lower than that of the
+    // previous epoch, restore the previous parameters and say converged.
+    if (accuracy < accuracyPrevEpoch) {
+      theta.setParams(thetaPrevEpoch);
+      // TODO: Compute the objective value? (costLastR is fairly meaningless)
+      return Optimizer::CONVERGED;
+    }
+    else if (accuracy - accuracyPrevEpoch < tol) {
+      // Here, we treat tol as the minimum amount by which accuracy must
+      // increase in order to justify continued optimization.
+      // TODO: Compute the objective value? (costLastR is fairly meaningless)
+      return Optimizer::CONVERGED;
+    }
+
+    // Record the current accuracy and parameters.
+    accuracyPrevEpoch = accuracy;
+    thetaPrevEpoch.setParams(theta);
   }
 
   return Optimizer::CONVERGED;
