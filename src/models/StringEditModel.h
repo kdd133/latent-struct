@@ -137,6 +137,11 @@ class StringEditModel : public Model {
     // A cache for observed feature vectors.
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
+    // If set to a non-zero value, approximate the feature co-occurrence counts
+    // that are obtained in expectedFeatureCooccurrences() by drawing the
+    // number of samples specified by this parameter.
+    int _featureCoocSamples;
+    
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
@@ -500,6 +505,8 @@ to the final state")
         "maximum length of phrases on the source side")
     ("phrase-target", opt::value<int>(&_maxTargetPhraseLength),
         "maximum length of phrases on the target side")
+    ("sample-cooc-n", opt::value<int>(&_featureCoocSamples)->default_value(0),
+        "approximate feature co-occurrence counts by drawing n samples")
     ("start-arc", opt::bool_switch(&_includeStartArc),
         "if true, include a start arc in the FST")
     ("help", "display a help message")
@@ -600,9 +607,15 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
   ExpectationSemiring::InsideOutsideResult result;
   result.rBar = fv;
   result.tBar = fm;
-  Inference<ExpectationSemiring>::logExpectedFeatureCooccurrences(*graph,
-      result);
-      
+  if (_featureCoocSamples <= 0) {
+    Inference<ExpectationSemiring>::logExpectedFeatureCooccurrences(*graph,
+        result);
+  }
+  else {
+    // TODO: Call a function in Inference with the desired number of samples.
+    assert(0);
+  }
+
   if (normalize) {
     *fv /= result.Z;
     *fm /= result.Z;
