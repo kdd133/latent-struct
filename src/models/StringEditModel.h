@@ -18,6 +18,7 @@
 #include "LogSemiring.h"
 #include "LogWeight.h"
 #include "Model.h"
+#include "NgramLexicon.h"
 #include "ObservedFeatureGen.h"
 #include "OpDelete.h"
 #include "OpInsert.h"
@@ -140,7 +141,7 @@ class StringEditModel : public Model {
     // If set to a non-zero value, approximate the feature co-occurrence counts
     // that are obtained in expectedFeatureCooccurrences() by drawing the
     // number of samples specified by this parameter.
-    int _featureCoocSamples;
+    int _featureCoocSamples;    
     
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
@@ -487,6 +488,7 @@ template <typename Graph>
 int StringEditModel<Graph>::processOptions(int argc, char** argv) {
   using namespace std;
   namespace opt = boost::program_options;
+  std::string nglexSourceFname, nglexTargetFname;
   opt::options_description options(name() + " options");
   options.add_options()
     ("allow-redundant", opt::bool_switch(&_allowRedundant),
@@ -501,6 +503,10 @@ substitute state if they differ; if false, use a replace state in both cases")
         "if true, do not fire a feature for each arc in the FST that connects \
 to the final state")
     ("order", opt::value<int>(&_order), "the Markov order")
+    ("nglex-source", opt::value<string>(&nglexSourceFname),
+        "file containing an n-gram lexicon for the source language")
+    ("nglex-target", opt::value<string>(&nglexTargetFname),
+        "file containing an n-gram lexicon for the target language")
     ("phrase-source", opt::value<int>(&_maxSourcePhraseLength),
         "maximum length of phrases on the source side")
     ("phrase-target", opt::value<int>(&_maxTargetPhraseLength),
@@ -533,6 +539,21 @@ to the final state")
   else {
     assert(_order == 2);
     addSecondOrderStates();
+  }
+
+  boost::shared_ptr<NgramLexicon> nglexSource, nglexTarget;
+  bool lexiconInUse = false;
+  if (nglexSourceFname.size() > 0) {
+    nglexSource.reset(new NgramLexicon(nglexSourceFname));
+    lexiconInUse = true;
+  }
+  if (nglexTargetFname.size() > 0) {
+    nglexTarget.reset(new NgramLexicon(nglexTargetFname));
+    lexiconInUse = true;
+  }
+  if (lexiconInUse) {
+    BOOST_FOREACH(EditOperation& op, _ops)
+      op.setNgramLexicons(nglexSource, nglexTarget);
   }
 
 #if 0

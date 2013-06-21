@@ -47,6 +47,13 @@ const StateType* OpDelete::apply(const vector<string>& source,
         return 0;
     }
   }
+  // If an n-gram lexicon is present, we only apply the operation if the phrase
+  // is contained in the lexicon. Note: All unigrams are allowed by default.
+  else if (_nglexSource && _phraseLengthSource > 1) {
+    string ngram = NgramLexicon::getNgramString(source, _phraseLengthSource, i);
+    if (!_nglexSource->contains(ngram))
+      return 0;
+  }
   iNew = i + _phraseLengthSource;
   jNew = j;
   return _defaultDestinationState;

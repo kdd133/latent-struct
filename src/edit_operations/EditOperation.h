@@ -11,6 +11,8 @@
 #define _EDITOPERATION_H
 
 
+#include "NgramLexicon.h"
+#include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
 
@@ -46,7 +48,13 @@ class EditOperation {
     const StateType* getDefaultDestinationState() const {
       return _defaultDestinationState;
     }
-
+    
+    void setNgramLexicons(boost::shared_ptr<NgramLexicon> lexiconSource,
+        boost::shared_ptr<NgramLexicon> lexiconTarget) {
+      _nglexSource = lexiconSource;
+      _nglexTarget = lexiconTarget;
+    }
+    
   protected:
   
     int _id;
@@ -54,5 +62,9 @@ class EditOperation {
     std::string _name;
     
     const StateType* _defaultDestinationState;
+    
+    boost::shared_ptr<NgramLexicon> _nglexSource;
+    
+    boost::shared_ptr<NgramLexicon> _nglexTarget;
 };
 #endif
