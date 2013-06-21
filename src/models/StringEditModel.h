@@ -612,8 +612,8 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
         result);
   }
   else {
-    // TODO: Call a function in Inference with the desired number of samples.
-    assert(0);
+    Inference<ExpectationSemiring>::logExpectedFeatureCooccurrencesSample(
+        *graph, _featureCoocSamples, result);
   }
 
   if (normalize) {

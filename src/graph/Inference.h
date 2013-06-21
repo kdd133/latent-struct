@@ -10,7 +10,6 @@
 #ifndef _INFERENCE_H
 #define _INFERENCE_H
 
-#include "ExpectationSemiring.h"
 #include "Graph.h"
 #include "Hyperedge.h"
 #include "Hypernode.h"
@@ -19,7 +18,6 @@
 #include "LogSemiring.h"
 #include "LogWeight.h"
 #include "Ublas.h"
-#include "ViterbiSemiring.h"
 #include <boost/foreach.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_array.hpp>
@@ -36,6 +34,9 @@ class Inference {
         
     static void logExpectedFeatureCooccurrences(const Graph& g,
         typename Semiring::InsideOutsideResult& result);
+        
+    static void logExpectedFeatureCooccurrencesSample(const Graph& g,
+        int numSamples, typename Semiring::InsideOutsideResult& result);
     
     // Note: maxFeatureVector and viterbiScore will return the same value, but
     // if you only need the score, the viterbiScore function should be slightly
@@ -46,8 +47,7 @@ class Inference {
     // Returns the *reverse* sequence of labels that correspond to the edges
     // in the Viterbi (max-scoring) path.
     static void viterbiPath(const Graph& g, std::list<int>& edgeLabels);
-    
-  private:    
+        
     static void insideOutside(const Graph& g, typename
         Semiring::InsideOutsideResult& result);
     
@@ -58,6 +58,8 @@ class Inference {
     
     static double viterbi(const Graph& g, std::list<const Hyperedge*>& bestPath);
     
+  private:
+
     typedef struct viterbi_entry {
       LogWeight score;
       const Hyperedge* backPointer;
@@ -95,6 +97,28 @@ template <class Semiring>
 void Inference<Semiring>::logExpectedFeatureCooccurrences(const Graph& g,
     typename Semiring::InsideOutsideResult& result) {
   insideOutside(g, result);
+}
+
+template <class Semiring>
+void Inference<Semiring>::logExpectedFeatureCooccurrencesSample(const Graph& g,
+    int numSamples, typename Semiring::InsideOutsideResult& result) {
+    
+  boost::shared_array<LogSemiring> betas = Inference<LogSemiring>::inside(g);
+  
+  Semiring::initInsideOutsideAccumulator(g, result);
+
+  const Hypernode* node = g.root();  
+  while (node != g.goal()) {
+    LogWeight insideScore = betas[node->getId()].score();
+    BOOST_FOREACH(const Hyperedge* e, node->getEdges()) {
+      assert(e);
+      LogWeight edgeWeight = e->getWeight();
+      BOOST_FOREACH(const Hypernode* child, e->getChildren()) {
+        assert(child);
+        
+      }
+    }
+  }
 }
 
 template <class Semiring>
