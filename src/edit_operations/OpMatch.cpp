@@ -53,6 +53,20 @@ const StateType* OpMatch::apply(const vector<string>& source,
         return 0;
     }
   }
+  // If an n-gram lexicon is present, we only apply the operation if the phrase
+  // is contained in the lexicon. Note: All unigrams are allowed by default.
+  else if ((_nglexSource || _nglexTarget) && _phraseLength > 1) {
+    if (_nglexSource) {
+      string ngram = NgramLexicon::getNgramString(source, _phraseLength, i);
+      if (!_nglexSource->contains(ngram))
+        return 0;
+    }
+    if (_nglexTarget) {
+      string ngram = NgramLexicon::getNgramString(target, _phraseLength, j);
+      if (!_nglexTarget->contains(ngram))
+        return 0;
+    }
+  }
   iNew = i + _phraseLength;
   jNew = j + _phraseLength;
   return _defaultDestinationState;

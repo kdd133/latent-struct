@@ -46,6 +46,13 @@ const StateType* OpInsert::apply(const vector<string>& source,
         return 0;
     }
   }
+  // If an n-gram lexicon is present, we only apply the operation if the phrase
+  // is contained in the lexicon. Note: All unigrams are allowed by default.
+  else if (_nglexTarget && _phraseLengthTarget > 1) {
+    string ngram = NgramLexicon::getNgramString(target, _phraseLengthTarget, j);
+    if (!_nglexTarget->contains(ngram))
+      return 0;
+  }
   iNew = i;
   jNew = j + _phraseLengthTarget;
   return _defaultDestinationState;

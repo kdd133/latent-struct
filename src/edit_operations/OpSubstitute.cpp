@@ -62,23 +62,39 @@ const StateType* OpSubstitute::apply(const vector<string>& source,
     if (same)
       return 0;
   }
-  if (_conditionEnabledSource) {
-    for (int l = 0; l < _phraseLengthSource; l++) {
-      if (boost::regex_match(source[i + l], _tokenRegexSource)) {
-        if (!_acceptMatchingSource)
+  if (_conditionEnabledSource || _conditionEnabledTarget) {
+    if (_conditionEnabledSource) {
+      for (int l = 0; l < _phraseLengthSource; l++) {
+        if (boost::regex_match(source[i + l], _tokenRegexSource)) {
+          if (!_acceptMatchingSource)
+            return 0;
+        }
+        else if (_acceptMatchingSource)
           return 0;
       }
-      else if (_acceptMatchingSource)
-        return 0;
+    }
+    if (_conditionEnabledTarget) {
+      for (int l = 0; l < _phraseLengthTarget; l++) {
+        if (boost::regex_match(target[j + l], _tokenRegexTarget)) {
+          if (!_acceptMatchingTarget)
+            return 0;
+        }
+        else if (_acceptMatchingTarget)
+          return 0;
+      }
     }
   }
-  if (_conditionEnabledTarget) {
-    for (int l = 0; l < _phraseLengthTarget; l++) {
-      if (boost::regex_match(target[j + l], _tokenRegexTarget)) {
-        if (!_acceptMatchingTarget)
-          return 0;
-      }
-      else if (_acceptMatchingTarget)
+  // If an n-gram lexicon is present, we only apply the operation if the phrase
+  // is contained in the lexicon. Note: All unigrams are allowed by default.
+  else if (_nglexSource || _nglexTarget) {
+    if (_nglexSource && _phraseLengthSource > 1) {
+      string ngram = NgramLexicon::getNgramString(source, _phraseLengthSource, i);
+      if (!_nglexSource->contains(ngram))
+        return 0;
+    }
+    if (_nglexTarget && _phraseLengthTarget > 1) {
+      string ngram = NgramLexicon::getNgramString(target, _phraseLengthTarget, j);
+      if (!_nglexTarget->contains(ngram))
         return 0;
     }
   }
