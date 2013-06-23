@@ -234,6 +234,13 @@ initial weights")
     return 1;
   }
   
+  if (fgenNameLat == EmptyAlignmentFeatureGen::name() &&
+      fgenNameObs == EmptyObservedFeatureGen::name()) {
+    cout << "Invalid arguments: fgen-latent and fgen-observed are both set " <<
+        "to empty feature generators.\n";
+    return 1;
+  }
+  
   if (!iends_with(dirPath, "/"))
     dirPath += "/";
     
