@@ -47,8 +47,11 @@ class StochasticGradientOptimizer : public Optimizer {
     
     double _eta; // learning rate
     
-    // print a progress report after this many updates
-    std::size_t _progressReportUpdates; 
+    // report the average cost after every n updates
+    std::size_t _reportAvgCost; 
+    
+    // report validation set performance every n updates
+    std::size_t _reportValStats;
     
     bool _quiet; // suppress optimization output
     

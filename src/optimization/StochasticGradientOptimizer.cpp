@@ -36,7 +36,7 @@ using namespace std;
 StochasticGradientOptimizer::StochasticGradientOptimizer(shared_ptr<TrainingObjective> objective,
                              shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _eta(0.01),
-    _progressReportUpdates(1000), _quiet(false), _seed(0),
+    _reportAvgCost(100), _reportValStats(1000), _quiet(false), _seed(0),
     _valSetFraction(0.1), _threads(1) {
 }
 
@@ -48,9 +48,11 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
         "maximum number of iterations")
-    ("progress-updates", opt::value<size_t>(&_progressReportUpdates)->
-        default_value(1000), "print a progress report after this many updates")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
+    ("report-avg-cost", opt::value<size_t>(&_reportAvgCost)->
+        default_value(100), "report the avg. cost every n updates")
+    ("report-validation-stats", opt::value<size_t>(&_reportValStats)->
+        default_value(1000), "report validation performance every n updates")
     ("seed", opt::value<int>(&_seed)->default_value(0),
         "seed for random number generator")
     ("threads", opt::value<size_t>(&_threads)->default_value(1),
@@ -77,17 +79,6 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   const double beta = _regularizer->getBeta();
   const size_t d = theta.getDimTotal();
   assert(d > 0);
-  
-  // FIXME: We're assuming L2 regularization (ignoring _regularizer) below.
-  
-  double cost = 0;
-  RealVec grad(d);
-  
-  // This variable will store a running total of the costs, summed over the last
-  // R examples that we've seen/processed.
-  double sumCosts = 0;
-  
-  size_t numExamplesSeen = 0;
 
   // Get a random ordering for the examples.
   shared_array<int> ordering = Utility::randPerm(m, _seed);
@@ -116,9 +107,18 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   }  
   LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
   
+  double cost = 0;
+  RealVec grad(d);
+  
+  // This variable will store a running total of the costs, summed over the last
+  // R examples that we've seen/processed.
+  double sumCosts = 0;
+  
   double fscoreBest = -1;
   Parameters thetaBest;
   
+  // FIXME: We're assuming L2 regularization (ignoring _regularizer) below.
+  size_t nUpdates = 0;
   for (size_t t = 0; t < _maxIters; ++t)
   {
     timer::cpu_timer timer;
@@ -133,34 +133,38 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       for (size_t j = 0; j < d; ++j) {
         theta.add(j, -_eta * (beta*theta[j] + grad[j]));
       }
+      nUpdates++;
       
-      // Each time we've seen a multiple of R examples, report the average cost
-      // (plus regularization) taken over the last R updates, where the cost of
-      // each example is computed prior to the parameter update (gradient step).
-      if (!_quiet && ++numExamplesSeen % _progressReportUpdates == 0) {
-        const size_t R = _progressReportUpdates;
+      // Report the average cost (plus regularization) taken over the last n
+      // updates, where the cost of each example is computed prior to the
+      // parameter update (gradient step).
+      if (!_quiet && nUpdates % _reportAvgCost == 0) {
+        const size_t R = _reportAvgCost;
         costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
-        cout << name() << ": t = " << t << "  fval_last_" << R << " = "
-            << costLastR << endl;
+        printf("%s: t = %d  nU = %d  cost_last_%d = %.5f\n", name().c_str(),
+            (int)t, (int)nUpdates, (int)_reportAvgCost, costLastR);
         sumCosts = 0; // reset the running total
       }
-    }
-
-    // Evaluate the performance of model on the held-out data.
-    double accuracy, precision, recall, fscore;
-    _objective->predict(theta, *validationData, labelScores);
-    Utility::calcPerformanceMeasures(*validationData, labelScores, false, "",
-        "", accuracy, precision, recall, fscore);
       
-    if (!_quiet) {
-      printf("%s: t = %d  acc = %.3f  prec = %.3f  rec = %.3f  fscore = %.3f",
-          name().c_str(), (int)t, accuracy, precision, recall, fscore);
-      cout << "  timer:" << timer.format();
-    }
-
-    if (fscore > fscoreBest) {
-      fscoreBest = fscore;
-      thetaBest.setParams(theta);
+      // Evaluate the performance of model on the held-out data.
+      if (nUpdates % _reportValStats == 0) {
+        double accuracy, precision, recall, fscore;
+        _objective->predict(theta, *validationData, labelScores);
+        Utility::calcPerformanceMeasures(*validationData, labelScores, false,
+            "", "", accuracy, precision, recall, fscore);
+          
+        if (!_quiet) {
+          printf("%s: t = %d  nU = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
+              name().c_str(), (int)t, (int)nUpdates, accuracy, precision,
+              recall);
+          printf("fscore = %.3f  timer: %s" , fscore, timer.format().c_str());
+        }
+    
+        if (fscore > fscoreBest) {
+          fscoreBest = fscore;
+          thetaBest.setParams(theta);
+        }
+      }
     }
   }
 
