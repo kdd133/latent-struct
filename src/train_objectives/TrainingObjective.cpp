@@ -113,7 +113,6 @@ void TrainingObjective::predict(const Parameters& theta, const Dataset& evalData
   const size_t numParts = evalData.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)evalData.getLabelSet().size();
-  assert(k > 1);
   ptr_vector<thread> threads;
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = evalData.partitionBegin(i);

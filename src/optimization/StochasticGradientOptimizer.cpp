@@ -7,23 +7,21 @@
  * Copyright (c) 2012-2013 Kenneth Dwyer
  */
 
-// Some of these checks fail when using, e.g., LogWeight as the element type
-// in ublas vector and matrix classes.
-#define BOOST_UBLAS_TYPE_CHECK 0
 
-#include "StochasticGradientOptimizer.h"
+#include "Dataset.h"
 #include "Model.h"
 #include "Optimizer.h"
 #include "Regularizer.h"
+#include "StochasticGradientOptimizer.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/foreach.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/program_options.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/timer/timer.hpp>
 #include <cstdlib>
 #include <exception>
@@ -39,7 +37,7 @@ StochasticGradientOptimizer::StochasticGradientOptimizer(shared_ptr<TrainingObje
                              shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _eta(0.01),
     _progressReportUpdates(1000), _quiet(false), _seed(0),
-    _valSetFraction(0.1) {
+    _valSetFraction(0.1), _threads(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
@@ -55,8 +53,10 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("seed", opt::value<int>(&_seed)->default_value(0),
         "seed for random number generator")
-    ("validation", opt::value<double>(&_valSetFraction)->default_value(0.1),
-        "fraction of training examples to use as a validation set")
+    ("threads", opt::value<size_t>(&_threads)->default_value(1),
+        "number of threads used to parallelize computing validation set score")
+    ("fraction-validation", opt::value<double>(&_valSetFraction)->default_value(
+        0.1), "fraction of training examples to use as a validation set")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -73,7 +73,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     double& costLastR, double tol) const {
   
   const Dataset& allData = _objective->getDataset(); 
-  const size_t m = allData.numExamples();
+  size_t m = allData.numExamples();
   const double beta = _regularizer->getBeta();
   const size_t d = theta.getDimTotal();
   assert(d > 0);
@@ -92,33 +92,38 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // Get a random ordering for the examples.
   shared_array<int> ordering = Utility::randPerm(m, _seed);
   
-  // Split the data into training and validation sets.
-  const size_t mVal = m * _valSetFraction;
-  const size_t mTrain = m - mVal;
-  
-  // Form the validation set using examples with indices[mTrain,...,m-1].
-  Dataset validationData;
-  for (size_t i = mTrain; i < m; ++i)
-    validationData.addExample(allData.getExamples()[ordering[i]]);
+  // If a distinct evaluation set has not been provided (to the superclass),
+  // then split the training data into smaller training and validation sets.
+  boost::shared_ptr<Dataset> validationData;
+  if (!_validationSet) {
+    validationData.reset(new Dataset(_threads));
+    const size_t mAll = m;
+    m -= m * _valSetFraction;
+    // Form the validation set using examples with indices[m,...,mAll-1].
+    for (size_t i = m; i < mAll; ++i)
+      validationData->addExample(allData.getExamples()[ordering[i]]);
+  }
+  else
+    validationData = _validationSet;
     
   // Create a data structure that will be used to store the predictions made on
   // the validation set. 
   size_t maxId = 0;
-  BOOST_FOREACH(const Example& ex, validationData.getExamples()) {
+  BOOST_FOREACH(const Example& ex, validationData->getExamples()) {
     const size_t id = ex.x()->getId();
     if (id > maxId)
       maxId = id;
   }  
   LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
   
-  double accuracyPrevEpoch = -1;
-  Parameters thetaPrevEpoch;
+  double fscoreBest = -1;
+  Parameters thetaBest;
   
   for (size_t t = 0; t < _maxIters; ++t)
   {
     timer::cpu_timer timer;
     
-    for (size_t i = 0; i < mTrain; ++i) {
+    for (size_t i = 0; i < m; ++i) {
       // compute the gradient and the cost function value for this example
       // (note: the cost returned here does not account for regularization)
       _objective->valueAndGradientOne(theta, cost, grad, ordering[i]);
@@ -143,34 +148,25 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 
     // Evaluate the performance of model on the held-out data.
     double accuracy, precision, recall, fscore;
-    _objective->predict(theta, validationData, labelScores);
-    Utility::calcPerformanceMeasures(validationData, labelScores, false, "", "",
-      accuracy, precision, recall, fscore);
+    _objective->predict(theta, *validationData, labelScores);
+    Utility::calcPerformanceMeasures(*validationData, labelScores, false, "",
+        "", accuracy, precision, recall, fscore);
       
     if (!_quiet) {
       printf("%s: t = %d  acc = %.3f  prec = %.3f  rec = %.3f  fscore = %.3f",
           name().c_str(), (int)t, accuracy, precision, recall, fscore);
       cout << "  timer:" << timer.format();
     }
-    
-    // If the accuracy after the current epoch is lower than that of the
-    // previous epoch, restore the previous parameters and say converged.
-    if (accuracy < accuracyPrevEpoch) {
-      theta.setParams(thetaPrevEpoch);
-      // TODO: Compute the objective value? (costLastR is fairly meaningless)
-      return Optimizer::CONVERGED;
-    }
-    else if (accuracy - accuracyPrevEpoch < tol) {
-      // Here, we treat tol as the minimum amount by which accuracy must
-      // increase in order to justify continued optimization.
-      // TODO: Compute the objective value? (costLastR is fairly meaningless)
-      return Optimizer::CONVERGED;
-    }
 
-    // Record the current accuracy and parameters.
-    accuracyPrevEpoch = accuracy;
-    thetaPrevEpoch.setParams(theta);
+    if (fscore > fscoreBest) {
+      fscoreBest = fscore;
+      thetaBest.setParams(theta);
+    }
   }
 
+  theta.setParams(thetaBest);
+  
+  // We don't actually test for convergence (simply run for the specified number
+  // of epochs); so, we'll just call it converged.
   return Optimizer::CONVERGED;
 }

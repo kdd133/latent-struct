@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
   string readerName(blank);
   string regName(blank);
   string trainFilename(blank);
+  string validationFilename(blank);
   string weightsInit(blank);
   vector<double> betas;
   vector<double> tolerances;
@@ -200,6 +201,8 @@ sample-train to use the unselected training examples as the eval set")
         vector<double>(1, 1e-4), "1e-4"), "the tolerance of the stopping \
 criterion used by the optimizer")
     ("train", opt::value<string>(&trainFilename), "training data file")
+    ("validation", opt::value<string>(&validationFilename),
+        "validation data file (only used by certain optimizers)")
     ("weights-init", opt::value<string>(&weightsInit)->default_value("noise"),
         "initialize weights {heuristic, heuristic+noise, noise, zero}")
     ("weights-noise-level", opt::value<double>(&weightsNoise)->default_value(
@@ -215,6 +218,7 @@ initial weights")
   const bool writeFiles = vm.count("directory");
   const bool trainFileSpecified = vm.count("train");
   const bool evalFileSpecified = vm.count("eval");
+  const bool validationFileSpecified = vm.count("validation");
   
   if (!trainFileSpecified && !evalFileSpecified) {
       cout << "Invalid arguments: Either --train or --eval is required\n"
@@ -527,6 +531,20 @@ initial weights")
   if (optInner->processOptions(argc, argv)) {
     cout << "Optimizer::processOptions() failed." << endl;
     return 1;
+  }
+  
+  if (!help && optInner->usesValidationSet() && validationFileSpecified) {
+    boost::shared_ptr<Dataset> validationData(new Dataset(threads));
+    cout << "Loading " << validationFilename << " ...\n";
+    timer::auto_cpu_timer loadValidationTimer;
+    if (Utility::loadDataset(*reader, validationFilename, *validationData)) {
+      cout << "Error: Unable to load validation file " << validationFilename <<
+          endl;
+      return 1;
+    }
+    cout << "Read " << validationData->numExamples() << " validation examples, "
+        << validationData->getLabelSet().size() << " classes\n";
+    optInner->setValidation(validationData);
   }
 
   // Wrap the optimizer in an EM procedure if requested.

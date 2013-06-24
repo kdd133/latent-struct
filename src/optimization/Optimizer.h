@@ -47,12 +47,21 @@ class Optimizer {
 
     virtual int processOptions(int argc, char** argv) = 0;
     
+    virtual bool usesValidationSet() const {
+      return false;
+    }
+    
+    virtual void setValidation(const boost::shared_ptr<Dataset>& val) {
+      _validationSet = val;
+    }
+    
   protected:
   
     boost::shared_ptr<TrainingObjective> _objective;
     
     boost::shared_ptr<Regularizer> _regularizer;
-
+    
+    boost::shared_ptr<Dataset> _validationSet;
 };
 
 #endif
