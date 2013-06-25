@@ -10,6 +10,7 @@
 #include "Parameters.h"
 #include "RegularizerL2.h"
 #include "StringEditModel.h"
+#include "TestingUtilities.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WordPairReader.h"
@@ -90,4 +91,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinaryObs)
   objective->valueAndGradient(W, fval, gradFv);
   l2->addRegularization(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.57629476570915272, fval, 1e-8);
+  
+  // Compare the analytical and numerical gradients.  
+  testing_util::checkGradientFiniteDifferences(*objective, W, 1e-4, 10);
 }

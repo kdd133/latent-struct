@@ -34,9 +34,11 @@ WeightVector::WeightVector(shared_array<double> weights, int dim) :
 }
 
 void WeightVector::reAlloc(int dim) {
-  assert(dim > 0);
   _dim = dim;
-  _weights.reset(new double[_dim]);
+  if (dim > 0)
+    _weights.reset(new double[_dim]);
+  else
+    _weights.reset();
   zero();
 }
 

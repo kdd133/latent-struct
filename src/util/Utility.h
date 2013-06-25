@@ -57,6 +57,15 @@ class Utility {
 
     // Return a random permutation of the integers 0,...,n-1.
     static boost::shared_array<int> randPerm(int n, int seed = 0);
+    
+    // Returns the ith coordinate of the numerical gradient (i.e., computed via
+    // finite differences) for the given objective value. Specifically, it
+    // computes (f(theta + eps_i) - f(theta - eps_i)) / (2 * eps), where eps_i
+    // is a vector v of zeros except for v[i]=eps. See this URL for details:
+    // http://deeplearning.stanford.edu/wiki/index.php/Gradient_checking_
+    // and_advanced_optimization
+    static double getNumericalGradientForCoordinate(TrainingObjective& obj,
+      const Parameters& theta, int i, double epsilon = 1e-4);
 
   private:
   

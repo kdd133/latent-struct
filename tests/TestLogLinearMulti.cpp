@@ -9,6 +9,7 @@
 #include "Parameters.h"
 #include "RegularizerL2.h"
 #include "StringEditModel.h"
+#include "TestingUtilities.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
@@ -98,4 +99,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   Optimizer::status status = opt.train(W, fvalOpt, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
   BOOST_CHECK_CLOSE(0.67414588974, fvalOpt, 1e-8);
+  
+  // Compare the analytical and numerical gradients.  
+  testing_util::checkGradientFiniteDifferences(*objective, W, 1e-4, 10);
 }

@@ -32,6 +32,9 @@ public:
   
   void add(const int index, const double v);
   
+  std::size_t getDimW() const;
+  std::size_t getDimU() const;
+  
   // Return the number of w parameters plus the number of u parameters.
   std::size_t getDimWU() const;
   

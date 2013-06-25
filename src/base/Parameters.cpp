@@ -34,6 +34,14 @@ void Parameters::add(const int index, const double v) {
   }
 }
 
+size_t Parameters::getDimW() const {
+  return w.getDim();
+}
+
+size_t Parameters::getDimU() const {
+  return u.getDim();
+}
+
 size_t Parameters::getDimWU() const {
   return w.getDim() + u.getDim();
 }

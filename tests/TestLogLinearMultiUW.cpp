@@ -13,6 +13,7 @@
 #include "Parameters.h"
 #include "RegularizerNone.h"
 #include "StringEditModel.h"
+#include "TestingUtilities.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include "WordAlignmentFeatureGen.h"
@@ -208,4 +209,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   theta.u.zero();
   objective->valueAndGradient(theta, fval_zeroU, gradFv);
   BOOST_CHECK(fval_zeroU > 2 * fvalOpt); // let's look for at least a doubling
+  
+  // Compare the analytical and numerical gradients.  
+  testing_util::checkGradientFiniteDifferences(*objective, theta, 1e-4, 10);
 }

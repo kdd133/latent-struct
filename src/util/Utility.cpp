@@ -257,3 +257,22 @@ shared_array<int> Utility::randPerm(int n, int seed) {
   }
   return numbers;
 }
+
+double Utility::getNumericalGradientForCoordinate(TrainingObjective& obj,
+    const Parameters& theta, int i, double epsilon) {
+  Parameters thetaPlus(theta.getDimW(), theta.getDimU());
+  thetaPlus.setParams(theta);
+  thetaPlus.add(i, epsilon);
+  
+  Parameters thetaMinus(theta.getDimW(), theta.getDimU());
+  thetaMinus.setParams(theta);
+  thetaMinus.add(i, -epsilon);
+  
+  RealVec grad(theta.getDimWU()); // this won't be used
+  
+  double fvalPlus, fvalMinus;
+  obj.valueAndGradient(thetaPlus, fvalPlus, grad);
+  obj.valueAndGradient(thetaMinus, fvalMinus, grad);
+  
+  return (fvalPlus - fvalMinus) / (2 * epsilon);
+}
