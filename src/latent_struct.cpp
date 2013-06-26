@@ -98,6 +98,7 @@ int main(int argc, char** argv) {
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
+  string loadFeaturesFilename;
   string fgenNameLat(blank);
   string fgenNameObs(blank);
   string modelName(blank);
@@ -105,6 +106,7 @@ int main(int argc, char** argv) {
   string optName(blank);
   string readerName(blank);
   string regName(blank);
+  string saveFeaturesFilename;
   string trainFilename(blank);
   string validationFilename(blank);
   string weightsInit(blank);
@@ -165,6 +167,8 @@ in the training objective, i.e., (beta/2)*||w||^2")
     ("keep-all-positives", opt::bool_switch(&keepAllPositives),
         "if --sample-train is enabled, this option ensures that all the \
 positive examples present in the data are retained")
+    ("load-features", opt::value<string>(&loadFeaturesFilename),
+        "load features/alphabet from the given file")
     ("model", opt::value<string>(&modelName)->default_value(
         StringEditModel<AlignmentHypergraph>::name()), modelMsgObs.str().c_str())
     ("no-early-grid-stop", opt::bool_switch(&noEarlyGridStop),
@@ -191,6 +195,8 @@ negative examples (implies --keep-all-positives)")
         "learn on this fraction of the train data (uniformly sampled, \
 without replacement); if greater than 1, the value is interpreted as the \
 *number* of training examples to sample")
+    ("save-features", opt::value<string>(&saveFeaturesFilename),
+        "save features/alphabet to the given file")
     ("seed", opt::value<int>(&seed)->default_value(0),
         "seed for random number generator")
     ("split", opt::bool_switch(&split), "used in combination with \
@@ -219,6 +225,8 @@ initial weights")
   const bool trainFileSpecified = vm.count("train");
   const bool evalFileSpecified = vm.count("eval");
   const bool validationFileSpecified = vm.count("validation");
+  const bool loadFeatures = loadFeaturesFilename.size() > 0;
+  const bool saveFeatures = saveFeaturesFilename.size() > 0;
   
   if (!trainFileSpecified && !evalFileSpecified) {
       cout << "Invalid arguments: Either --train or --eval is required\n"
@@ -245,6 +253,12 @@ initial weights")
     return 1;
   }
   
+  if (loadFeatures && saveFeatures) {
+    cout << "Invalid arguments: Can't use --load-features and " <<
+        "--save-features at the same time.\n";
+    return 1;
+  }
+  
   if (!iends_with(dirPath, "/"))
     dirPath += "/";
     
@@ -255,6 +269,11 @@ initial weights")
   
   shared_ptr<Alphabet> loadedAlphabet(new Alphabet(false, false));
   if (filesystem::exists(alphabetFname)) {
+    if (loadFeatures || saveFeatures) {
+      cout << "Error: Can't load or save features when the default " <<
+          "named alphabet file (" << alphabetFname << ") already exists\n";
+      return 1;
+    }
     if (!loadedAlphabet->read(alphabetFname)) {
       cout << "Error: Unable to read " << alphabetFname << endl;
       return 1;
@@ -564,7 +583,7 @@ initial weights")
     return 1;
   }
   
-  if (!resumed) {
+  if (!resumed && !loadFeatures) {
     cout << "Gathering features ...\n";
     size_t maxNumFvs = 0, totalNumFvs = 0;
     {
@@ -581,12 +600,35 @@ initial weights")
       objective->getModel(0).getFgenObserved();
   shared_ptr<Alphabet> alphabet = fgenLat->getAlphabet();
   assert(alphabet == fgenObs->getAlphabet()); // Assume the alphabet is shared
-  
+
+  if (loadFeatures) {
+    if (!filesystem::exists(loadFeaturesFilename)) {
+      cout << "Error: " << loadFeaturesFilename << " does not exist.\n";
+      return 1;
+    }
+    if (!alphabet->read(loadFeaturesFilename)) {
+      cout << "Error: Unable to read " << loadFeaturesFilename << endl;
+      return 1;
+    }
+  }
+
   if (alphabet->size() == 0) {
     cout << "Error: No features were found!\n";
     return 1;
   }
   cout << "Extracted " << alphabet->size() << " features\n";  
+  
+  if (saveFeatures) {
+    alphabet->lock();
+    if (!alphabet->write(saveFeaturesFilename)) {
+      cout << "Warning: Unable to write " << saveFeaturesFilename << endl;
+      return 1;
+    }
+    else {
+      cout << "Saved features to " << saveFeaturesFilename << endl;
+      return 0;
+    }
+  }
 
   // Enable caching at this point, if requested.
   if (cachingEnabled) {

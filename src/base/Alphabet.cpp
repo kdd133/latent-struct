@@ -164,6 +164,7 @@ bool Alphabet::read(const string& fname) {
 }
 
 bool Alphabet::write(const string& fname) const {
+  assert(_locked);
   ofstream fout(fname.c_str());
   if (!fout.good())
     return false;
