@@ -27,7 +27,7 @@ class Utility {
   public:
   
     static bool loadDataset(const InputReader& reader, std::string fileName,
-      Dataset& dataset);
+      Dataset& dataset, std::size_t firstId = 0);
 
     static void evaluate(const Parameters& w, TrainingObjective& obj,
       const Dataset& eval, const std::string& identifier,

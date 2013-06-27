@@ -44,6 +44,8 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   namespace opt = program_options;
   opt::options_description options(name() + " options");
   options.add_options()
+    ("fraction-validation", opt::value<double>(&_valSetFraction)->default_value(
+        0.1), "fraction of training examples to use as a validation set")
     ("learning-rate", opt::value<double>(&_eta)->default_value(0.01),
         "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
@@ -57,8 +59,6 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         "seed for random number generator")
     ("threads", opt::value<size_t>(&_threads)->default_value(1),
         "number of threads used to parallelize computing validation set score")
-    ("fraction-validation", opt::value<double>(&_valSetFraction)->default_value(
-        0.1), "fraction of training examples to use as a validation set")
     ("help", "display a help message")
   ;
   opt::variables_map vm;

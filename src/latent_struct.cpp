@@ -553,14 +553,18 @@ initial weights")
   }
   
   if (!help && optInner->usesValidationSet() && validationFileSpecified) {
+    const size_t nextId = trainData.getExamples()[trainData.numExamples()-1].
+        x()->getId() + 1;
     boost::shared_ptr<Dataset> validationData(new Dataset(threads));
     cout << "Loading " << validationFilename << " ...\n";
     timer::auto_cpu_timer loadValidationTimer;
-    if (Utility::loadDataset(*reader, validationFilename, *validationData)) {
+    if (Utility::loadDataset(*reader, validationFilename, *validationData,
+        nextId)) {
       cout << "Error: Unable to load validation file " << validationFilename <<
           endl;
       return 1;
     }
+    assert(nextId == validationData->getExamples()[0].x()->getId());
     cout << "Read " << validationData->numExamples() << " validation examples, "
         << validationData->getLabelSet().size() << " classes\n";
     optInner->setValidation(validationData);
@@ -610,6 +614,7 @@ initial weights")
       cout << "Error: Unable to read " << loadFeaturesFilename << endl;
       return 1;
     }
+    cout << "Loaded features from " << loadFeaturesFilename << endl;
   }
 
   if (alphabet->size() == 0) {

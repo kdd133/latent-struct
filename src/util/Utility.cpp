@@ -35,13 +35,13 @@ using namespace std;
 const double Utility::log1PlusTiny = 1e-4;
 
 bool Utility::loadDataset(const InputReader& reader, string fileName,
-    Dataset& dataset) {
+    Dataset& dataset, size_t firstId) {
   ifstream fin(fileName.c_str());
   if (!fin.good())
     return true;
   Pattern* pattern = 0;
   Label label;
-  size_t i = 0;
+  size_t i = firstId;
   string line;
   while (getline(fin, line)) {
     reader.readExample(line, pattern, label);
