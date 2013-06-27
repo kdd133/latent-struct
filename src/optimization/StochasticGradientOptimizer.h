@@ -37,6 +37,10 @@ class StochasticGradientOptimizer : public Optimizer {
       return _name;
     }
     
+    virtual bool isOnline() const {
+      return true;
+    }
+    
     virtual bool usesValidationSet() const {
       return true;
     }
@@ -63,6 +67,9 @@ class StochasticGradientOptimizer : public Optimizer {
     
     // # of threads used to parallelize computing validation set score 
     std::size_t _threads;
+    
+    // update parameters based on minibatches of this many examples
+    std::size_t _minibatchSize;
 };
 
 #endif

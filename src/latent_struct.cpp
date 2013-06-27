@@ -552,10 +552,13 @@ initial weights")
     return 1;
   }
   
+  boost::shared_ptr<Dataset> validationData;
   if (!help && optInner->usesValidationSet() && validationFileSpecified) {
+    // Enumerate the examples in the validation set such that the ids do not
+    // overlap with the training set.
     const size_t nextId = trainData.getExamples()[trainData.numExamples()-1].
         x()->getId() + 1;
-    boost::shared_ptr<Dataset> validationData(new Dataset(threads));
+    validationData.reset(new Dataset(threads));
     cout << "Loading " << validationFilename << " ...\n";
     timer::auto_cpu_timer loadValidationTimer;
     if (Utility::loadDataset(*reader, validationFilename, *validationData,
@@ -640,7 +643,16 @@ initial weights")
     for (size_t i = 0; i < objective->getNumModels(); i++) {
       objective->getModel(i).setCacheEnabled(true);
       // The cache may contain a "reusable" fst: see StringEditModel::getFst().
-      objective->getModel(i).emptyCache();      
+      objective->getModel(i).emptyCache();
+      if (optimizer->isOnline() && validationData->numExamples() > 0) {
+        // If we're employing an online learner (e.g., SGD), we don't want to
+        // cache graphs for training examples because presumably the dataset is
+        // very large. In this case, if caching is enabled, we interpret it to
+        // mean that we want to cache the validation set examples, which will
+        // be classified multiple times during training.
+        objective->getModel(i).onlyCacheIdsGreaterThanOrEqualTo(
+            validationData->getExamples()[0].x()->getId());
+      }
     }
   }
   

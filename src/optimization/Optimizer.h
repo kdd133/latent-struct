@@ -51,6 +51,10 @@ class Optimizer {
       return false;
     }
     
+    virtual bool isOnline() const {
+      return false; // assume the default is batch learning
+    }
+    
     virtual void setValidation(const boost::shared_ptr<Dataset>& val) {
       _validationSet = val;
     }

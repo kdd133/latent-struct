@@ -138,6 +138,10 @@ class StringEditModel : public Model {
     // A cache for observed feature vectors.
     boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
     
+    // If caching is disabled, it's still useful to reuse an existing graph in
+    // order to avoid repeated memory allocation.
+    boost::shared_ptr<Graph> _reusableGraph;
+    
     // If set to a non-zero value, approximate the feature co-occurrence counts
     // that are obtained in expectedFeatureCooccurrences() by drawing the
     // number of samples specified by this parameter.
@@ -736,7 +740,7 @@ Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
     const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   assert(_states.size() > 0);
   Graph* graph = 0;
-  if (_cacheFsts) {
+  if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
     ExampleId id = std::make_pair(x.getId(), y);
     typename boost::ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
     if (it == cache.end()) {
@@ -753,16 +757,14 @@ Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
     }
   }
   else {
-    if (cache.size() == 0) {
+    if (!_reusableGraph) {
       // Initialize a "reusable" graph.
-      ExampleId id = std::make_pair(0, 0);
-      cache.insert(id, new Graph(_states, _fgenAlign, _fgenObserved,
+      _reusableGraph.reset(new Graph(_states, _fgenAlign, _fgenObserved,
           !_noFinalArcFeats));
     }
-    assert(cache.size() == 1);
-    graph = cache.begin()->second;
-    assert(graph);
-    graph->build(w, x, y, _includeStartArc, includeObs);
+    assert(_reusableGraph);
+    _reusableGraph->build(w, x, y, _includeStartArc, includeObs);
+    graph = _reusableGraph.get();
   }
   assert(graph);
   return graph;
@@ -773,7 +775,7 @@ SparseRealVec* StringEditModel<Graph>::observedFeatures(const Pattern& x,
     const Label y, bool& callerOwns) {
   callerOwns = !_cacheFsts;
   SparseRealVec* fv = 0;
-  if (_cacheFsts) {
+  if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
     ExampleId id = std::make_pair(x.getId(), y);
     typename boost::ptr_map<ExampleId, SparseRealVec>::iterator it =
         _fvCacheObs.find(id);

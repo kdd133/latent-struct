@@ -33,11 +33,11 @@
 using namespace boost;
 using namespace std;
 
-StochasticGradientOptimizer::StochasticGradientOptimizer(shared_ptr<TrainingObjective> objective,
-                             shared_ptr<Regularizer> regularizer) :
+StochasticGradientOptimizer::StochasticGradientOptimizer(
+    shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _eta(0.01),
     _reportAvgCost(100), _reportValStats(1000), _quiet(false), _seed(0),
-    _valSetFraction(0.1), _threads(1) {
+    _valSetFraction(0.1), _threads(1), _minibatchSize(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
@@ -50,6 +50,8 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
         "maximum number of iterations")
+    ("minibatch-size", opt::value<size_t>(&_minibatchSize)->default_value(1),
+        "update parameters based on minibatches of this many examples")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("report-avg-cost", opt::value<size_t>(&_reportAvgCost)->
         default_value(100), "report the avg. cost every n updates")

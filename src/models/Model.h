@@ -74,6 +74,8 @@ class Model {
     
     boost::shared_ptr<AlignmentFeatureGen> getFgenLatent() const;
     
+    void onlyCacheIdsGreaterThanOrEqualTo(std::size_t id);
+    
 
   protected:
   
@@ -86,6 +88,9 @@ class Model {
     // Whether or not to cache transducers in memory during training.
     bool _cacheFsts;
     
+    // Do not cache a graph for an example that has an id less than or equal
+    // to this value.
+    std::size_t _onlyCacheIdsGreaterThanOrEqualTo;
     
   private:
   
@@ -96,7 +101,8 @@ class Model {
 
 inline Model::Model(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
     boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
-    _fgenAlign(fgenAlign), _fgenObserved(fgenObserved), _cacheFsts(false) {
+    _fgenAlign(fgenAlign), _fgenObserved(fgenObserved), _cacheFsts(false),
+    _onlyCacheIdsGreaterThanOrEqualTo(0) {
   assert(_fgenAlign != 0);
   assert(_fgenObserved != 0);
 }
@@ -115,6 +121,10 @@ inline boost::shared_ptr<ObservedFeatureGen> Model::getFgenObserved() const {
 
 inline boost::shared_ptr<AlignmentFeatureGen> Model::getFgenLatent() const {
   return _fgenAlign;
+}
+
+inline void Model::onlyCacheIdsGreaterThanOrEqualTo(std::size_t id) {
+  _onlyCacheIdsGreaterThanOrEqualTo = id;
 }
 
 #endif
