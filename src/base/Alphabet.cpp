@@ -115,7 +115,7 @@ size_t Alphabet::size() const {
 
 size_t Alphabet::numFeaturesPerClass() const {
   assert(_entries.size() == _dict.size());
-  assert(_uniqueLabels.size() > 0);
+  //assert(_uniqueLabels.size() > 0); // could be 0 if --load-features is used
   return _entries.size();
 }
 

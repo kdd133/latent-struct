@@ -38,7 +38,6 @@
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
 #include "Parameters.h"
-#include "Parameters.h"
 #include "Pattern.h"
 #include "Regularizer.h"
 #include "RegularizerL2.h"
@@ -618,8 +617,9 @@ initial weights")
       return 1;
     }
     cout << "Loaded features from " << loadFeaturesFilename << endl;
+    alphabet = objective->combineAlphabets(trainData.getLabelSet());
   }
-
+  
   if (alphabet->size() == 0) {
     cout << "Error: No features were found!\n";
     return 1;
