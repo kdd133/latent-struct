@@ -12,6 +12,7 @@
 
 #include "Optimizer.h"
 #include "Parameters.h"
+#include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <string>
 
@@ -49,6 +50,8 @@ class StochasticGradientOptimizer : public Optimizer {
     
     std::size_t _maxIters; // maximum number of iterations
     
+    bool _autoEta; // if true, estimate the optimal eta on a small data sample
+    
     double _eta; // learning rate
     
     // report the average cost after every n updates
@@ -70,6 +73,15 @@ class StochasticGradientOptimizer : public Optimizer {
     
     // update parameters based on minibatches of this many examples
     std::size_t _minibatchSize;
+    
+    double objectiveValueForLearningRate(const Parameters& theta,
+        const int* permutation, std::size_t sampleSize, double eta) const;
+      
+    double objectiveValueForSample(const Parameters& theta,
+        const int* permutation, std::size_t sampleSize) const;
+        
+    double estimateBestLearningRate(const Parameters& theta,
+        const int* permutation, std::size_t numSamples, double eta0) const;
 };
 
 #endif
