@@ -33,7 +33,7 @@ class TrainingObjective {
     // Return the function value and gradient computed over the entire training
     // set.
     virtual void valueAndGradient(const Parameters& theta, double& value,
-      RealVec& grad);
+      RealVec& grad, const int* sample = 0, std::size_t sampleSize = 0);
       
     // Return the function value and gradient for the subset of training
     // examples specified by begin and end.

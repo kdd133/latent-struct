@@ -69,19 +69,32 @@ void TrainingObjective::valueAndGradient(const Parameters& theta,
 }
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
-    RealVec& gradFv) {
+    RealVec& gradFv, const int* sample, size_t sampleSize) {
   assert(gradFv.size() == theta.getDimTotal());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
+  
+  // By default, use the Dataset that is stored internally (member _dataset).
+  // However, if an array of indices is provided, create a temporary Dataset
+  // consisting of the examples that correspond to these indices.
+  const Dataset* dataset = &_dataset;
+  Dataset sampledData(numParts);
+  if (sample) {
+    assert(sampleSize > 0);
+    for (size_t i = 0; i < sampleSize; i++)
+      sampledData.addExample(_dataset.getExamples()[sample[i]]);
+    dataset = &sampledData;
+  }
+    
   vector<RealVec> grads(numParts, RealVec(theta.getDimTotal()));
   vector<double> fvals(numParts, 0);
   
   // Compute the function values and gradients.
   ptr_vector<thread> threads;
   for (size_t i = 0; i < numParts; i++) {
-    const Dataset::iterator begin = _dataset.partitionBegin(i);
-    const Dataset::iterator end = _dataset.partitionEnd(i);
+    const Dataset::iterator begin = dataset->partitionBegin(i);
+    const Dataset::iterator end = dataset->partitionEnd(i);
     threads.push_back(new thread(bind(
         &TrainingObjective::valueAndGradientPart, this, boost::cref(theta),
         boost::ref(_models[i]), begin, end, k, boost::ref(fvals[i]),
@@ -102,7 +115,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
   
   if (_computeAverageLoss) {
     // Scale the value and gradient by 1/t
-    const double scaleFactor = 1.0 / _dataset.numExamples();
+    const double scaleFactor = 1.0 / dataset->numExamples();
     fval *= scaleFactor;
     gradFv *= scaleFactor; 
   }
