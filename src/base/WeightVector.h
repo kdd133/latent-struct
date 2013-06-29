@@ -20,7 +20,7 @@ class LogWeight;
 class WeightVector {
   
   public:
-    WeightVector() : _dim(0), _l2(0) {}
+    WeightVector() : _dim(0) {}
     
     WeightVector(int dim);
     
@@ -38,7 +38,7 @@ class WeightVector {
     
     void add(const int index, const double value);
     
-    double squaredL2Norm() const { return _l2; }
+    double squaredL2Norm() const;
     
     int getDim() const { return _dim; }
     
@@ -56,7 +56,9 @@ class WeightVector {
     
     friend std::ostream& operator<<(std::ostream& out, const WeightVector& w);
     
-    const double& operator[](int index) const;
+    double operator[](int index) const;
+    
+    void rescale();
 
   private:
   
@@ -64,7 +66,7 @@ class WeightVector {
     
     int _dim; // the dimensionality of the vector
     
-    double _l2; // the squared L2 norm of weights
+    double _scale; // each weight is implicitly multipled by this factor
     
 };
 #endif

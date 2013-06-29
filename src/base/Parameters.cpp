@@ -62,7 +62,7 @@ bool Parameters::hasSharedU() const {
   return shared_u.getDim() > 0;
 }
 
-const double& Parameters::operator[](int index) const {
+double Parameters::operator[](int index) const {
   assert(index >= 0 && index < getDimTotal());
   int offset = 0;
   for (int i = 0; i < _numWV; i++) {

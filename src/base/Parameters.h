@@ -59,7 +59,7 @@ public:
   
   void zero();
   
-  const double& operator[](int index) const;
+  double operator[](int index) const;
   
   int indexW() const;
   

@@ -18,19 +18,14 @@
 
 using namespace boost;
 
-WeightVector::WeightVector(int dim) {
+WeightVector::WeightVector(int dim) : _scale(1) {
   reAlloc(dim);
 }
 
 WeightVector::WeightVector(shared_array<double> weights, int dim) :
-    _weights(weights), _dim(dim) {
+    _weights(weights), _dim(dim), _scale(1) {
   assert(weights != 0);
   assert(_dim > 0);
-  _l2 = 0;
-  for (int i = 0; i < _dim; i++) {
-    const double weight = _weights[i];
-    _l2 += weight*weight;
-  }
 }
 
 void WeightVector::reAlloc(int dim) {
@@ -51,7 +46,7 @@ double WeightVector::innerProd(const SparseLogVec& fv) const {
     assert(it.index() < _dim);
     prod += exp(*it) * _weights[it.index()];
   }
-  return prod;
+  return _scale * prod;
 }
 
 double WeightVector::innerProd(const SparseRealVec& fv) const {
@@ -63,7 +58,7 @@ double WeightVector::innerProd(const SparseRealVec& fv) const {
     assert(it.index() < _dim);
     prod += (*it) * _weights[it.index()];
   }
-  return prod;
+  return _scale * prod;
 }
 
 double WeightVector::innerProd(const LogVec& fv) const {
@@ -73,7 +68,7 @@ double WeightVector::innerProd(const LogVec& fv) const {
   double prod = 0;
   for (size_t i = 0; i < fv.size(); ++i)
     prod += exp(fv(i)) * _weights[i];
-  return prod;
+  return _scale * prod;
 }
 
 double WeightVector::innerProd(const RealVec& fv) const {
@@ -83,32 +78,29 @@ double WeightVector::innerProd(const RealVec& fv) const {
   double prod = 0;
   for (size_t i = 0; i < fv.size(); ++i)
     prod += fv(i) * _weights[i];
-  return prod;
+  return _scale * prod;
 }
 
 void WeightVector::add(const int index, const double update) {
   assert(!(index < 0 || index >= _dim));
-  const double currentVal = _weights[index];
-  _weights[index] += update;
-  _l2 += update * update + 2 * update * currentVal;
+  _weights[index] += update / _scale;
 }
 
 void WeightVector::zero() {
   for (int i = 0; i < _dim; i++)
     _weights[i] = 0;
-  _l2 = 0;
+  _scale = 1;
 }
 
 void WeightVector::setWeights(const double* newWeights, int len) {
   assert(newWeights != _weights.get());
   if (len !=  _dim)
     reAlloc(len);
-  _l2 = 0;
   for (int index = 0; index < _dim; index++) {
     const double update = newWeights[index];
     _weights[index] = update;
-    _l2 += update * update;
   }
+  _scale = 1;
 }
 
 bool WeightVector::read(const std::string& fname, int dim) {
@@ -137,7 +129,7 @@ bool WeightVector::write(const std::string& fname) const {
   if (!fout.good())
     return false;
   for (int i = 0; i < _dim; i++)
-    fout << i << " " << _weights[i] << endl;
+    fout << i << " " << _scale * _weights[i] << endl;
   fout.close();
   return true;
 }
@@ -149,12 +141,29 @@ std::ostream& operator<<(std::ostream& out, const WeightVector& w) {
     return out;
   }
   for (int index = 0; index < w._dim - 1; index++)
-    out << w._weights[index] << ",";
-  out << w._weights[w._dim - 1] << ")";
+    out << w._scale * w._weights[index] << ",";
+  out << w._scale * w._weights[w._dim - 1] << ")";
   return out;
 }
 
-const double& WeightVector::operator[](int index) const {
+double WeightVector::operator[](int index) const {
   assert(index < _dim);
-  return _weights[index];
+  return _weights[index] * _scale;
+}
+
+void WeightVector::rescale() {
+  if (_scale != 1.0) {
+    for (int i = 0; i < _dim; i++) {
+      const double v = _weights[i] * _scale;
+      _weights[i] = v;
+    }
+    _scale = 1;
+  }
+}
+
+double WeightVector::squaredL2Norm() const {
+  double prod = 0;
+  for (int i = 0; i < _dim; i++)
+    prod += _weights[i] * _weights[i];
+  return _scale * _scale * prod;
 }
