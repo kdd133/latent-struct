@@ -35,13 +35,15 @@ using namespace std;
 
 StochasticGradientOptimizer::StochasticGradientOptimizer(
     shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
-    Optimizer(objective, regularizer), _maxIters(250), _autoEta(false), _eta(0.01),
-    _reportAvgCost(100), _reportValStats(1000), _quiet(false), _seed(0),
-    _valSetFraction(0.1), _threads(1), _minibatchSize(1) {
+    Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
+    _eta(0.01), _reportAvgCost(100), _reportValStats(1000), _reportObjVal(true),
+    _quiet(false), _seed(0), _valSetFraction(0.1), _threads(1),
+    _minibatchSize(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   namespace opt = program_options;
+  bool noObjVal = false;
   opt::options_description options(name() + " options");
   options.add_options()
     ("estimate-learning-rate", opt::bool_switch(&_autoEta),
@@ -54,6 +56,8 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         "maximum number of iterations")
     ("minibatch-size", opt::value<size_t>(&_minibatchSize)->default_value(1),
         "update parameters based on minibatches of this many examples")
+    ("no-report-objective-value", opt::bool_switch(&noObjVal),
+        "do not compute/report the objective value along with validation stats")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("report-avg-cost", opt::value<size_t>(&_reportAvgCost)->
         default_value(100), "report the avg. cost every n updates")
@@ -69,6 +73,9 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   opt::store(opt::command_line_parser(argc, argv).options(options)
       .allow_unregistered().run(), vm);
   opt::notify(vm);
+  
+  if (noObjVal)
+    _reportObjVal = false;
   
   if (vm.count("help"))
     cout << options << endl;
@@ -150,32 +157,54 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // Report the average cost (plus regularization) taken over the last n
       // updates, where the cost of each example is computed prior to the
       // parameter update (gradient step).
-      if (!_quiet && t % _reportAvgCost == 0) {
+      if (!_quiet && _reportAvgCost > 0 && t % _reportAvgCost == 0) {
         const size_t R = _reportAvgCost;
         costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
-        printf("%s: ep = %d  t = %d  cost_last_%d = %.5f\n", name().c_str(),
-            (int)ep, (int)t, (int)_reportAvgCost, costLastR);
+        printf("%s: ep = %d  t = %d  cost_last_%d = %.5f  time_last_%d =%s",
+            name().c_str(), (int)ep, (int)t, (int)_reportAvgCost, costLastR,
+            (int)_reportAvgCost, timer.format().c_str());
         sumCosts = 0; // reset the running total
+        timer.start();
       }
       
       // Evaluate the performance of model on the held-out data.
-      if (t % _reportValStats == 0) {
+      if (_reportValStats > 0 && t % _reportValStats == 0) {
+        timer.stop();
         double accuracy, precision, recall, fscore;
-        _objective->predict(theta, *validationData, labelScores);
-        Utility::calcPerformanceMeasures(*validationData, labelScores, false,
-            "", "", accuracy, precision, recall, fscore);
-          
+        {
+          timer::cpu_timer clock;
+          if (!_quiet) {
+            cout << name() << ": Predicting on validation set examples...  ";
+            cout.flush();
+          }
+          _objective->predict(theta, *validationData, labelScores);
+          Utility::calcPerformanceMeasures(*validationData, labelScores, false,
+              "", "", accuracy, precision, recall, fscore);
+          if (!_quiet) {
+            printf("ep = %d  t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
+                (int)ep, (int)t, accuracy, precision, recall);
+            printf("fscore = %.3f %s" , fscore, clock.format().c_str());
+          }
+        }
+
         if (!_quiet) {
-          printf("%s: ep = %d  nU = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
-              name().c_str(), (int)ep, (int)t, accuracy, precision,
-              recall);
-          printf("fscore = %.3f  timer: %s" , fscore, timer.format().c_str());
+          if (_reportObjVal) {
+            double fval;
+            RealVec grad(d);
+            timer::cpu_timer clock;
+            cout << name() << ": Computing objective value...  ";
+            cout.flush();
+            _objective->valueAndGradient(theta, fval, grad);
+            printf("obj = %.5f ", fval);
+            cout << clock.format();
+          }
         }
     
         if (fscore > fscoreBest) {
           fscoreBest = fscore;
           thetaBest.setParams(theta);
         }
+        timer.resume();
       }
     }
   }

@@ -60,6 +60,9 @@ class StochasticGradientOptimizer : public Optimizer {
     // report validation set performance every n updates
     std::size_t _reportValStats;
     
+    // compute and report the objective value along with validation stats
+    bool _reportObjVal;
+    
     bool _quiet; // suppress optimization output
     
     int _seed; // seed for random number generator
