@@ -69,7 +69,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta,
 }
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
-    RealVec& gradFv, const int* sample, size_t sampleSize) {
+    RealVec& gradFv, const list<int>* indices) {
   assert(gradFv.size() == theta.getDimTotal());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
@@ -80,10 +80,10 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
   // consisting of the examples that correspond to these indices.
   const Dataset* dataset = &_dataset;
   Dataset sampledData(numParts);
-  if (sample) {
-    assert(sampleSize > 0);
-    for (size_t i = 0; i < sampleSize; i++)
-      sampledData.addExample(_dataset.getExamples()[sample[i]]);
+  if (indices) {
+    assert(indices->size() > 0);
+    BOOST_FOREACH(int i, *indices)
+      sampledData.addExample(_dataset.getExamples()[i]);
     dataset = &sampledData;
   }
     

@@ -20,13 +20,16 @@
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
+#include <boost/scoped_array.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/timer/timer.hpp>
+#include <cmath>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <list>
 #include <stdio.h>
 #include <string>
 
@@ -118,11 +121,27 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   }  
   LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
   
+  // Group the training examples into minibatches based on the random ordering.
+  int numMinibatches = ceil(m / (float)_minibatchSize);
+  scoped_array<list<int> > minibatches(new list<int>[numMinibatches]);
+  int j = 0;
+  for (int mb = 0; mb < numMinibatches; mb++) {
+    for (int count = 0; count < _minibatchSize && j < m; count++)
+      minibatches[mb].push_back(ordering[j++]);
+  }
+  
   double eta0 = _eta;
-  if (_autoEta)
-    eta0 = estimateBestLearningRate(theta, ordering.get(), 1000, 0.1);
+  if (_autoEta) {
+    const int sampleSize = 1000;
+    list<int> sample;
+    for (int j = 0; j < sampleSize; j++)
+      sample.push_back(ordering[j]);
+    eta0 = estimateBestLearningRate(theta, sample, 0.1);
+  }
   cout << "Using learning rate eta0 = " << eta0 << endl;
   double eta_t = eta0;
+  
+  ordering.reset(); // we can safely discard this
   
   double cost = 0;
   RealVec grad(d);
@@ -140,10 +159,17 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   {
     timer::cpu_timer timer;
     
-    for (size_t i = 0; i < m; ++i) {
+    for (size_t i = 0; i < numMinibatches; ++i) {
       // compute the gradient and the cost function value for this example
       // (note: the cost returned here does not account for regularization)
-      _objective->valueAndGradientOne(theta, cost, grad, ordering[i]);
+      if (_minibatchSize > 1) {
+        _objective->valueAndGradient(theta, cost, grad, &minibatches[i]);
+      }
+      else {
+        // avoid multi-threading overhead in this case
+        _objective->valueAndGradientOne(theta, cost, grad,
+            minibatches[i].front());
+      }        
       sumCosts += cost;
       
       // update the parameters based on the computed gradient
@@ -217,20 +243,19 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 }
 
 double StochasticGradientOptimizer::objectiveValueForSample(
-    const Parameters& theta, const int* perm, size_t sampleSize) const {
+    const Parameters& theta, const list<int>& sample) const {
   // Compute the objective value with theta for the given sample.
   RealVec grad(theta.getDimTotal());
   double avgCost;
-  _objective->valueAndGradient(theta, avgCost, grad, perm, sampleSize);
+  _objective->valueAndGradient(theta, avgCost, grad, &sample);
   return 0.5 * _regularizer->getBeta() * theta.squaredL2Norm() + avgCost;
 }
 
 // Based on code in crfsgd.cpp by Leon Bottou:
 // http://leon.bottou.org/projects/sgd
 double StochasticGradientOptimizer::objectiveValueForLearningRate(
-    const Parameters& theta_, const int* perm, size_t sampleSize, double eta)
-    const
-{
+    const Parameters& theta_, const list<int>& sample,
+    const list<int>* minibatches, size_t numMinibatches, double eta) const {
   Parameters theta(theta_.getDimW(), theta_.getDimU());
   theta.setParams(theta_);
   
@@ -240,21 +265,28 @@ double StochasticGradientOptimizer::objectiveValueForLearningRate(
   double cost;
 
   // Perform one epoch of learning using the given sample.
-  for (int i = 0; i < sampleSize; i++) {
-    _objective->valueAndGradientOne(theta, cost, grad, perm[i]);
+  for (size_t i = 0; i < numMinibatches; ++i) {
+    if (_minibatchSize > 1) {
+      _objective->valueAndGradient(theta, cost, grad, &minibatches[i]);
+    }
+    else {
+      // avoid multi-threading overhead in this case
+      _objective->valueAndGradientOne(theta, cost, grad,
+          minibatches[i].front());
+    }        
     for (size_t j = 0; j < d; ++j)
       theta.add(j, -eta * (beta*theta[j] + grad[j]));
   }
   
-  return objectiveValueForSample(theta, perm, sampleSize);
+  return objectiveValueForSample(theta, sample);
 }
 
 // Based on code in crfsgd.cpp by Leon Bottou:
 // http://leon.bottou.org/projects/sgd
 double StochasticGradientOptimizer::estimateBestLearningRate(
-    const Parameters& theta, const int* perm, size_t numSamples, double eta0)
-    const {
+    const Parameters& theta, const list<int>& sample, double eta0) const {
   timer::cpu_timer timer;
+  size_t numSamples = sample.size();
   if (!_quiet) {
     cout << "Estimating best learning rate based on " << numSamples <<
       " samples" << endl;
@@ -262,8 +294,15 @@ double StochasticGradientOptimizer::estimateBestLearningRate(
   size_t numExamples = _objective->getDataset().numExamples();
   if (numSamples > numExamples)
     numSamples = numExamples;
+    
+  // Group the examples into minibatches.
+  int numMinibatches = ceil(numSamples / (float)_minibatchSize);
+  scoped_array<list<int> > minibatches(new list<int>[numMinibatches]);
+  int count = 0;
+  BOOST_FOREACH(int i, sample)
+    minibatches[count++ % numMinibatches].push_back(i);
 
-  double obj0 = objectiveValueForSample(theta, perm, numSamples);
+  double obj0 = objectiveValueForSample(theta, sample);
   if (!_quiet)
     cout << "  Initial objective value: " << obj0 << endl;
 
@@ -275,7 +314,8 @@ double StochasticGradientOptimizer::estimateBestLearningRate(
   double factor = 2;
   bool phase2 = false;
   while (toTest > 0 || !phase2) {
-    double obj = objectiveValueForLearningRate(theta, perm, numSamples, eta);
+    double obj = objectiveValueForLearningRate(theta, sample, minibatches.get(),
+        numMinibatches, eta);
     bool okay = (obj < obj0);
     if (!_quiet) {
       cout << "  Trying eta=" << eta << "  obj=" << obj;

@@ -14,6 +14,7 @@
 #include "Parameters.h"
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <list>
 #include <string>
 
 class Dataset;
@@ -78,13 +79,14 @@ class StochasticGradientOptimizer : public Optimizer {
     std::size_t _minibatchSize;
     
     double objectiveValueForLearningRate(const Parameters& theta,
-        const int* permutation, std::size_t sampleSize, double eta) const;
+        const std::list<int>& sample, const std::list<int>* minibatches,
+        std::size_t numMinibatches, double eta) const;
       
     double objectiveValueForSample(const Parameters& theta,
-        const int* permutation, std::size_t sampleSize) const;
+        const std::list<int>& sample) const;
         
     double estimateBestLearningRate(const Parameters& theta,
-        const int* permutation, std::size_t numSamples, double eta0) const;
+        const std::list<int>& sample, double eta0) const;
 };
 
 #endif
