@@ -20,19 +20,20 @@
 using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testStochasticGradient)
-{
-  const int argc = 10;
+{  
+  const int argc = 11;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
   argv[1] = (char*) "--order=0";
-  argv[2] = (char*) "--no-align-ngrams";
-  argv[3] = (char*) "--no-collapsed-align-ngrams";
-  argv[4] = (char*) "--restarts=2";
-  argv[5] = (char*) "--quietX";
-  argv[6] = (char*) "--no-normalize";
-  argv[7] = (char*) "--bias-no-normalize";
-  argv[8] = (char*) "--no-final-arc-feats";
-  argv[9] = (char*) "--validation=0.4";
+  argv[2] = (char*) "--no-collapsed-align-ngrams";
+  argv[3] = (char*) "--quiet";
+  argv[4] = (char*) "--no-normalize";
+  argv[5] = (char*) "--bias-no-normalize";
+  argv[6] = (char*) "--no-final-arc-feats";
+  argv[7] = (char*) "--estimate-learning-rate";
+  argv[8] = (char*) "--max-iters=50";
+  argv[9] = (char*) "--fraction-validation=0";
+  argv[10] = (char*) "--report-validation-stats=200";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -63,24 +64,12 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   BOOST_CHECK(!alphabet->isLocked());
   alphabet->lock();
   const int d = alphabet->size();
-  BOOST_REQUIRE_EQUAL(d, 4);
+  BOOST_REQUIRE_EQUAL(d, 281);
   
-  Parameters W = objective->getDefaultParameters(d);
-  
-  // set the feature weight for bias class y=1 to one
-  int index = alphabet->lookup("Bias", 1, false);
-  BOOST_REQUIRE(index >= 0);
-  W.add(index, 1.0);
-  BOOST_REQUIRE_EQUAL(W[index], 1.0);
-  
-  RealVec gradFv(d);
-  double fval;
-  objective->valueAndGradient(W, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(1.12714370334, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.91161441403, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.39367847911, gradFv[3], 1e-8);
+  // Set the weights to random values.
+  Parameters theta = objective->getDefaultParameters(d);
+  shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1);
+  theta.w.setWeights(samples.get(), d);
   
   const double beta = 0.1;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));
@@ -89,11 +78,12 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   ret = opt.processOptions(argc, argv);
   BOOST_REQUIRE_EQUAL(0, ret); 
   
-  double fvalOpt = 0.0;
-  Optimizer::status status = opt.train(W, fvalOpt, 1e-5);
+  double fval;
+  Optimizer::status status = opt.train(theta, fval, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
   
-  objective->valueAndGradient(W, fval, gradFv);
-  l2->addRegularization(W, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.67917812871, fval, 1e-8);
+  RealVec gradFv(d);
+  objective->valueAndGradient(theta, fval, gradFv);
+  l2->addRegularization(theta, fval, gradFv);
+  BOOST_CHECK_CLOSE(0.619922957358687, fval, 1e-8);
 }

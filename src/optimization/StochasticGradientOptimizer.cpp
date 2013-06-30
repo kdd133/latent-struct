@@ -132,13 +132,16 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   
   double eta0 = _eta;
   if (_autoEta) {
-    const int sampleSize = 1000;
+    int sampleSize = 1000;
+    if (sampleSize > m)
+      sampleSize = m;
     list<int> sample;
     for (int j = 0; j < sampleSize; j++)
       sample.push_back(ordering[j]);
     eta0 = estimateBestLearningRate(theta, sample, 0.1);
   }
-  cout << "Using learning rate eta0 = " << eta0 << endl;
+  if (!_quiet)
+    cout << "Using learning rate eta0 = " << eta0 << endl;
   double eta_t = eta0;
   
   ordering.reset(); // we can safely discard this
@@ -196,7 +199,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // Evaluate the performance of model on the held-out data.
       if (_reportValStats > 0 && t % _reportValStats == 0) {
         timer.stop();
-        double accuracy, precision, recall, fscore;
+        double accuracy = 0, precision = 0, recall = 0, fscore = 0;
+        if (validationData->numExamples() > 0)
         {
           timer::cpu_timer clock;
           if (!_quiet) {
@@ -342,7 +346,8 @@ double StochasticGradientOptimizer::estimateBestLearningRate(
     if (phase2)
       eta = eta / factor;
   }
-  cout << "  Elapsed time: " << timer.format();
+  if (!_quiet)
+    cout << "  Elapsed time: " << timer.format();
   // To be safe, we choose a learning rate that's slightly lower than the best.
   return bestEta / factor;
 }
