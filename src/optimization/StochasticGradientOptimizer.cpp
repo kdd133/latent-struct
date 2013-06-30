@@ -175,9 +175,13 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       }        
       sumCosts += cost;
       
-      // update the parameters based on the computed gradient
+      // update the parameters based on the computed gradient; see Sec 5.1 of
+      // http://cilvr.cs.nyu.edu/diglib/lsml/bottou-sgd-tricks-2012.pdf
+      // note: the scaling of theta must be done before the add operations
+      theta.scale(1 - beta * eta_t);
       for (size_t j = 0; j < d; ++j) {
-        theta.add(j, -eta_t * (beta*theta[j] + grad[j]));
+        if (grad[j])
+          theta.add(j, -eta_t * grad[j]);
       }
       t++;
       
@@ -278,8 +282,12 @@ double StochasticGradientOptimizer::objectiveValueForLearningRate(
       _objective->valueAndGradientOne(theta, cost, grad,
           minibatches[i].front());
     }        
-    for (size_t j = 0; j < d; ++j)
-      theta.add(j, -eta * (beta*theta[j] + grad[j]));
+  
+    theta.scale(1 - beta * eta);
+    for (size_t j = 0; j < d; ++j) {
+      if (grad[j])
+        theta.add(j, -eta * grad[j]);
+    }
   }
   
   return objectiveValueForSample(theta, sample);
