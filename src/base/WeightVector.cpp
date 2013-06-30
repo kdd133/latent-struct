@@ -92,15 +92,23 @@ void WeightVector::zero() {
   _scale = 1;
 }
 
-void WeightVector::setWeights(const double* newWeights, int len) {
-  assert(newWeights != _weights.get());
+void WeightVector::setWeights(const double* rawWeights, int len) {
+  assert(rawWeights != _weights.get());
   if (len !=  _dim)
     reAlloc(len);
-  for (int index = 0; index < _dim; index++) {
-    const double update = newWeights[index];
-    _weights[index] = update;
-  }
+  for (int index = 0; index < _dim; index++)
+    _weights[index] = rawWeights[index];
   _scale = 1;
+}
+
+void WeightVector::setWeights(const WeightVector& w) {
+  if (this != &w) {
+    if (w._dim !=  _dim)
+      reAlloc(w._dim);
+    for (int index = 0; index < _dim; index++)
+      _weights[index] = w._weights[index];
+    _scale = w._scale;
+  }
 }
 
 bool WeightVector::read(const std::string& fname, int dim) {
@@ -151,6 +159,12 @@ double WeightVector::operator[](int index) const {
   return _weights[index] * _scale;
 }
 
+void WeightVector::scale(const double s) {
+  _scale *= s;
+  if (_scale < 1e-5)
+    rescale();
+}
+
 void WeightVector::rescale() {
   if (_scale != 1.0) {
     for (int i = 0; i < _dim; i++) {
@@ -166,4 +180,8 @@ double WeightVector::squaredL2Norm() const {
   for (int i = 0; i < _dim; i++)
     prod += _weights[i] * _weights[i];
   return _scale * _scale * prod;
+}
+
+double WeightVector::getScale() const {
+  return _scale;
 }

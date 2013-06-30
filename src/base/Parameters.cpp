@@ -92,13 +92,13 @@ double Parameters::innerProd(const RealVec& fv) const {
 }
 
 void Parameters::setParams(const Parameters& other) {
-  w.setWeights(other.w.getWeights(), other.w.getDim());
+  w.setWeights(other.w);
   if (other.hasU())
-    u.setWeights(other.u.getWeights(), other.u.getDim());
+    u.setWeights(other.u);
   if (other.hasSharedW())
-    shared_w.setWeights(other.shared_w.getWeights(), other.shared_w.getDim());
+    shared_w.setWeights(other.shared_w);
   if (other.hasSharedU())
-    shared_u.setWeights(other.shared_u.getWeights(), other.shared_u.getDim());
+    shared_u.setWeights(other.shared_u);
   init();
 }
 
@@ -144,4 +144,14 @@ int Parameters::indexSharedU() const {
   if (!hasSharedU())
     return -1;
   return indexSharedW() + shared_w.getDim();
+}
+
+void Parameters::scale(double s) {
+  w.scale(s);
+  if (hasU())
+    u.scale(s);
+  if (hasSharedW())
+    shared_w.scale(s);
+  if (hasSharedU())
+    shared_u.scale(s);
 }

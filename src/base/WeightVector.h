@@ -42,9 +42,7 @@ class WeightVector {
     
     int getDim() const { return _dim; }
     
-    const double* getWeights() const { return _weights.get(); }
-    
-    double getWeight(int index) const { return _weights[index]; }
+    void setWeights(const WeightVector& wv);
     
     void setWeights(const double* w, int len);
     
@@ -58,7 +56,11 @@ class WeightVector {
     
     double operator[](int index) const;
     
+    void scale(const double s);
+    
     void rescale();
+    
+    double getScale() const;
 
   private:
   

@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   // observe a change in the objective value. If we did, it would mean that
   // our optimization algorithm is not finding the best (w,u) parameters.
   double fval_setUtoW = 0.0;
-  theta.u.setWeights(theta.w.getWeights(), theta.w.getDim());
+  theta.u.setWeights(theta.w);
   objective->valueAndGradient(theta, fval_setUtoW, gradFv);
   BOOST_CHECK_CLOSE(fvalOpt, fval_setUtoW, 1e-5);
   

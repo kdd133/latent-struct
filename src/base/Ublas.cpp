@@ -103,7 +103,7 @@ namespace ublas_util {
       RealVec& dest) {
     assert(w.getDim() == v.getDim() && w.getDim() == dest.size());
     for (int i = 0; i < w.getDim(); ++i)
-      dest(i) = w.getWeight(i) - v.getWeight(i);
+      dest(i) = w[i] - v[i];
     return dest;
   }
   

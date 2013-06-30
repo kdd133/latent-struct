@@ -68,6 +68,8 @@ public:
   int indexSharedW() const;
   
   int indexSharedU() const;
+  
+  void scale(double s);
 
 private:
   void init();
