@@ -13,6 +13,7 @@
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
 #include "CognatePairReader.h"
+#include "CognatePairAlignerReader.h"
 #include "Dataset.h"
 #include "EmOptimizer.h"
 #include "EmptyAlignmentFeatureGen.h"
@@ -141,7 +142,9 @@ int main(int argc, char** argv) {
       StochasticGradientOptimizer::name() << "}";
   stringstream readerMsg;
   readerMsg << "reader that parses lines from input file {" <<
-      CognatePairReader::name() << CMA << SentencePairReader::name() << CMA <<
+      CognatePairReader::name() << CMA <<
+      CognatePairAlignerReader::name() << CMA <<
+      SentencePairReader::name() << CMA <<
       WordPairReader::name() << "}";  
   stringstream regMsg;
   regMsg << "type of regularization {" << RegularizerL2::name() << CMA <<
@@ -365,6 +368,8 @@ initial weights")
   scoped_ptr<InputReader> reader;
   if (readerName == CognatePairReader::name())
     reader.reset(new CognatePairReader());
+  else if (readerName == CognatePairAlignerReader::name())
+    reader.reset(new CognatePairAlignerReader());
   else if (readerName == SentencePairReader::name())
     reader.reset(new SentencePairReader());
   else if (readerName == WordPairReader::name())
