@@ -10,7 +10,10 @@
 #ifndef _INPUTREADER_H
 #define _INPUTREADER_H
 
+#include "Label.h"
 #include <string>
+
+class Pattern;
 
 class InputReader {
 
