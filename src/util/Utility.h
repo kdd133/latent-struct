@@ -15,6 +15,7 @@
 #include "Ublas.h"
 #include <boost/shared_array.hpp>
 #include <string>
+#include <vector>
 
 class Dataset;
 class InputReader;
@@ -66,6 +67,16 @@ class Utility {
     // and_advanced_optimization
     static double getNumericalGradientForCoordinate(TrainingObjective& obj,
       const Parameters& theta, int i, double epsilon = 1e-4);
+      
+    // Returns the Levenshtein edit distance between the source and target
+    // strings, which are represented as vectors of strings. The sourceEps
+    // and targetEps arguments will be set to the aligned source and target
+    // strings, respectively, with "-" symbols indicating insertions/deletions. 
+    static int levenshtein(const std::vector<std::string>& source,
+                           const std::vector<std::string>& target,
+                           std::vector<std::string>& sourceEps,
+                           std::vector<std::string>& targetEps,
+                           int subCost = 1);
 
   private:
   

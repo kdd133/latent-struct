@@ -18,6 +18,7 @@
 #include "Ublas.h"
 #include "Utility.h"
 #include <boost/foreach.hpp>
+#include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -27,6 +28,7 @@
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <stack>
 #include <string>
 
 using namespace boost;
@@ -275,4 +277,98 @@ double Utility::getNumericalGradientForCoordinate(TrainingObjective& obj,
   obj.valueAndGradient(thetaMinus, fvalMinus, grad);
   
   return (fvalPlus - fvalMinus) / (2 * epsilon);
+}
+
+int Utility::levenshtein(const vector<string>& s, const vector<string>& t,
+    vector<string>& sEps, vector<string>& tEps, int subCost) {
+  multi_array<int, 2> cost(extents[s.size()+1][t.size()+1]);
+  multi_array<int, 2> lastOp(extents[s.size()+1][t.size()+1]);
+  enum {INS, DEL, SUB};
+  cost[0][0] = 0;
+  for (size_t i = 1; i <= s.size(); ++i) {
+    cost[i][0] = i;
+    lastOp[i][0] = INS;
+  }
+  for (size_t j = 1; j <= t.size(); ++j) {
+    cost[0][j] = j;
+    lastOp[0][j] = DEL;
+  }
+  
+  for (size_t i = 1; i <= s.size(); ++i) {
+    for (size_t j = 1; j <= t.size(); ++j) {
+      if (s[i-1] == t[j-1]) { // the strings are indexed from zero 
+        cost[i][j] = cost[i-1][j-1];
+        lastOp[i][j] = SUB;
+      }
+      else {
+        const int ins = cost[i-1][j]+1;
+        const int del = cost[i][j-1]+1;
+        const int sub = cost[i-1][j-1]+subCost;
+        cost[i][j] = ins;
+        lastOp[i][j] = INS;
+        if (del < cost[i][j]) {
+          cost[i][j] = del;
+          lastOp[i][j] = DEL;
+        }
+        if (sub < cost[i][j]) {
+          cost[i][j] = sub;
+          lastOp[i][j] = SUB;
+        }
+      }
+    }
+  }
+
+#if 0
+  for (size_t i = 0; i <= s.size(); ++i) {
+    for (size_t j = 0; j <= t.size(); ++j) {
+      cout << cost[i][j] << " " << lastOp[i][j] << "|";
+    }
+    cout << endl;
+  }
+#endif
+  
+  stack<int> ops;
+  size_t i = s.size();
+  size_t j = t.size();
+  while (i > 0 || j > 0) {
+    switch (lastOp[i][j]) {
+      case INS:
+        ops.push(INS);
+        i--;
+        break;
+      case DEL:
+        ops.push(DEL);
+        j--;
+        break;
+      case SUB:
+        ops.push(SUB);
+        i--;
+        j--;
+        break;
+    }
+  }
+  
+  sEps.clear();
+  tEps.clear();
+  i = 0;
+  j = 0;
+  while (!ops.empty()) {
+    switch (ops.top()) {
+      case INS:
+        sEps.push_back(s[i++]);
+        tEps.push_back("-");
+        break;
+      case DEL:
+        sEps.push_back("-");
+        tEps.push_back(t[j++]);
+        break;
+      case SUB:
+        sEps.push_back(s[i++]);
+        tEps.push_back(t[j++]);
+        break;
+    }
+    ops.pop();
+  } 
+
+  return cost[s.size()][t.size()];
 }
