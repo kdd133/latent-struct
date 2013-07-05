@@ -12,6 +12,7 @@
 
 #include <boost/unordered_set.hpp>
 #include <string>
+#include <vector>
 
 class NgramLexicon {
 
