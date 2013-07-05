@@ -52,12 +52,15 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
     
     bool _regexEnabled;
     
+    bool _encodeOffset;
+    
     boost::regex _regVowel;
   
     boost::regex _regConsonant;
     
     static void appendSubstrings(const std::vector<std::string>* s, size_t i,
-      size_t k, size_t end, std::vector<std::string>& subs);
+      size_t k, size_t end, std::vector<std::string>& subs,
+      const std::string suffix = std::string());
 };
 
 #endif

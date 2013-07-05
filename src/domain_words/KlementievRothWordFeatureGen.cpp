@@ -31,7 +31,8 @@ const string KlementievRothWordFeatureGen::SUB_JOINER = ",";
 KlementievRothWordFeatureGen::KlementievRothWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _offsetSize(1),
-    _normalize(normalize), _addBias(true), _regexEnabled(false) {
+    _normalize(normalize), _addBias(true), _regexEnabled(false),
+    _encodeOffset(false) {
 }
 
 int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
@@ -47,6 +48,8 @@ int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
   bool noNormalize = false;
   string vowelsFname;
   options.add_options()
+    ("encode-offset", opt::bool_switch(&_encodeOffset),
+        "encode the offset in each feature")
     ("kr-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
     ("kr-no-normalize", opt::bool_switch(&noNormalize),
         "do not normalize by the length of the longer word")
@@ -148,9 +151,18 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
     // extract the k-grams at positions in the longest string that are within
     // _offsetSize of the current position in the shortest string
     for (int j = -_offsetSize; j <= _offsetSize; j++) {
-      if (i + j >= 0 && i + j < (int) longest->size())
-        appendSubstrings(longest, i + j, _substringSize, longest->size(),
-            subs_lo);
+      if (i + j >= 0 && i + j < (int) longest->size()) {
+        if (_encodeOffset && j != 0) { // we omit the suffix when offset=j is 0
+          stringstream offset;
+          offset << "[" << j << "]";
+          appendSubstrings(longest, i + j, _substringSize, longest->size(),
+              subs_lo, offset.str());
+        }
+        else {
+          appendSubstrings(longest, i + j, _substringSize, longest->size(),
+              subs_lo);
+        }
+      }
     }
     
     // pair each source substring with each target substring
@@ -213,11 +225,11 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
 }
 
 inline void KlementievRothWordFeatureGen::appendSubstrings(const vector<string>* s,
-    size_t i, size_t k, size_t end, vector<string>& subs) {
+    size_t i, size_t k, size_t end, vector<string>& subs, const string suffix) {
   string sub = s->at(i);
-  subs.push_back(sub);
+  subs.push_back(sub + suffix);
   for (size_t j = 1; j < k && i + j < end; j++) {
     sub = sub + CHAR_JOINER + s->at(i + j);
-    subs.push_back(sub);
+    subs.push_back(sub + suffix);
   }
 }
