@@ -25,9 +25,5 @@ void CognatePairAlignerReader::readExample(const string& line, Pattern*& pattern
   CognatePairReader::readExample(line, pat, label);  
   StringPair* sp = (StringPair*)pat;
   pattern = new StringPairAligned(sp->getSource(), sp->getTarget());
-  
-  StringPairAligned* spa = (StringPairAligned*)pattern;
-  cout << *spa << endl;
-  
-  delete pat;
+  delete sp;
 }

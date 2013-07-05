@@ -32,15 +32,17 @@ class StringPair : public Pattern {
         _target.push_back(target.substr(i, 1));
     }
     
-    const std::vector<std::string>& getSource() const;
+    virtual const std::vector<std::string>& getSource() const;
 
-    const std::vector<std::string>& getTarget() const;
+    virtual const std::vector<std::string>& getTarget() const;
     
     // Returns the length of the longer string.
     virtual int getSize() const;
+    
+    friend std::ostream& operator<<(std::ostream& out, const StringPair& sp);
 
 
-  private:
+  protected:
     std::vector<std::string> _source;
 
     std::vector<std::string> _target;
@@ -57,6 +59,16 @@ inline const std::vector<std::string>& StringPair::getTarget() const {
 
 inline int StringPair::getSize() const {
   return _source.size() > _target.size() ? _source.size() : _target.size();
+}
+
+inline std::ostream& operator<<(std::ostream& out, const StringPair& sp) {
+  for (std::size_t i = 0; i < sp._source.size(); ++i)
+    out << sp._source[i] << " ";
+  out << std::endl;
+  for (std::size_t i = 0; i < sp._target.size(); ++i)
+    out << sp._target[i] << " ";
+  out << std::endl;
+  return out;
 }
 
 #endif
