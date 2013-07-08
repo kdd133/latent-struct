@@ -82,7 +82,7 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   RealMat G(1, 1);
   RealMat copyG(1, 1);
   RealVec wTemp(d);
-  RealVec grad_t(d);
+  SparseRealVec grad_t(d);
   double Remp;
   
   // Since this is (presumably) a convex objective, the starting point should

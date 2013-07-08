@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
   theta.u.setWeights(samples.get(), numFeats);
   
   // Check the function value and gradient. 
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(theta, fval, gradFv);
   BOOST_CHECK_CLOSE(fval, 0.8285285674643136, 1e-7);
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiELFV)
       -0.40881101770846434, -0.36079319180820008, -1.1618793011946678
   };
   for (int i = 0; i < theta.w.getDim(); ++i)
-    BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-7);
+    BOOST_CHECK_CLOSE((double)gradFv[i], checkedGrad[i], 1e-7);
 
   shared_ptr<Regularizer> reg(new RegularizerL2(0.01));
 

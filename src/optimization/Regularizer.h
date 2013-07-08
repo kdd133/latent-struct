@@ -24,7 +24,7 @@ class Regularizer {
     virtual ~Regularizer() {}
 
     virtual void addRegularization(const Parameters& theta, double& fval,
-        RealVec& grad) const = 0;
+        SparseRealVec& grad) const = 0;
     
     // Some regularizers may need to store additional parameters (and
     // corresponding features) beyond what the training objective requires.

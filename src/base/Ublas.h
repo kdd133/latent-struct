@@ -63,7 +63,8 @@ namespace ublas_util {
   
   AccumRealMat& exponentiate(const AccumLogMat& src, AccumRealMat& dest);
   
-  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest);
+  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest,
+      double scale = 1.0);
   
   void addExponentiated(const SparseLogVec& src, RealVec& dest, double scale);
   

@@ -34,17 +34,17 @@ class TrainingObjective {
     // Return the function value and gradient computed over the entire training
     // set.
     virtual void valueAndGradient(const Parameters& theta, double& value,
-      RealVec& grad, const std::list<int>* indices = 0);
+      SparseRealVec& grad, const std::list<int>* indices = 0);
       
     // Return the function value and gradient for the subset of training
     // examples specified by begin and end.
     virtual void valueAndGradient(const Parameters& theta,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      double& value, RealVec& grad);
+      double& value, SparseRealVec& grad);
     
     // Return the function value and gradient for the ith training example.
     virtual void valueAndGradientOne(const Parameters& theta, double& value,
-      RealVec& grad, std::size_t i);
+      SparseRealVec& grad, std::size_t i);
     
     virtual void predict(const Parameters& theta, const Dataset& evalData,
       LabelScoreTable& scores);
@@ -107,14 +107,14 @@ class TrainingObjective {
     
     virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, double& f, RealVec& g) = 0;
+      const Label maxLabel, double& f, SparseRealVec& g) = 0;
     
     // After valueAndGradientPart() completes for each thread, this function is
     // called and may modify the function value and/or gradient. For example,
     // MaxMarginMulti requires us to account for the imputed feature vector
     // exactly once -- but not once per thread.
     virtual void valueAndGradientFinalize(const Parameters& theta, double& f,
-        RealVec& g);
+        SparseRealVec& g);
       
     virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

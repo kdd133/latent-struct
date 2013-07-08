@@ -39,7 +39,7 @@ TrainingObjective::TrainingObjective(const Dataset& dataset,
 }
 
 void TrainingObjective::valueAndGradientOne(const Parameters& theta,
-    double& fval, RealVec& gradFv, size_t i) {
+    double& fval, SparseRealVec& gradFv, size_t i) {
   assert(gradFv.size() == theta.getDimTotal());
   assert(i < _dataset.getExamples().size());
   const Label k = (Label)_dataset.getLabelSet().size();
@@ -59,7 +59,7 @@ void TrainingObjective::valueAndGradientOne(const Parameters& theta,
 
 void TrainingObjective::valueAndGradient(const Parameters& theta,
     const Dataset::iterator& begin, const Dataset::iterator& end, double& fval,
-    RealVec& gradFv) {
+    SparseRealVec& gradFv) {
   assert(gradFv.size() == theta.getDimTotal());
   const Label k = (Label)_dataset.getLabelSet().size();
   
@@ -69,7 +69,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta,
 }
 
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
-    RealVec& gradFv, const list<int>* indices) {
+    SparseRealVec& gradFv, const list<int>* indices) {
   assert(gradFv.size() == theta.getDimTotal());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
@@ -87,7 +87,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
     dataset = &sampledData;
   }
     
-  vector<RealVec> grads(numParts, RealVec(theta.getDimTotal()));
+  vector<SparseRealVec> grads(numParts, SparseRealVec(theta.getDimTotal()));
   vector<double> fvals(numParts, 0);
   
   // Compute the function values and gradients.
@@ -174,7 +174,7 @@ void TrainingObjective::initLatentFeatureVectors(const Parameters& theta) {
 }
 
 void TrainingObjective::valueAndGradientFinalize(const Parameters& theta,
-    double& f, RealVec& g) {
+    double& f, SparseRealVec& g) {
   // Not implemented by the given TrainingObjective subclass. Do nothing.
 }
 

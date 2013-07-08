@@ -39,7 +39,7 @@ int RegularizerL2::processOptions(int argc, char** argv) {
 }
 
 void RegularizerL2::addRegularization(const Parameters& theta, double& fval,
-    RealVec& grad) const {
+    SparseRealVec& grad) const {
   const int d = theta.getDimTotal();
   assert(d == grad.size());
   

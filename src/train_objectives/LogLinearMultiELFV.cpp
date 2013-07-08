@@ -25,7 +25,7 @@
 
 void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, RealVec& gradFv) {
+    const Label k, double& funcVal, SparseRealVec& gradFv) {
 
   const int n = theta.w.getDim(); // i.e., the number of features (all classes)
   const int d = theta.getDimWU(); // i.e., the length of the [w u] vector

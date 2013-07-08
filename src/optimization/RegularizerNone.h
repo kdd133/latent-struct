@@ -28,7 +28,7 @@ class RegularizerNone : public Regularizer {
     virtual ~RegularizerNone() {}
 
     virtual void addRegularization(const Parameters& theta, double& fval,
-        RealVec& grad) const {
+        SparseRealVec& grad) const {
       /** do nothing **/
     }
     

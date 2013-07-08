@@ -25,7 +25,7 @@ using namespace std;
 
 void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, RealVec& gradFv) {
+    const Label k, double& funcVal, SparseRealVec& gradFv) {
   
   const int d = theta.w.getDim();
   
@@ -72,7 +72,7 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
 }
 
 void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
-    double& funcVal, RealVec& gradFv) {    
+    double& funcVal, SparseRealVec& gradFv) {    
   // Subtract the sum of the imputed vectors from the gradient.
   gradFv -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.

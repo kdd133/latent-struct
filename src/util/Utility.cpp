@@ -270,7 +270,7 @@ double Utility::getNumericalGradientForCoordinate(TrainingObjective& obj,
   thetaMinus.setParams(theta);
   thetaMinus.add(i, -epsilon);
   
-  RealVec grad(theta.getDimWU()); // this won't be used
+  SparseRealVec grad(theta.getDimWU()); // this won't be used
   
   double fvalPlus, fvalMinus;
   obj.valueAndGradient(thetaPlus, fvalPlus, grad);

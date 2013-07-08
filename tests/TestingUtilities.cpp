@@ -22,7 +22,7 @@ namespace testing_util {
   void checkGradientFiniteDifferences(TrainingObjective& objective,
       Parameters& theta, double tol, int nWeightVectors) {
     const int d = theta.getDimWU();
-    RealVec gradFv(d);
+    SparseRealVec gradFv(d);
     double fval;
     
     for (int wi = 0; wi < nWeightVectors; wi++) {
@@ -35,9 +35,9 @@ namespace testing_util {
         const double numGrad_i = Utility::getNumericalGradientForCoordinate(
             objective, theta, i);
         if (numGrad_i != 0 && gradFv[i] != 0)
-          BOOST_CHECK_CLOSE(numGrad_i, gradFv[i], tol);
+          BOOST_CHECK_CLOSE(numGrad_i, (double)gradFv[i], tol);
         else if (numGrad_i == 0)
-          BOOST_CHECK_SMALL(gradFv[i], tol);
+          BOOST_CHECK_SMALL((double)gradFv[i], tol);
         else
           BOOST_CHECK_SMALL(numGrad_i, tol);
       }

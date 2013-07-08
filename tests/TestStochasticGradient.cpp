@@ -32,8 +32,8 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   argv[6] = (char*) "--no-final-arc-feats";
   argv[7] = (char*) "--estimate-learning-rate";
   argv[8] = (char*) "--max-iters=50";
-  argv[9] = (char*) "--fraction-validation=0";
-  argv[10] = (char*) "--report-validation-stats=200";
+  argv[9] = (char*) "--fraction-validation=0.4";
+  argv[10] = (char*) "--report-validation-stats=10";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   shared_array<double> samples = Utility::generateGaussianSamples(d, 0, 1);
   theta.w.setWeights(samples.get(), d);
   
-  const double beta = 0.1;
+  const double beta = 1e-8;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));
   BOOST_REQUIRE_EQUAL(l2->getBeta(), beta);
   StochasticGradientOptimizer opt(objective, l2);
@@ -82,8 +82,8 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   Optimizer::status status = opt.train(theta, fval, 1e-5);
   BOOST_REQUIRE(status == Optimizer::CONVERGED);
   
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   objective->valueAndGradient(theta, fval, gradFv);
   l2->addRegularization(theta, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.619922957358687, fval, 1e-8);
+  BOOST_CHECK_CLOSE(1.06272359235157, fval, 1e-8);
 }

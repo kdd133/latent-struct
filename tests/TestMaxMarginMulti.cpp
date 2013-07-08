@@ -75,19 +75,19 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   W.setWeights(samples.get(), d);
   samples.reset();
   
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(W, fval, gradFv);
   
   BOOST_CHECK_CLOSE(6.1197757635591392, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.25, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(0.2, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.9, gradFv[3], 1e-8);
-  BOOST_CHECK_CLOSE(0.25, gradFv[4], 1e-8);
-  BOOST_CHECK_CLOSE(4.4, gradFv[5], 1e-8);
-  BOOST_CHECK_CLOSE(4.1, gradFv[6], 1e-8);
-  BOOST_CHECK_CLOSE(0, gradFv[7], 1e-8);
+  BOOST_CHECK_CLOSE(-0.25, (double)gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.2, (double)gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0, (double)gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.9, (double)gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(0.25, (double)gradFv[4], 1e-8);
+  BOOST_CHECK_CLOSE(4.4, (double)gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(4.1, (double)gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(0, (double)gradFv[7], 1e-8);
   
   // Note: BmrmOptimizer handles regularization in a non-standard way, so it
   // will not actually use the RegularizerL2 internally, except to retrieve the

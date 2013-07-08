@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
   theta.shared_u.setWeights(randomWeights.get() + classDim, sharedDim);
   
   double fval = 0;
-  RealVec grad(theta.getDimTotal());
+  SparseRealVec grad(theta.getDimTotal());
   grad.clear();
   regularizer.addRegularization(theta, fval, grad);
   
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
       5.36409,-7.05839,3.209,-6.11022,-1.76948
   };
   for (size_t i = 0; i < 40; ++i)
-    BOOST_CHECK_CLOSE(grad[i], checkedGrad[i], 1e-3);
+    BOOST_CHECK_CLOSE((double)grad[i], checkedGrad[i], 1e-3);
     
   // This test verifies that RegularizerSoftTying reduces to RegularizerL2 when
   // the shared beta values are both set to zero.
@@ -107,20 +107,20 @@ BOOST_AUTO_TEST_CASE(testRegularizerSoftTying)
     regularizerST.setupParameters(theta, alphabet, labels, 0);
     theta.shared_w.zero();
     theta.shared_u.zero();
-    RealVec gradST(theta.getDimTotal());
+    SparseRealVec gradST(theta.getDimTotal());
     double fvalST = 0;
     gradST.clear();
     regularizerST.addRegularization(theta, fvalST, gradST);
     
     RegularizerL2 regularizerL2;
     regularizerL2.processOptions(argc, argv);
-    RealVec gradL2(theta.getDimTotal());
+    SparseRealVec gradL2(theta.getDimTotal());
     double fvalL2 = 0;
     gradL2.clear();
     regularizerL2.addRegularization(theta, fvalL2, gradL2);
     
     BOOST_CHECK_CLOSE(fvalST, fvalL2, 1e-8);
     for (size_t i = 0; i < alphabet.size(); ++i)
-      BOOST_CHECK_CLOSE(gradST[i], gradL2[i], 1e-8);
+      BOOST_CHECK_CLOSE((double)gradST[i], (double)gradL2[i], 1e-8);
   }
 }

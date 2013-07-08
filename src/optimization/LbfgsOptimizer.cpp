@@ -77,7 +77,7 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   
   // Compute the gradient at the given theta.
   // Note: The above setting of theta updated the model used here by obj.
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   obj->valueAndGradient(theta, fval, gradFv);
   reg->addRegularization(theta, fval, gradFv);
   

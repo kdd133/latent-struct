@@ -67,14 +67,14 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinaryObs)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W[index], 1.0);
   
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.96922619047, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.0125, gradFv[0], 1e-6);
-  BOOST_CHECK_CLOSE(-0.0166666666, gradFv[1], 1e-6);
-  BOOST_CHECK_CLOSE(-0.0011904761, gradFv[280],1e-4);
-  BOOST_CHECK_CLOSE(0.0125, gradFv[362], 1e-4);
+  BOOST_CHECK_CLOSE(-0.0125, (double)gradFv[0], 1e-6);
+  BOOST_CHECK_CLOSE(-0.0166666666, (double)gradFv[1], 1e-6);
+  BOOST_CHECK_CLOSE(-0.0011904761, (double)gradFv[280],1e-4);
+  BOOST_CHECK_CLOSE(0.0125, (double)gradFv[362], 1e-4);
   
   const double beta = 0.1;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));

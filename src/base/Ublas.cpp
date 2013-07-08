@@ -87,10 +87,11 @@ namespace ublas_util {
     return dest;
   }
   
-  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest) {
+  void addExponentiated(const SparseLogVec& src, SparseRealVec& dest,
+      double scale) {
     SparseLogVec::const_iterator it;
     for (it = src.begin(); it != src.end(); ++it)
-      dest(it.index()) += exp(*it);
+      dest(it.index()) += exp(*it) * scale;
   }
   
   void addExponentiated(const SparseLogVec& src, RealVec& dest, double scale) {

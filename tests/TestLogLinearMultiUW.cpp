@@ -99,12 +99,12 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
   thetaW.setWeights(samples.get(), numFeats);
   
   // Get the function value and gradient for LogLinearMulti.
-  RealVec gradFvW(numFeats);
+  SparseRealVec gradFvW(numFeats);
   double fvalW;
   objectiveW->valueAndGradient(thetaW, fvalW, gradFvW);
   
   // Get the function value and gradient for LogLinearMultiUW. 
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(theta, fval, gradFv);
   BOOST_CHECK_CLOSE(fval, 1.7556439545048077, 1e-8);
@@ -113,13 +113,13 @@ BOOST_AUTO_TEST_CASE(testLogLinearMultiUW)
       -0.6515068509204448, -0.51842886092062412, -1.7040430386649665
   };
   for (int i = 0; i < theta.w.getDim(); ++i)
-    BOOST_CHECK_CLOSE(gradFv[i], checkedGrad[i], 1e-8);
+    BOOST_CHECK_CLOSE((double)gradFv[i], checkedGrad[i], 1e-8);
   
   // Since we set w == u above, the function values and the w portion of the
   // gradients should be equal.
   BOOST_CHECK_CLOSE(fvalW, fval, 1e-8);
   for (int i = 0; i < theta.w.getDim(); ++i)
-    BOOST_CHECK_CLOSE(gradFvW[i], gradFv[i], 1e-8);
+    BOOST_CHECK_CLOSE((double)gradFvW[i], (double)gradFv[i], 1e-8);
 
   shared_ptr<Regularizer> reg(new RegularizerNone());
 

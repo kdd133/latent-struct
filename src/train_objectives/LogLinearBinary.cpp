@@ -25,7 +25,7 @@ using boost::shared_array;
 
 void LogLinearBinary::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, RealVec& gradFv) {
+    const Label k, double& funcVal, SparseRealVec& gradFv) {
   
   const WeightVector W0; // zero weight vector, for computing |Z(x)|
   

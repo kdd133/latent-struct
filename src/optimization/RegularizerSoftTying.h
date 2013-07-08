@@ -36,7 +36,7 @@ class RegularizerSoftTying : public Regularizer {
     virtual ~RegularizerSoftTying() {}
 
     virtual void addRegularization(const Parameters& theta, double& fval,
-        RealVec& grad) const;
+        SparseRealVec& grad) const;
         
     virtual void setupParameters(Parameters& theta, Alphabet& alphabet,
         const std::set<Label>& labelSet, int seed);

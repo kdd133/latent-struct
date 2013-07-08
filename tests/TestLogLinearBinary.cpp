@@ -73,14 +73,14 @@ BOOST_AUTO_TEST_CASE(testLogLinearBinary)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W[index], 1.0);
   
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(1.12714370334, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.91161441403, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.39367847911, gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(0.23105857863, (double)gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(1.12714370334, (double)gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.91161441403, (double)gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.39367847911, (double)gradFv[3], 1e-8);
   
   const double beta = 0.1;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));

@@ -147,7 +147,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   ordering.reset(); // we can safely discard this
   
   double cost = 0;
-  RealVec grad(d);
+  SparseRealVec grad(d);
   
   // This variable will store a running total of the costs, summed over the last
   // R examples that we've seen/processed.
@@ -179,10 +179,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // http://cilvr.cs.nyu.edu/diglib/lsml/bottou-sgd-tricks-2012.pdf
       // note: the scaling of theta must be done before the add operations
       theta.scale(1 - beta * eta_t);
-      for (size_t j = 0; j < d; ++j) {
-        if (grad[j])
-          theta.add(j, -eta_t * grad[j]);
-      }
+      SparseRealVec::const_iterator it;
+      for (it = grad.begin(); it != grad.end(); ++it)
+        theta.add(it.index(), -eta_t * (*it));
       t++;
       
       eta_t = eta0 / (1 + eta0*beta*t); // update the learning rate
@@ -224,11 +223,11 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         if (!_quiet) {
           if (_reportObjVal) {
             double fval;
-            RealVec grad(d);
+            SparseRealVec gradTemp(d);
             timer::cpu_timer clock;
             cout << name() << ": Computing objective value...  ";
             cout.flush();
-            _objective->valueAndGradient(theta, fval, grad);
+            _objective->valueAndGradient(theta, fval, gradTemp);
             printf("obj = %.5f ", fval);
             cout << clock.format();
           }
@@ -245,6 +244,11 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 
   theta.setParams(thetaBest);
   
+  if (!_quiet) {
+    cout << name() << ": Highest Fscore achieved on validation set was " <<
+        fscoreBest << endl;
+  }
+  
   // We don't actually test for convergence (simply run for the specified number
   // of epochs); so, we'll just call it converged.
   return Optimizer::CONVERGED;
@@ -253,7 +257,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 double StochasticGradientOptimizer::objectiveValueForSample(
     const Parameters& theta, const list<int>& sample) const {
   // Compute the objective value with theta for the given sample.
-  RealVec grad(theta.getDimTotal());
+  SparseRealVec grad(theta.getDimTotal());
   double avgCost;
   _objective->valueAndGradient(theta, avgCost, grad, &sample);
   return 0.5 * _regularizer->getBeta() * theta.squaredL2Norm() + avgCost;
@@ -269,7 +273,7 @@ double StochasticGradientOptimizer::objectiveValueForLearningRate(
   
   const double beta = _regularizer->getBeta();
   const size_t d = theta.getDimTotal();
-  RealVec grad(d);
+  SparseRealVec grad(d);
   double cost;
 
   // Perform one epoch of learning using the given sample.
@@ -284,10 +288,9 @@ double StochasticGradientOptimizer::objectiveValueForLearningRate(
     }        
   
     theta.scale(1 - beta * eta);
-    for (size_t j = 0; j < d; ++j) {
-      if (grad[j])
-        theta.add(j, -eta * grad[j]);
-    }
+    SparseRealVec::const_iterator it;
+    for (it = grad.begin(); it != grad.end(); ++it)
+      theta.add(it.index(), -eta * (*it));
   }
   
   return objectiveValueForSample(theta, sample);

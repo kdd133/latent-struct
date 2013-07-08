@@ -74,18 +74,18 @@ BOOST_AUTO_TEST_CASE(testLogLinearMulti)
   W.add(index, 1.0);
   BOOST_REQUIRE_EQUAL(W[index], 1.0);
   
-  RealVec gradFv(d);
+  SparseRealVec gradFv(d);
   double fval;
   objective->valueAndGradient(W, fval, gradFv);
   BOOST_CHECK_CLOSE(0.81326168751, fval, 1e-8);
-  BOOST_CHECK_CLOSE(0.23105857863, gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(0.71278741450, gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.69725812519, gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.30803476795, gradFv[3], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[0], gradFv[4], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[1], gradFv[5], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[2], gradFv[6], 1e-8);
-  BOOST_CHECK_CLOSE(-gradFv[3], gradFv[7], 1e-8);
+  BOOST_CHECK_CLOSE(0.23105857863, (double)gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(0.71278741450, (double)gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(0.69725812519, (double)gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(0.30803476795, (double)gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(-(double)gradFv[0], (double)gradFv[4], 1e-8);
+  BOOST_CHECK_CLOSE(-(double)gradFv[1], (double)gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(-(double)gradFv[2], (double)gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(-(double)gradFv[3], (double)gradFv[7], 1e-8);
   
   const double beta = 0.1;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));
