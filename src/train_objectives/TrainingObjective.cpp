@@ -215,7 +215,7 @@ void TrainingObjective::gatherFeaturesPart(Model& model,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     for (Label y = 0; y < k; y++) {
-      if (!(isBinary() && y != 1)) { 
+      if (!(isBinary() && y != kPositive)) { 
         const size_t numFvs = model.gatherFeatures(x, y);
         totalFvs += numFvs;
         if (numFvs > maxFvs)
@@ -239,15 +239,20 @@ shared_ptr<Alphabet> TrainingObjective::combineAlphabets(
       // number of (base) features in this case.
       const size_t n = a->numFeaturesPerClass();
       for (size_t j = 0; j < n; j++)
-        combined->lookup(a->reverseLookup(j), 0, true);
+        combined->lookup(a->reverseLookup(j), kPositive, true);
     }
   }
-  // We performed lookups using label 0 above, simply to populate the feature
+  // We performed lookups using label=1 above, simply to populate the feature
   // dictionary. We must also tell the alphabet which class labels exist, so
   // that it knows how many "copies" of each feature are valid.
-  set<Label>::const_iterator lbl;
-  for (lbl = labels.begin(); lbl != labels.end(); ++lbl)
-    combined->addLabel(*lbl);
+  if (isBinary()) {
+    combined->addLabel(kPositive);
+  }
+  else {
+    set<Label>::const_iterator lbl;
+    for (lbl = labels.begin(); lbl != labels.end(); ++lbl)
+      combined->addLabel(*lbl);
+  }
   for (size_t i = 0; i < getNumModels(); i++) {
     _models[i].getFgenLatent()->setAlphabet(combined);
     _models[i].getFgenObserved()->setAlphabet(combined);

@@ -155,6 +155,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   
   double fscoreBest = -1;
   Parameters thetaBest;
+  thetaBest.setParams(theta);
   
   // FIXME: We're assuming L2 regularization (ignoring _regularizer) below.
   size_t t = 0;
@@ -242,7 +243,10 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     }
   }
 
-  theta.setParams(thetaBest);
+  // If we evaluated on a validation set at least once, return the best set of
+  // parameters we found. Otherwise, return the current parameters theta.
+  if (_reportValStats > 0 && t >= _reportValStats)
+    theta.setParams(thetaBest);
   
   if (!_quiet) {
     cout << name() << ": Highest Fscore achieved on validation set was " <<
