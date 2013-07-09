@@ -14,7 +14,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
-#include <math.h>
 #include <string>
 #include <vector>
 using namespace boost;

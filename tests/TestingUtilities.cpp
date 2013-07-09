@@ -25,8 +25,7 @@ namespace testing_util {
     const int d = theta.getDimWU();
     SparseRealVec gradFv(d);
     double fval;
-    const double TINY = 1e-8;
-    
+
     for (int wi = 0; wi < nWeightVectors; wi++) {
       // try several different (random) weight vectors
       boost::shared_array<double> weights = Utility::generateGaussianSamples(d,
@@ -36,11 +35,15 @@ namespace testing_util {
       for (int i = 0; i < d; i++) {
         const double numGrad_i = Utility::getNumericalGradientForCoordinate(
             objective, theta, i);
-        // If both values are less than TINY, we consider them to be
-        // sufficiently close and do not run the explicit check involving,
-        // e.g., BOOST_CHECK_SMALL.
-        if (abs(numGrad_i) > TINY && abs(gradFv[i]) > TINY)
+        if (std::abs(numGrad_i) > tol && std::abs(gradFv[i]) > tol) {
           BOOST_CHECK_CLOSE(numGrad_i, (double)gradFv[i], tol);
+        }
+        else {
+          // BOOST_CHECK_CLOSE causes false positives when, e.g., one of the
+          // values is zero. So, we verify that both values are small here.
+          BOOST_CHECK_SMALL((double)gradFv[i], tol);
+          BOOST_CHECK_SMALL(numGrad_i, tol);
+        }
       }
     }
   }
