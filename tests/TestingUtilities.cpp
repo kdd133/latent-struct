@@ -14,6 +14,7 @@
 #include <boost/shared_array.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
+#include <cmath>
 
 using namespace boost;
 
@@ -24,6 +25,7 @@ namespace testing_util {
     const int d = theta.getDimWU();
     SparseRealVec gradFv(d);
     double fval;
+    const double TINY = 1e-8;
     
     for (int wi = 0; wi < nWeightVectors; wi++) {
       // try several different (random) weight vectors
@@ -34,12 +36,11 @@ namespace testing_util {
       for (int i = 0; i < d; i++) {
         const double numGrad_i = Utility::getNumericalGradientForCoordinate(
             objective, theta, i);
-        if (numGrad_i != 0 && gradFv[i] != 0)
+        // If both values are less than TINY, we consider them to be
+        // sufficiently close and do not run the explicit check involving,
+        // e.g., BOOST_CHECK_SMALL.
+        if (abs(numGrad_i) > TINY && abs(gradFv[i]) > TINY)
           BOOST_CHECK_CLOSE(numGrad_i, (double)gradFv[i], tol);
-        else if (numGrad_i == 0)
-          BOOST_CHECK_SMALL((double)gradFv[i], tol);
-        else
-          BOOST_CHECK_SMALL(numGrad_i, tol);
       }
     }
   }
