@@ -19,9 +19,11 @@ do
   ./point.pl-from-latent_struct.sh ${f} | gzip > ${f%-*}-train_11pt_avg_prec.txt.gz
 done
 
-for f in ${1}/*/*-eval_predictions.txt.gz
+# Note: There may be multiple eval files, but this script will only process the
+# one with id 0, i.e., eval0.
+for f in ${1}/*/*-eval0_predictions.txt.gz
 do
-  ./point.pl-from-latent_struct.sh ${f} | gzip > ${f%-*}-eval_11pt_avg_prec.txt.gz
+  ./point.pl-from-latent_struct.sh ${f} | gzip > ${f%-*}-eval0_11pt_avg_prec.txt.gz
 done
 
 exit 0
