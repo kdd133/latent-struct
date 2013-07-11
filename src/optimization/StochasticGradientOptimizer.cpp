@@ -204,6 +204,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       if (_reportValStats > 0 && t % _reportValStats == 0) {
         timer.stop();
         double accuracy = 0, precision = 0, recall = 0, fscore = 0;
+        double avg11ptPrec = 0;
         if (validationData->numExamples() > 0)
         {
           timer::cpu_timer clock;
@@ -213,11 +214,12 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
           }
           _objective->predict(theta, *validationData, labelScores);
           Utility::calcPerformanceMeasures(*validationData, labelScores, false,
-              "", "", accuracy, precision, recall, fscore);
+              "", "", accuracy, precision, recall, fscore, avg11ptPrec);
           if (!_quiet) {
             printf("ep = %d  t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
                 (int)ep, (int)t, accuracy, precision, recall);
-            printf("fscore = %.3f %s" , fscore, clock.format().c_str());
+            printf("fscore = %.3f  11ptAvgPrec = %.3f %s", fscore, avg11ptPrec,
+                clock.format().c_str());
           }
         }
 

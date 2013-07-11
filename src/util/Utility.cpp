@@ -17,6 +17,7 @@
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
+#include <algorithm>
 #include <boost/foreach.hpp>
 #include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -128,10 +129,10 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
   assert(fnames.size() == 0 || numWeightVectors == fnames.size());
   
   for (size_t wvIndex = 0; wvIndex < numWeightVectors; wvIndex++) {
-    double accuracy, precision, recall, fscore;
+    double accuracy, precision, recall, fscore, avg11ptPrec;
     calcPerformanceMeasures(evalData, labelScores[wvIndex], true,
         identifiers[wvIndex], fnames[wvIndex],
-        accuracy, precision, recall, fscore);
+        accuracy, precision, recall, fscore, avg11ptPrec);
   }
 }
 
@@ -154,15 +155,16 @@ void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
   LabelScoreTable labelScores(maxId + 1, evalData.getLabelSet().size());
   obj.predict(w, evalData, labelScores);
   
-  double accuracy, precision, recall, fscore;
+  double accuracy, precision, recall, fscore, avg11ptPrec;
   calcPerformanceMeasures(evalData, labelScores, true, identifier, fname,
-      accuracy, precision, recall, fscore);
+      accuracy, precision, recall, fscore, avg11ptPrec);
 }
 
 void Utility::calcPerformanceMeasures(const Dataset& evalData,
     LabelScoreTable& labelScores, bool toStdout,
     const string& id, const string& fname,
-    double& accuracy, double& precision, double& recall, double& fscore) {
+    double& accuracy, double& precision, double& recall, double& fscore,
+    double& avg11ptPrec) {
     
   bool writeFiles = (fname.size() > 0);
   ofstream fout;
@@ -173,6 +175,9 @@ void Utility::calcPerformanceMeasures(const Dataset& evalData,
       writeFiles = false;
     }
   }
+  
+  std::vector<prediction> predictions(evalData.numExamples());
+  size_t p_i = 0;
   
   const Label yPos = TrainingObjective::kPositive;
   int numErrors = 0;
@@ -192,6 +197,9 @@ void Utility::calcPerformanceMeasures(const Dataset& evalData,
         score_yHat = score_y;
       }
     }
+    
+    prediction pred = {yi, labelScores.getScore(id, yPos)};
+    predictions[p_i++] = pred;
     
     if (yi != yHat)
       numErrors++;      
@@ -223,6 +231,7 @@ void Utility::calcPerformanceMeasures(const Dataset& evalData,
   recall = (tp == 0) ? 0 : (double) ppCorrect / tp;
   fscore = (precision + recall == 0) ? 0 : 2 * ((precision * recall)
       / (precision + recall));
+  avg11ptPrec = avg11ptPrecision(predictions);
       
   if (toStdout) {
     const char* id_ = id.c_str();
@@ -230,6 +239,7 @@ void Utility::calcPerformanceMeasures(const Dataset& evalData,
     printf("%s-Precision: %.4f ( %d of %d )\n", id_, precision, ppCorrect, pp);
     printf("%s-Recall: %.4f ( %d of %d )\n", id_, recall, ppCorrect, tp);
     printf("%s-Fscore: %.4f\n", id_, fscore);
+    printf("%s-11ptAvgPrec: %.4f\n", id_, avg11ptPrec);
   }
 }
 
@@ -371,4 +381,37 @@ int Utility::levenshtein(const vector<string>& s, const vector<string>& t,
   } 
 
   return cost[s.size()][t.size()];
+}
+
+double Utility::avg11ptPrecision(std::vector<prediction>& predictions) {
+  // Sort the predictions in descending order by score.
+  sort(predictions.rbegin(), predictions.rend());
+  
+  // Record the number of positive predictions we've made at each point in the
+  // list of predictions.
+  int posTotal = 0;
+  std::vector<Label> positiveCount(predictions.size());
+  for (size_t i = 0; i < predictions.size(); i++) {
+    if (predictions[i].y == TrainingObjective::kPositive)
+      posTotal++;
+    positiveCount[i] = posTotal; 
+  }
+  
+  // Compute our precision at each of the 11 recall points.
+  std::vector<double> precisionAtRecall(11, 0);
+  for (int i = predictions.size()-1; i >= 0; i--) {
+    double currentRecall = positiveCount[i] / (double)posTotal;
+    double currentPrecision = positiveCount[i] / (double)(i+1);
+    for (int ri = 0; ri <= currentRecall * 10; ri++) {
+      if (currentPrecision > precisionAtRecall[ri])
+        precisionAtRecall[ri] = currentPrecision;
+    }
+  }
+  precisionAtRecall[0] = 1; // by definition
+  
+  // Return the 11-point average precision.
+  double prSum = 0;
+  for (int ri = 0; ri < 11; ri++)
+    prSum += precisionAtRecall[ri];
+  return prSum / 11;
 }

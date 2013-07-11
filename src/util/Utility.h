@@ -42,7 +42,8 @@ class Utility {
     static void calcPerformanceMeasures(const Dataset& evalData,
       LabelScoreTable& scores, bool printToStdout,
       const std::string& identifier, const std::string& fnameOut,
-      double& accuracy, double& precision, double& recall, double& fscore);
+      double& accuracy, double& precision, double& recall, double& fscore,
+      double& avg11ptPrec);
         
     static double sigmoid(double a);
     
@@ -77,12 +78,23 @@ class Utility {
                            std::vector<std::string>& sourceEps,
                            std::vector<std::string>& targetEps,
                            int subCost = 1);
-
+                           
   private:
   
     // Call the library function log1p if argument to log1Plus is less than
     // this value.
     static const double log1PlusTiny;
+    
+    struct prediction {
+      Label y;
+      double positiveScore;
+      bool operator<(const prediction& p) const {
+        return positiveScore < p.positiveScore;
+      }
+    };
+    
+    // Note: The predictions vector will be modified (sorted).
+    static double avg11ptPrecision(std::vector<prediction>& predictions);
 };
 
 inline double Utility::sigmoid(double a) {
