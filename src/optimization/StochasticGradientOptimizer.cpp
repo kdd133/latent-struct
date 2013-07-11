@@ -18,6 +18,7 @@
 #include "Utility.h"
 #include "WeightVector.h"
 #include <assert.h>
+#include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/scoped_array.hpp>
@@ -41,7 +42,7 @@ StochasticGradientOptimizer::StochasticGradientOptimizer(
     Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
     _eta(0.01), _reportAvgCost(100), _reportValStats(1000), _reportObjVal(true),
     _quiet(false), _seed(0), _valSetFraction(0.1), _threads(1),
-    _minibatchSize(1) {
+    _minibatchSize(1), _perfMeasure("fscore") {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
@@ -66,6 +67,9 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         default_value(100), "report the avg. cost every n updates")
     ("report-validation-stats", opt::value<size_t>(&_reportValStats)->
         default_value(1000), "report validation performance every n updates")
+    ("performance-measure", opt::value<string>(&_perfMeasure)->default_value(
+        "fscore"), "the statistic that determines the 'best' set of parameters \
+{accuracy, fscore, 11pt_avg_prec}")
     ("seed", opt::value<int>(&_seed)->default_value(0),
         "seed for random number generator")
     ("threads", opt::value<size_t>(&_threads)->default_value(1),
@@ -82,11 +86,19 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   
   if (vm.count("help"))
     cout << options << endl;
+    
+  to_lower(_perfMeasure);
+  if (_perfMeasure != "fscore" && _perfMeasure != "accuracy" &&
+      _perfMeasure != "11pt_avg_prec") {
+    cout << "Invalid arguments: Unrecognized performance measure\n";
+    cout << options << endl;
+    return 1;
+  }    
   return 0;
 }
 
 Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
-    double& costLastR, double tol) const {
+    double& bestPerf, double tol) const {
   
   const Dataset& allData = _objective->getDataset(); 
   size_t m = allData.numExamples();
@@ -153,9 +165,16 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // R examples that we've seen/processed.
   double sumCosts = 0;
   
-  double fscoreBest = -1;
+  bestPerf = -1;
   Parameters thetaBest;
   thetaBest.setParams(theta);
+  
+  double accuracy, precision, recall, fscore, avg11ptPrec;
+  double* perf = &fscore; // assume fscore by default
+  if (_perfMeasure == "accuracy")
+    perf = &accuracy;
+  else if (_perfMeasure == "11pt_avg_prec")
+    perf = &avg11ptPrec;
   
   // FIXME: We're assuming L2 regularization (ignoring _regularizer) below.
   size_t t = 0;
@@ -192,7 +211,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // parameter update (gradient step).
       if (!_quiet && _reportAvgCost > 0 && t % _reportAvgCost == 0) {
         const size_t R = _reportAvgCost;
-        costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
+        double costLastR = 0.5 * beta * theta.squaredL2Norm() + (sumCosts / R);
         printf("%s: ep = %d  t = %d  cost_last_%d = %.5f  time_last_%d =%s",
             name().c_str(), (int)ep, (int)t, (int)_reportAvgCost, costLastR,
             (int)_reportAvgCost, timer.format().c_str());
@@ -203,8 +222,6 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // Evaluate the performance of model on the held-out data.
       if (_reportValStats > 0 && t % _reportValStats == 0) {
         timer.stop();
-        double accuracy = 0, precision = 0, recall = 0, fscore = 0;
-        double avg11ptPrec = 0;
         if (validationData->numExamples() > 0)
         {
           timer::cpu_timer clock;
@@ -236,8 +253,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
           }
         }
     
-        if (fscore > fscoreBest) {
-          fscoreBest = fscore;
+        if (*perf > bestPerf) {
+          bestPerf = *perf;
           thetaBest.setParams(theta);
         }
         timer.resume();
@@ -251,8 +268,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     theta.setParams(thetaBest);
   
   if (!_quiet) {
-    cout << name() << ": Highest Fscore achieved on validation set was " <<
-        fscoreBest << endl;
+    cout << name() << ": Highest performance achieved on validation set was " <<
+        bestPerf << " " << _perfMeasure << endl;
   }
   
   // We don't actually test for convergence (simply run for the specified number

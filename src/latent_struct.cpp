@@ -741,11 +741,11 @@ initial weights")
         if (trainFileSpecified && !skipTraining) {
           // Train the model.
           Optimizer::status status = Optimizer::FAILURE;
+          double fval = 0.0;
           cout << "Calling Optimizer.train() with beta=" << beta << " and " <<
               "tolerance=" << tol << endl;
           {
             timer::auto_cpu_timer trainTimer;
-            double fval = 0.0; // (not used)
             regularizer->setBeta(beta);
             status = optimizer->train(theta, fval, tol);
           }
@@ -765,6 +765,7 @@ initial weights")
             break;
           }
           cout << wvIndex << "-status: " << status << endl;
+          cout << wvIndex << "-Objective-Value: " << fval << endl;
         }
         else {
           // If no train file was specified or the user requested that training

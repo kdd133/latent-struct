@@ -78,6 +78,9 @@ class StochasticGradientOptimizer : public Optimizer {
     // update parameters based on minibatches of this many examples
     std::size_t _minibatchSize;
     
+    // the performance measure that determines the "best" set of parameters
+    std::string _perfMeasure;
+    
     double objectiveValueForLearningRate(const Parameters& theta,
         const std::list<int>& sample, const std::list<int>* minibatches,
         std::size_t numMinibatches, double eta) const;

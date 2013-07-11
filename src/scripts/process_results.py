@@ -14,28 +14,34 @@ import re
 import sys
 
 # labels of fields to (attempt to) extract from the output files
-field_names = ('^([0-9]+)-(Train-Accuracy)',
+field_names = ('^([0-9]+)-(Objective-Value)',
+               '^([0-9]+)-(Train-Accuracy)',
                '^([0-9]+)-(Train-Precision)',
                '^([0-9]+)-(Train-Recall)',
                '^([0-9]+)-(Train-Fscore)',
+               '^([0-9]+)-(Train-11ptAvgPrec)',
                '^([0-9]+)-(Eval-Accuracy)',
                '^([0-9]+)-(Eval-Precision)',
                '^([0-9]+)-(Eval-Recall)',
                '^([0-9]+)-(Eval-Fscore)',
+               '^([0-9]+)-(Eval-11ptAvgPrec)',
                '^([0-9]+)-(beta)',
                '^([0-9]+)-(tolerance)',
                '^([0-9]+)-(status)',
                '^ *(11-pt) avg')
 
 # map cryptic names to "pretty" names; columns will be printed in this order  
-stat_names = {'Train-Accuracy' : 'Train acc',
+stat_names = {'Objective-Value': 'Obj',
+              'Train-Accuracy' : 'Train acc',
               'Train-Precision' : 'Train prec',
               'Train-Recall' : 'Train rec',
               'Train-Fscore' : 'Train F1',
+              'Train-11ptAvgPrec' : 'Train 11pt',
               'Eval-Accuracy' : 'Eval acc',
               'Eval-Precision' : 'Eval prec',
               'Eval-Recall' : 'Eval rec',
-              'Eval-Fscore' : 'Eval F1'}
+              'Eval-Fscore' : 'Eval F1',
+              'Eval-11ptAvgPrec' : 'Eval 11pt'}
 
 # these options will be omitted from any output
 option_names_to_skip = ('dir',)
