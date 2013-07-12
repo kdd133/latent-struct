@@ -32,7 +32,7 @@ KlementievRothWordFeatureGen::KlementievRothWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _offsetSize(1),
     _normalize(normalize), _addBias(true), _regexEnabled(false),
-    _encodeOffset(false) {
+    _encodeOffset(false), _ignoreEps(false) {
 }
 
 int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
@@ -50,6 +50,8 @@ int KlementievRothWordFeatureGen::processOptions(int argc, char** argv) {
   options.add_options()
     ("encode-offset", opt::bool_switch(&_encodeOffset),
         "encode the offset in each feature")
+    ("ignore-epsilon", opt::bool_switch(&_ignoreEps),
+        "discard epsilon symbols from the phrases (assuming they are aligned)")
     ("kr-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
     ("kr-no-normalize", opt::bool_switch(&noNormalize),
         "do not normalize by the length of the longer word")
@@ -141,11 +143,12 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
     subs_source = &subs_sh;
     subs_target = &subs_lo;
   }
-
+  
   // extract the k-grams at each position in the shortest string
   for (int i = 0; i < (int) shortest->size(); i++) {
     subs_sh.clear();
-    appendSubstrings(shortest, i, _substringSize, shortest->size(), subs_sh);
+    appendSubstrings(shortest, i, _substringSize, shortest->size(), subs_sh,
+      _ignoreEps);
     subs_lo.clear();
 
     // extract the k-grams at positions in the longest string that are within
@@ -156,11 +159,11 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
           stringstream offset;
           offset << "[" << j << "]";
           appendSubstrings(longest, i + j, _substringSize, longest->size(),
-              subs_lo, offset.str());
+              subs_lo, _ignoreEps, offset.str());
         }
         else {
           appendSubstrings(longest, i + j, _substringSize, longest->size(),
-              subs_lo);
+              subs_lo, _ignoreEps);
         }
       }
     }
@@ -225,11 +228,19 @@ SparseRealVec* KlementievRothWordFeatureGen::getFeatures(const Pattern& x,
 }
 
 inline void KlementievRothWordFeatureGen::appendSubstrings(const vector<string>* s,
-    size_t i, size_t k, size_t end, vector<string>& subs, const string suffix) {
-  string sub = s->at(i);
-  subs.push_back(sub + suffix);
-  for (size_t j = 1; j < k && i + j < end; j++) {
-    sub = sub + CHAR_JOINER + s->at(i + j);
+    size_t i, size_t k, size_t end, vector<string>& subs, bool ignoreEps,
+    const string suffix) {
+  bool first = true;
+  string sub;
+  for (size_t j = 0; j < k && i + j < end; j++) {
+    if (ignoreEps && s->at(i + j) == FeatureGenConstants::EPSILON)
+      continue;
+    if (first) {
+      sub = s->at(i + j);
+      first = false;
+    }
+    else
+      sub = sub + CHAR_JOINER + s->at(i + j);
     subs.push_back(sub + suffix);
   }
 }

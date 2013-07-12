@@ -9,6 +9,7 @@
 
 #include "AlignmentFeatureGen.h"
 #include "Dataset.h"
+#include "FeatureGenConstants.h"
 #include "InputReader.h"
 #include "LabelScoreTable.h"
 #include "Model.h"
@@ -366,10 +367,10 @@ int Utility::levenshtein(const vector<string>& s, const vector<string>& t,
     switch (ops.top()) {
       case INS:
         sEps.push_back(s[i++]);
-        tEps.push_back("-");
+        tEps.push_back(FeatureGenConstants::EPSILON);
         break;
       case DEL:
-        sEps.push_back("-");
+        sEps.push_back(FeatureGenConstants::EPSILON);
         tEps.push_back(t[j++]);
         break;
       case SUB:
