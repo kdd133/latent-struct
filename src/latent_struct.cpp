@@ -10,6 +10,7 @@
 #include "AlignmentFeatureGen.h"
 #include "AlignmentHypergraph.h"
 #include "Alphabet.h"
+#include "BergsmaKondrakWordFeatureGen.h"
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
 #include "CognatePairReader.h"
@@ -124,6 +125,7 @@ int main(int argc, char** argv) {
   stringstream fgenMsgObs;
   fgenMsgObs << "observed feature generator {" << BiasFeatureGen::name() << CMA
       << EmptyObservedFeatureGen::name() << CMA
+      << BergsmaKondrakWordFeatureGen::name() << CMA
       << KlementievRothWordFeatureGen::name() << CMA
       << KlementievRothSentenceFeatureGen::name() << "}";      
   stringstream modelMsgObs;
@@ -315,6 +317,8 @@ initial weights")
     shared_ptr<ObservedFeatureGen> fgenObs;
     if (fgenNameObs == BiasFeatureGen::name())
       fgenObs.reset(new BiasFeatureGen(alphabet));
+    else if (fgenNameObs == BergsmaKondrakWordFeatureGen::name())
+      fgenObs.reset(new BergsmaKondrakWordFeatureGen(alphabet));
     else if (fgenNameObs == KlementievRothWordFeatureGen::name())
       fgenObs.reset(new KlementievRothWordFeatureGen(alphabet));
     else if (fgenNameObs == KlementievRothSentenceFeatureGen::name())

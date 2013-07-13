@@ -60,8 +60,8 @@ class KlementievRothWordFeatureGen : public ObservedFeatureGen {
   
     boost::regex _regConsonant;
     
-    static void appendSubstrings(const std::vector<std::string>* s, size_t i,
-      size_t k, size_t end, std::vector<std::string>& subs,
+    static void appendSubstrings(const std::vector<std::string>* s, std::size_t i,
+      std::size_t k, std::size_t end, std::vector<std::string>& subs,
       bool ignoreEps = false, const std::string suffix = std::string());
 };
 
