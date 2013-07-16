@@ -37,6 +37,10 @@ class BmrmOptimizer : public Optimizer {
       return _name;
     }
     
+    virtual bool usesValidationSet() const {
+      return true;
+    }
+
   private:
     
     std::size_t _maxIters; // maximum number of iterations
@@ -44,6 +48,9 @@ class BmrmOptimizer : public Optimizer {
     bool _quiet; // suppress optimization output
     
     bool _noShrinking; // if true, disable the shrinking heuristic
+    
+    // the performance measure that determines the "best" set of parameters
+    std::string _perfMeasure;
 };
 
 #endif
