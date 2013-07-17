@@ -295,6 +295,9 @@ JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
   // parameters w.
   if (_validationSet) {
     w.setParams(wBest);
+    // Return the best validation set performance instead of the objective
+    // value, since the former is more useful for model selection.
+    min_Jw = bestPerf;
     if (!_quiet) {
       cout << name() << ": Highest performance achieved on validation set was "
           << bestPerf << " " << _perfMeasure << endl;
