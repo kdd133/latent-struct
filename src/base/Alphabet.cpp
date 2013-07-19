@@ -67,6 +67,7 @@ int Alphabet::lookup(string key, Label label, bool addIfAbsent) {
   else if (index >= 0) {
     // Note: This assert can fail if the Alphabet is used without being locked.
     assert(label < _labelIndices.size());
+    assert(_labelIndices[label] >= 0);
     index += _entries.size() * _labelIndices[label];
   }
   

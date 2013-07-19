@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
       LogLinearBinaryUnscaled::name() << CMA <<
       LogLinearBinaryObs::name() << CMA << LogLinearMulti::name() << CMA <<
       LogLinearMultiELFV::name() << CMA << LogLinearMultiELFV_sigmoid::name() <<
-      LogLinearMultiUW::name() << CMA << MaxMarginBinary::name() << CMA <<
+      CMA << LogLinearMultiUW::name() << CMA << MaxMarginBinary::name() << CMA <<
       MaxMarginBinaryObs::name() << CMA << MaxMarginMulti::name() << "}";
   stringstream optMsgObs;
   optMsgObs << "optimization algorithm {" << optAuto << CMA <<
@@ -675,15 +675,23 @@ initial weights")
   // FIXME: We cannot add another dummy label if an alphabet was loaded that
   // already had a dummy label added to it.
   assert(!resumed);
-  regularizer->setupParameters(theta0, *alphabet, trainData.getLabelSet(),
+  // A label that is "instantiated" has at least one feature associated with it.
+  // Specifically, for a binary objective, the negative class will not be
+  // instantiated.
+  set<Label> instantiatedLabels;
+  if (objective->isBinary())
+    instantiatedLabels.insert(TrainingObjective::kPositive);
+  else
+     instantiatedLabels = trainData.getLabelSet();
+  regularizer->setupParameters(theta0, *alphabet, instantiatedLabels,
       seed);
   alphabet->lock(); // We can lock the Alphabet at this point.
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
-      trainData.getLabelSet(), fgenLat);
+      instantiatedLabels, fgenLat);
   if (theta0.hasU()) {
     // Note: We modify the seed to avoid symmetry in the parameters.
     initWeights(theta0.u, weightsInit, weightsNoise, seed + 1, alphabet,
-        trainData.getLabelSet(), fgenLat);
+        instantiatedLabels, fgenLat);
   }
   
   // If an output directory was specfied, save the alphabet and options.
