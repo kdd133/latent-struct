@@ -111,22 +111,22 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   
   // If a distinct evaluation set has not been provided (to the superclass),
   // then split the training data into smaller training and validation sets.
-  boost::shared_ptr<Dataset> validationData;
+  boost::shared_ptr<Dataset> validationData(new Dataset(_threads));
   if (!_validationSet && _valSetFraction > 0) {
     assert(_valSetFraction < 1);
-    validationData.reset(new Dataset(_threads));
     const size_t mAll = m;
     m -= m * _valSetFraction;
     // Form the validation set using examples with indices[m,...,mAll-1].
     for (size_t i = m; i < mAll; ++i)
       validationData->addExample(allData.getExamples()[ordering[i]]);
   }
-  else
+  else if (_validationSet)
     validationData = _validationSet;
-    
+
   // Create a data structure that will be used to store the predictions made on
   // the validation set. 
   size_t maxId = 0;
+  assert(validationData); // it may be an empty Dataset, but should not be null
   BOOST_FOREACH(const Example& ex, validationData->getExamples()) {
     const size_t id = ex.x()->getId();
     if (id > maxId)
