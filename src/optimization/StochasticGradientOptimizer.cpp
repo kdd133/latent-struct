@@ -41,7 +41,7 @@ StochasticGradientOptimizer::StochasticGradientOptimizer(
     shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
     _eta(0.01), _reportAvgCost(100), _reportValStats(1000), _reportObjVal(true),
-    _quiet(false), _seed(0), _valSetFraction(0.1), _threads(1),
+    _quiet(false), _seed(0), _valSetFraction(0), _threads(1),
     _minibatchSize(1), _perfMeasure("fscore") {
 }
 
@@ -53,7 +53,7 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
     ("estimate-learning-rate", opt::bool_switch(&_autoEta),
         "estimate the optimal learning rate on a sample of 1000 examples")
     ("fraction-validation", opt::value<double>(&_valSetFraction)->default_value(
-        0.1), "fraction of training examples to use as a validation set")
+        0), "fraction of training examples to use as a validation set")
     ("learning-rate", opt::value<double>(&_eta)->default_value(0.01),
         "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
@@ -112,7 +112,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // If a distinct evaluation set has not been provided (to the superclass),
   // then split the training data into smaller training and validation sets.
   boost::shared_ptr<Dataset> validationData;
-  if (!_validationSet) {
+  if (!_validationSet && _valSetFraction > 0) {
+    assert(_valSetFraction < 1);
     validationData.reset(new Dataset(_threads));
     const size_t mAll = m;
     m -= m * _valSetFraction;
@@ -267,7 +268,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   if (_reportValStats > 0 && t >= _reportValStats)
     theta.setParams(thetaBest);
   
-  if (!_quiet) {
+  if (!_quiet && validationData->numExamples() > 0) {
     cout << name() << ": Highest performance achieved on validation set was " <<
         bestPerf << " " << _perfMeasure << endl;
   }
