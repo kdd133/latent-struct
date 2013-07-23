@@ -134,6 +134,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   }  
   LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
   
+  // This variable is used to simplify some of the if statements below.
+  const bool doValid = validationData->numExamples() && _reportValStats > 0;
+  
   // Group the training examples into minibatches based on the random ordering.
   int numMinibatches = ceil(m / (float)_minibatchSize);
   scoped_array<list<int> > minibatches(new list<int>[numMinibatches]);
@@ -220,40 +223,38 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         timer.start();
       }
       
-      // Evaluate the performance of model on the held-out data.
-      if (_reportValStats > 0 && t % _reportValStats == 0) {
+      // Compute and report the actual objective value.
+      if (_reportObjVal && !_quiet) {
         timer.stop();
-        if (validationData->numExamples() > 0)
-        {
-          timer::cpu_timer clock;
-          if (!_quiet) {
-            cout << name() << ": Predicting on validation set examples...  ";
-            cout.flush();
-          }
-          _objective->predict(theta, *validationData, labelScores);
-          Utility::calcPerformanceMeasures(*validationData, labelScores, false,
-              "", "", accuracy, precision, recall, fscore, avg11ptPrec);
-          if (!_quiet) {
-            printf("ep = %d  t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
-                (int)ep, (int)t, accuracy, precision, recall);
-            printf("fscore = %.3f  11ptAvgPrec = %.3f %s", fscore, avg11ptPrec,
-                clock.format().c_str());
-          }
-        }
-
+        timer::cpu_timer clock;
+        cout << name() << ": Computing objective value...  ";
+        cout.flush();
+        double fval;
+        SparseRealVec gradTemp(d);
+        _objective->valueAndGradient(theta, fval, gradTemp);
+        printf("obj = %.5f ", fval);
+        cout << clock.format();
+        timer.resume();
+      }
+      
+      // Evaluate the performance of model on the held-out data. This is done
+      // every _reportValStats updates, and after the first update.
+      if (doValid && (t == 1 || t % _reportValStats == 0)) {
+        timer.stop();
+        timer::cpu_timer clock;
         if (!_quiet) {
-          if (_reportObjVal) {
-            double fval;
-            SparseRealVec gradTemp(d);
-            timer::cpu_timer clock;
-            cout << name() << ": Computing objective value...  ";
-            cout.flush();
-            _objective->valueAndGradient(theta, fval, gradTemp);
-            printf("obj = %.5f ", fval);
-            cout << clock.format();
-          }
+          cout << name() << ": Predicting on validation set examples...  ";
+          cout.flush();
         }
-    
+        _objective->predict(theta, *validationData, labelScores);
+        Utility::calcPerformanceMeasures(*validationData, labelScores, false,
+            "", "", accuracy, precision, recall, fscore, avg11ptPrec);
+        if (!_quiet) {
+          printf("ep = %d  t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
+              (int)ep, (int)t, accuracy, precision, recall);
+          printf("fscore = %.3f  11ptAvgPrec = %.3f %s", fscore, avg11ptPrec,
+              clock.format().c_str());
+        }
         if (*perf > bestPerf) {
           bestPerf = *perf;
           thetaBest.setParams(theta);
@@ -263,14 +264,32 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
     }
   }
 
-  // If we evaluated on a validation set at least once, return the best set of
-  // parameters we found. Otherwise, return the current parameters theta.
-  if (_reportValStats > 0 && t >= _reportValStats)
+  // If we evaluated on a validation set, return the best set of parameters we
+  // found. Otherwise, return the current parameters theta.
+  if (doValid) {
     theta.setParams(thetaBest);
+    if (!_quiet) {
+      cout << name() << ": Highest performance achieved on validation set was "
+          << bestPerf << " " << _perfMeasure << endl;
+    }
+  }
   
-  if (!_quiet && validationData->numExamples() > 0) {
-    cout << name() << ": Highest performance achieved on validation set was " <<
-        bestPerf << " " << _perfMeasure << endl;
+  // If the bestPerf value hasn't been altered from its initial -1, which
+  // serves as a flag, then set it to the objective function value. This is
+  // necessary if we are inside an EmOptimizer, for example.
+  if (bestPerf == -1) {
+    assert(!doValid); // we shouldn't arrive here if we used a validation set
+    timer::cpu_timer clock;
+    if (!_quiet) {
+      cout << name() << ": Computing objective value...  ";
+      cout.flush();
+    }
+    SparseRealVec gradTemp(d);
+    _objective->valueAndGradient(theta, bestPerf, gradTemp);
+    if (!_quiet) {
+      printf("obj = %.5f ", bestPerf);
+      cout << clock.format();
+    }
   }
   
   // We don't actually test for convergence (simply run for the specified number
