@@ -814,7 +814,7 @@ initial weights")
           stringstream identifier;
           identifier << wvIndex << "-Train";
           timer::auto_cpu_timer classifyTrainTimer;
-          Utility::evaluate(theta, *objective, trainData, identifier.str(),
+          Utility::evaluate(theta, objective, trainData, identifier.str(),
               predictFname.str());
         }
       }
@@ -857,7 +857,7 @@ initial weights")
       assert(evalData.numExamples() > 0);
       assert(evalData.getLabelSet().size() > 1);
       
-      evaluateMultipleWeightVectors(weightVectors, evalData, *objective,
+      evaluateMultipleWeightVectors(weightVectors, evalData, objective,
           dirPath, evalId++, writeFiles, printAlignments, cachingEnabled);
     }
   }

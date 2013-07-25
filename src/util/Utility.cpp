@@ -27,6 +27,7 @@
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -60,12 +61,12 @@ bool Utility::loadDataset(const InputReader& reader, string fileName,
 }
 
 void Utility::evaluate(const vector<Parameters>& weightVectors,
-    TrainingObjective& obj, const Dataset& evalData,
+    shared_ptr<TrainingObjective> obj, const Dataset& evalData,
     const vector<string>& identifiers, const vector<string>& fnames,
     bool caching) {
     
-  assert(obj.getModel(0).getFgenLatent()->getAlphabet()->isLocked());
-  assert(obj.getModel(0).getFgenObserved()->getAlphabet()->isLocked());
+  assert(obj->getModel(0).getFgenLatent()->getAlphabet()->isLocked());
+  assert(obj->getModel(0).getFgenObserved()->getAlphabet()->isLocked());
   assert(evalData.getLabelSet().size() > 1);
   
   const size_t numWeightVectors = weightVectors.size();
@@ -92,9 +93,9 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
   }
   
   // Ensure that caching is enabled (if requested), and that the cache is empty.
-  for (size_t mi = 0; mi < obj.getNumModels(); mi++) {
-    obj.getModel(mi).setCacheEnabled(caching);
-    obj.getModel(mi).emptyCache();
+  for (size_t mi = 0; mi < obj->getNumModels(); mi++) {
+    obj->getModel(mi).setCacheEnabled(caching);
+    obj->getModel(mi).emptyCache();
   }
   
   // The dataset has already been partitioned into numThreads, but in order to
@@ -112,17 +113,17 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
     }
     partData.addLabels(evalData.getLabelSet());
     assert(partData.getLabelSet().size() == evalData.getLabelSet().size());
-    obj.predict(weightVectors[0], partData, labelScores[0]);
+    obj->predict(weightVectors[0], partData, labelScores[0]);
     
     // We have now cached the fsts for the first (original) partition of the
     // data, which can be reused for predicting with the other weight vectors.
     for (size_t wvIndex = 1; wvIndex < numWeightVectors; wvIndex++)
-      obj.predict(weightVectors[wvIndex], partData, labelScores[wvIndex]);
+      obj->predict(weightVectors[wvIndex], partData, labelScores[wvIndex]);
     
     // Clear the cache (we don't need the fsts for this partition any more).
     if (caching) {
-      for (size_t mi = 0; mi < obj.getNumModels(); mi++)
-        obj.getModel(mi).emptyCache();
+      for (size_t mi = 0; mi < obj->getNumModels(); mi++)
+        obj->getModel(mi).emptyCache();
     }
   }
 
@@ -137,11 +138,11 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
   }
 }
 
-void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
+void Utility::evaluate(const Parameters& w, shared_ptr<TrainingObjective> obj,
     const Dataset& evalData, const string& identifier, const string& fname) {
     
-  assert(obj.getModel(0).getFgenLatent()->getAlphabet()->isLocked());
-  assert(obj.getModel(0).getFgenObserved()->getAlphabet()->isLocked());
+  assert(obj->getModel(0).getFgenLatent()->getAlphabet()->isLocked());
+  assert(obj->getModel(0).getFgenObserved()->getAlphabet()->isLocked());
   
   size_t maxId = 0;
   BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
@@ -154,7 +155,7 @@ void Utility::evaluate(const Parameters& w, TrainingObjective& obj,
   }
   
   LabelScoreTable labelScores(maxId + 1, evalData.getLabelSet().size());
-  obj.predict(w, evalData, labelScores);
+  obj->predict(w, evalData, labelScores);
   
   double accuracy, precision, recall, fscore, avg11ptPrec;
   calcPerformanceMeasures(evalData, labelScores, true, identifier, fname,

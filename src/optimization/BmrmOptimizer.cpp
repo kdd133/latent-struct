@@ -294,6 +294,7 @@ JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
   // according to the chosen performance metric. Otherwise, return the current
   // parameters w.
   if (_validationSet) {
+    assert(bestPerf != -1);
     w.setParams(wBest);
     // Return the best validation set performance instead of the objective
     // value, since the former is more useful for model selection.

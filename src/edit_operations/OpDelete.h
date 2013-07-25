@@ -21,6 +21,8 @@ class OpDelete : public EditOperation {
   public:
     OpDelete(int opId, const StateType* defaultDestinationState,
       std::string name = "Delete", int phraseLengthSource = 1);
+      
+    virtual ~OpDelete() {}
     
     virtual const StateType* apply(const std::vector<std::string>& source,
                                    const std::vector<std::string>& target,

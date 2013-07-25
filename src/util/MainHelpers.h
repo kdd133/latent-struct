@@ -12,6 +12,7 @@
 
 #include "Dataset.h"
 #include "Parameters.h"
+#include <boost/shared_ptr.hpp>
 #include <set>
 #include <string>
 
@@ -23,8 +24,8 @@ class WeightVector;
 // Classify eval examples and optionally write the predictions to files.
 // Can also write the alignments to files upon request.
 void evaluateMultipleWeightVectors(const std::vector<Parameters>&,
-    const Dataset&, TrainingObjective&, const std::string&, int id,
-    bool writeFiles, bool writeAlignments, bool cachingEnabled);
+    const Dataset&, boost::shared_ptr<TrainingObjective>, const std::string&,
+    int id, bool writeFiles, bool writeAlignments, bool cachingEnabled);
 
 void initWeights(WeightVector& w, const std::string& initType, double noise,
     int seed, const boost::shared_ptr<Alphabet> alphabet,

@@ -14,6 +14,7 @@
 #include "LabelScoreTable.h"
 #include "Ublas.h"
 #include <boost/shared_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <string>
 #include <vector>
 
@@ -30,12 +31,13 @@ class Utility {
     static bool loadDataset(const InputReader& reader, std::string fileName,
       Dataset& dataset, std::size_t firstId = 0);
 
-    static void evaluate(const Parameters& w, TrainingObjective& obj,
+    static void evaluate(const Parameters& w,
+      boost::shared_ptr<TrainingObjective> obj,
       const Dataset& eval, const std::string& identifier,
       const std::string& outFname = "");
       
     static void evaluate(const std::vector<Parameters>& weightVectors,
-      TrainingObjective& obj, const Dataset& evalData,
+      boost::shared_ptr<TrainingObjective> obj, const Dataset& evalData,
       const std::vector<std::string>& ids,
       const std::vector<std::string>& fnames, bool enableCache);
       

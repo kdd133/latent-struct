@@ -60,8 +60,9 @@ void initWeights(WeightVector& w, const string& initType, double noiseLevel,
 }
 
 void evaluateMultipleWeightVectors(const vector<Parameters>& weightVectors,
-    const Dataset& evalData, TrainingObjective& objective, const string& path,
-    int id, bool writeFiles, bool writeAlignments, bool cachingEnabled) {
+    const Dataset& evalData, shared_ptr<TrainingObjective> objective,
+    const string& path, int id, bool writeFiles, bool writeAlignments,
+    bool cachingEnabled) {
   vector<string> identifiers;
   vector<string> fnames;
   for (size_t wvIndex = 0; wvIndex < weightVectors.size(); wvIndex++) {
@@ -86,13 +87,13 @@ void evaluateMultipleWeightVectors(const vector<Parameters>& weightVectors,
         cout << "Warning: Unable to write " << alignFname.str() << endl;
         continue;
       }
-      Model& model = objective.getModel(0);
+      Model& model = objective->getModel(0);
       assert(!model.getCacheEnabled()); // this would waste memory
       const Parameters& params = weightVectors[wvIndex];
       cout << "Printing alignments to " << alignFname.str() << ".\n";
       BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
         BOOST_FOREACH(const Label y, evalData.getLabelSet()) {
-          if (objective.isBinary() && y != 1)
+          if (objective->isBinary() && y != 1)
             continue;
           alignOut << ex.x()->getId() << " (yi = " << ex.y() << ")  y = "
               << y << endl;

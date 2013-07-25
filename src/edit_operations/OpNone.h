@@ -21,6 +21,8 @@ class OpNone : public EditOperation {
   
     OpNone(std::string name = "None") : EditOperation(ID, name) {}
     
+    virtual ~OpNone() {}
+    
     virtual const StateType* apply(const std::vector<std::string>& source,
                                    const std::vector<std::string>& target,
                                    const StateType* prevStateType,

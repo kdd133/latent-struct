@@ -21,6 +21,8 @@ class OpInsert : public EditOperation {
   
     OpInsert(int opId, const StateType* defaultDestinationState,
       std::string name = "Insert", int phraseLengthTarget = 1);
+      
+    virtual ~OpInsert() {}
     
     virtual const StateType* apply(const std::vector<std::string>& source,
                                    const std::vector<std::string>& target,
