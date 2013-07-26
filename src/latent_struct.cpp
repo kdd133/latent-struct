@@ -674,7 +674,10 @@ initial weights")
   // that, e.g., alphabet->size() may subsequently return a different value.
   // FIXME: We cannot add another dummy label if an alphabet was loaded that
   // already had a dummy label added to it.
-  assert(!resumed);
+  if (resumed) {
+    cout << "Error: Resuming an experiment is not supported in this version.\n";
+    return 1;
+  }
   // A label that is "instantiated" has at least one feature associated with it.
   // Specifically, for a binary objective, the negative class will not be
   // instantiated.
@@ -682,7 +685,7 @@ initial weights")
   if (objective->isBinary())
     instantiatedLabels.insert(TrainingObjective::kPositive);
   else
-     instantiatedLabels = trainData.getLabelSet();
+    instantiatedLabels = trainData.getLabelSet();
   regularizer->setupParameters(theta0, *alphabet, instantiatedLabels,
       seed);
   alphabet->lock(); // We can lock the Alphabet at this point.
