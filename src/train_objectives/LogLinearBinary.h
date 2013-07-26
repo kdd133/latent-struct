@@ -13,6 +13,7 @@
 #include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
+#include <boost/thread/mutex.hpp>
 #include <boost/unordered_map.hpp>
 #include <string>
 #include <vector>
@@ -28,8 +29,7 @@ class LogLinearBinary : public TrainingObjective {
     typedef boost::unordered_map<int,LogWeight> DictType;
     typedef DictType::value_type PairType;
   
-    LogLinearBinary(const Dataset& dataset, const std::vector<Model*>& models) :
-      TrainingObjective(dataset, models) {}
+    LogLinearBinary(const Dataset& dataset, const std::vector<Model*>& models);
     
     virtual ~LogLinearBinary() {}
     
@@ -51,6 +51,18 @@ class LogLinearBinary : public TrainingObjective {
     virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, LabelScoreTable& scores);
+      
+    // This method is overridden and used to pre-compute some quantities that
+    // are used to compute the value and gradient; stored in _logSizeZxMap. 
+    virtual void setLatentFeatureVectorsPart(const Parameters& theta,
+      Model& model, const Dataset::iterator& begin,
+      const Dataset::iterator& end);
+      
+    // An empty clearLatentFeatureVectors method is required for the above to
+    // work properly.
+    virtual void clearLatentFeatureVectors() {}
+      
+    boost::mutex _logSizeZxMapLock;
 };
 
 #endif
