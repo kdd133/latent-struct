@@ -84,5 +84,5 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   SparseRealVec gradFv(d);
   objective->valueAndGradient(theta, fval, gradFv);
   l2->addRegularization(theta, fval, gradFv);
-  BOOST_CHECK_CLOSE(1.06272359235157, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.678591422618550, fval, 1e-8);
 }
