@@ -12,6 +12,7 @@
 
 #include "Optimizer.h"
 #include "Parameters.h"
+#include "ValidationSetHandler.h"
 #include <boost/shared_ptr.hpp>
 #include <lbfgs.h>
 #include <string>
@@ -59,10 +60,11 @@ class LbfgsOptimizer : public Optimizer {
       const lbfgsfloatval_t step, int n, int k, int ls);
         
     typedef struct {
-      TrainingObjective* obj;
-      Regularizer* reg;
+      boost::shared_ptr<TrainingObjective> obj;
+      boost::shared_ptr<Regularizer> reg;
       Parameters* theta;
       bool quiet;
+      boost::shared_ptr<ValidationSetHandler> vsh;
     } LbfgsInstance;
 };
 

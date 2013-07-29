@@ -14,8 +14,8 @@
 #include "Regularizer.h"
 #include <boost/shared_ptr.hpp>
 
-class Dataset;
 class TrainingObjective;
+class ValidationSetHandler;
 
 class Optimizer {
 
@@ -55,8 +55,9 @@ class Optimizer {
       return false; // assume the default is batch learning
     }
     
-    virtual void setValidation(const boost::shared_ptr<Dataset>& val) {
-      _validationSet = val;
+    virtual void setValidationSetHandler(
+        const boost::shared_ptr<ValidationSetHandler>& vsh) {
+      _validationSetHandler = vsh;
     }
     
   protected:
@@ -65,7 +66,7 @@ class Optimizer {
     
     boost::shared_ptr<Regularizer> _regularizer;
     
-    boost::shared_ptr<Dataset> _validationSet;
+    boost::shared_ptr<ValidationSetHandler> _validationSetHandler;
 };
 
 #endif

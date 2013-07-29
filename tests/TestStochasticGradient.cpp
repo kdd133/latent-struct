@@ -21,7 +21,7 @@ using namespace boost;
 
 BOOST_AUTO_TEST_CASE(testStochasticGradient)
 {  
-  const int argc = 11;
+  const int argc = 10;
   char* argv[argc];
   argv[0] = (char*) "latent_struct";
   argv[1] = (char*) "--order=0";
@@ -32,8 +32,7 @@ BOOST_AUTO_TEST_CASE(testStochasticGradient)
   argv[6] = (char*) "--no-final-arc-feats";
   argv[7] = (char*) "--estimate-learning-rate";
   argv[8] = (char*) "--max-iters=50";
-  argv[9] = (char*) "--fraction-validation=0.4";
-  argv[10] = (char*) "--report-validation-stats=10";
+  argv[9] = (char*) "--report-validation-stats=10";
   
   shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
   shared_ptr<BiasFeatureGen> fgenObs(new BiasFeatureGen(alphabet));

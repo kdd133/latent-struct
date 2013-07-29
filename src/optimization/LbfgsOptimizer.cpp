@@ -15,6 +15,7 @@
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
+#include "ValidationSetHandler.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
@@ -67,8 +68,8 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   boost::timer::cpu_timer timer;
   
   const LbfgsInstance* inst = (LbfgsInstance*)instance;
-  TrainingObjective* obj = inst->obj;
-  const Regularizer* reg = inst->reg;
+  TrainingObjective* obj = inst->obj.get();
+  const Regularizer* reg = inst->reg.get();
   Parameters& theta = *inst->theta;
   double fval = 0;
   
@@ -96,6 +97,7 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
     const lbfgsfloatval_t xnorm, const lbfgsfloatval_t gnorm,
     const lbfgsfloatval_t step, int n, int k, int ls) {
     
+  cout << "LbfgsOptimizer: ";
   cout << "iter = " << k << ", ";
   cout << "fx = " << fx << ", ";
   cout << "ls = " << ls << ", ";
@@ -104,6 +106,13 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
   cout << "step = " << step
       << endl;
       
+  // Evaluate on the validation set if one is present.
+  LbfgsInstance* inst = (LbfgsInstance*)instance;
+  if (inst->vsh) {
+    Parameters& theta = *inst->theta;
+    inst->vsh->evaluate(theta, k);
+  }
+
   return 0;
 }
 
@@ -113,7 +122,16 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   const int d = theta.getDimTotal();
   assert(d > 0);
   
-  LbfgsInstance inst = { _objective.get(), _regularizer.get(), &theta, _quiet };
+  Parameters thetaBest;
+  thetaBest.setParams(theta);
+  
+  LbfgsInstance inst;
+  inst.obj = _objective;
+  inst.reg = _regularizer;
+  inst.theta = &theta;
+  inst.quiet = _quiet;
+  inst.vsh = _validationSetHandler;
+  
   lbfgsfloatval_t* x = lbfgs_malloc(d);
   for (int i = 0; i < d; i++)
     x[i] = theta[i]; // set the starting point to be theta
@@ -185,6 +203,23 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   }
   fval = objVal;
   theta.setWeights(x, d); // copy the final point into theta
+  
+  // If we evaluated on a validation set, return the best parameters we obtained
+  // according to the chosen performance metric. Otherwise, return the current
+  // parameters theta.
+  if (_validationSetHandler) {
+    const Parameters& thetaBest = _validationSetHandler->getBestParams();
+    assert(thetaBest.getDimWU() > 0);
+    theta.setParams(thetaBest);
+    // Return the best validation set performance instead of the objective
+    // value, since the former is more useful for model selection.
+    fval = _validationSetHandler->getBestScore();
+    if (!_quiet) {
+      cout << name() << ": Highest performance achieved on validation set was "
+          << _validationSetHandler->getBestScore() << " "
+          << _validationSetHandler->getPerfMeasure() << endl;
+    }
+  }
   
   lbfgs_free(x);
   return status;

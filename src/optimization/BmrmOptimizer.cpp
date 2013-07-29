@@ -18,6 +18,7 @@
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
+#include "ValidationSetHandler.h"
 #include "WeightVector.h"
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
@@ -104,38 +105,14 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   // we may be starting at the minimizer).
   w.zero();
   
-  // Create a data structure that will be used to store the predictions made on
-  // the validation set. 
-  size_t maxId = 0;
-  if (_validationSet) {
-    BOOST_FOREACH(const Example& ex, _validationSet->getExamples()) {
-      const size_t id = ex.x()->getId();
-      if (id > maxId)
-        maxId = id;
-    }
-  }
-  LabelScoreTable labelScores(maxId + 1, _objective->getDataset()
-      .getLabelSet().size());
-  
   // Compute the initial objective value and gradient.
   _objective->valueAndGradient(w, Remp, grad_t);
   min_Jw = (0.5 * beta * w.squaredL2Norm()) + Remp;
   double Jw = 0; // initialized in the loop
   
-  double accuracy, precision, recall, fscore, avg11ptPrec;
-  double* perf = &fscore; // assume fscore by default
-  if (_perfMeasure == "accuracy")
-    perf = &accuracy;
-  else if (_perfMeasure == "11pt_avg_prec")
-    perf = &avg11ptPrec;
-  
-  double bestPerf = -1;
-  Parameters wBest;
-  w.setParams(w);
-  
   if (!_quiet)
     cout << name() << ": Starting objective value is " << min_Jw << endl;
-  
+    
   bool converged = false;
   for (size_t t = 1; t <= _maxIters; t++) {
     timer::cpu_timer timer;
@@ -220,26 +197,8 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
     if (Jw < min_Jw)
       min_Jw = Jw;
       
-    if (_validationSet) {
-      timer::cpu_timer clock;
-      if (!_quiet) {
-        cout << name() << ": Predicting on validation set examples...  ";
-        cout.flush();
-      }
-      _objective->predict(w, *_validationSet, labelScores);
-      Utility::calcPerformanceMeasures(*_validationSet, labelScores, false, "",
-          "", accuracy, precision, recall, fscore, avg11ptPrec);
-      if (!_quiet) {
-        printf("t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ", (int) t,
-            accuracy, precision, recall);
-        printf("fscore = %.3f  11ptAvgPrec = %.3f %s", fscore, avg11ptPrec,
-            clock.format().c_str());
-      }
-      if (*perf > bestPerf) {
-          bestPerf = *perf;
-          wBest.setParams(w);
-      }
-    }
+    if (_validationSetHandler)
+      _validationSetHandler->evaluate(w, t);
 
     double epsilon_t = min_Jw - JwCP;
     if (epsilon_t < 0) {
@@ -293,15 +252,17 @@ JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
   // If we evaluated on a validation set, return the best parameters we obtained
   // according to the chosen performance metric. Otherwise, return the current
   // parameters w.
-  if (_validationSet) {
-    assert(bestPerf != -1);
+  if (_validationSetHandler) {
+    const Parameters& wBest = _validationSetHandler->getBestParams();
+    assert(wBest.getDimWU() > 0);
     w.setParams(wBest);
     // Return the best validation set performance instead of the objective
     // value, since the former is more useful for model selection.
-    min_Jw = bestPerf;
+    min_Jw = _validationSetHandler->getBestScore();
     if (!_quiet) {
       cout << name() << ": Highest performance achieved on validation set was "
-          << bestPerf << " " << _perfMeasure << endl;
+          << _validationSetHandler->getBestScore() << " "
+          << _validationSetHandler->getPerfMeasure() << endl;
     }
   }
   

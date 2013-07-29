@@ -38,9 +38,9 @@ class TrainingObjective {
       
     // Return the function value and gradient for the subset of training
     // examples specified by begin and end.
-    virtual void valueAndGradient(const Parameters& theta,
-      const Dataset::iterator& begin, const Dataset::iterator& end,
-      double& value, SparseRealVec& grad);
+//    virtual void valueAndGradient(const Parameters& theta,
+//      const Dataset::iterator& begin, const Dataset::iterator& end,
+//      double& value, SparseRealVec& grad);
     
     // Return the function value and gradient for the ith training example.
     virtual void valueAndGradientOne(const Parameters& theta, double& value,

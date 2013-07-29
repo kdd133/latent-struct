@@ -55,8 +55,12 @@ void TrainingObjective::valueAndGradientOne(const Parameters& theta,
   fval = 0;
   gradFv.clear();
   valueAndGradientPart(theta, _models[0], begin, end, k, fval, gradFv);
+  
+  // Maybe this should just call the (currently unused) function below? Oh,
+  // there would be a fair amount of overhead for parallelism that is wasted
+  // when it's called with a single example...
 }
-
+/*
 void TrainingObjective::valueAndGradient(const Parameters& theta,
     const Dataset::iterator& begin, const Dataset::iterator& end, double& fval,
     SparseRealVec& gradFv) {
@@ -67,7 +71,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta,
   gradFv.clear();
   valueAndGradientPart(theta, _models[0], begin, end, k, fval, gradFv);
 }
-
+*/
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
     SparseRealVec& gradFv, const list<int>* indices) {
   assert(gradFv.size() == theta.getDimTotal());

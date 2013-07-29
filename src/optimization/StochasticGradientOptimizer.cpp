@@ -16,9 +16,9 @@
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
+#include "ValidationSetHandler.h"
 #include "WeightVector.h"
 #include <assert.h>
-#include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/scoped_array.hpp>
@@ -41,8 +41,7 @@ StochasticGradientOptimizer::StochasticGradientOptimizer(
     shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
     _eta(0.01), _reportAvgCost(100), _reportValStats(1000), _reportObjVal(true),
-    _quiet(false), _seed(0), _valSetFraction(0), _threads(1),
-    _minibatchSize(1), _perfMeasure("fscore") {
+    _quiet(false), _seed(0), _minibatchSize(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
@@ -52,8 +51,6 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   options.add_options()
     ("estimate-learning-rate", opt::bool_switch(&_autoEta),
         "estimate the optimal learning rate on a sample of 1000 examples")
-    ("fraction-validation", opt::value<double>(&_valSetFraction)->default_value(
-        0), "fraction of training examples to use as a validation set")
     ("learning-rate", opt::value<double>(&_eta)->default_value(0.01),
         "the learning rate")
     ("max-iters", opt::value<size_t>(&_maxIters)->default_value(250),
@@ -67,13 +64,8 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         default_value(100), "report the avg. cost every n updates")
     ("report-validation-stats", opt::value<size_t>(&_reportValStats)->
         default_value(1000), "report validation performance every n updates")
-    ("performance-measure", opt::value<string>(&_perfMeasure)->default_value(
-        "fscore"), "the statistic that determines the 'best' set of parameters \
-{accuracy, fscore, 11pt_avg_prec}")
     ("seed", opt::value<int>(&_seed)->default_value(0),
         "seed for random number generator")
-    ("threads", opt::value<size_t>(&_threads)->default_value(1),
-        "number of threads used to parallelize computing validation set score")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -86,14 +78,7 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   
   if (vm.count("help"))
     cout << options << endl;
-    
-  to_lower(_perfMeasure);
-  if (_perfMeasure != "fscore" && _perfMeasure != "accuracy" &&
-      _perfMeasure != "11pt_avg_prec") {
-    cout << "Invalid arguments: Unrecognized performance measure\n";
-    cout << options << endl;
-    return 1;
-  }    
+
   return 0;
 }
 
@@ -109,33 +94,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // Get a random ordering for the examples.
   shared_array<int> ordering = Utility::randPerm(m, _seed);
   
-  // If a distinct evaluation set has not been provided (to the superclass),
-  // then split the training data into smaller training and validation sets.
-  boost::shared_ptr<Dataset> validationData(new Dataset(_threads));
-  if (!_validationSet && _valSetFraction > 0) {
-    assert(_valSetFraction < 1);
-    const size_t mAll = m;
-    m -= m * _valSetFraction;
-    // Form the validation set using examples with indices[m,...,mAll-1].
-    for (size_t i = m; i < mAll; ++i)
-      validationData->addExample(allData.getExamples()[ordering[i]]);
-  }
-  else if (_validationSet)
-    validationData = _validationSet;
-
-  // Create a data structure that will be used to store the predictions made on
-  // the validation set. 
-  size_t maxId = 0;
-  assert(validationData); // it may be an empty Dataset, but should not be null
-  BOOST_FOREACH(const Example& ex, validationData->getExamples()) {
-    const size_t id = ex.x()->getId();
-    if (id > maxId)
-      maxId = id;
-  }  
-  LabelScoreTable labelScores(maxId + 1, allData.getLabelSet().size());
-  
   // This variable is used to simplify some of the if statements below.
-  const bool doValid = validationData->numExamples() && _reportValStats > 0;
+  const bool doValid = _validationSetHandler && _reportValStats > 0;
   
   // Group the training examples into minibatches based on the random ordering.
   int numMinibatches = ceil(m / (float)_minibatchSize);
@@ -168,17 +128,6 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // This variable will store a running total of the costs, summed over the last
   // R examples that we've seen/processed.
   double sumCosts = 0;
-  
-  bestPerf = -1;
-  Parameters thetaBest;
-  thetaBest.setParams(theta);
-  
-  double accuracy, precision, recall, fscore, avg11ptPrec;
-  double* perf = &fscore; // assume fscore by default
-  if (_perfMeasure == "accuracy")
-    perf = &accuracy;
-  else if (_perfMeasure == "11pt_avg_prec")
-    perf = &avg11ptPrec;
   
   // FIXME: We're assuming L2 regularization (ignoring _regularizer) below.
   size_t t = 0;
@@ -241,24 +190,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
       // every _reportValStats updates, and after the first update.
       if (doValid && (t == 1 || t % _reportValStats == 0)) {
         timer.stop();
-        timer::cpu_timer clock;
-        if (!_quiet) {
-          cout << name() << ": Predicting on validation set examples...  ";
-          cout.flush();
-        }
-        _objective->predict(theta, *validationData, labelScores);
-        Utility::calcPerformanceMeasures(*validationData, labelScores, false,
-            "", "", accuracy, precision, recall, fscore, avg11ptPrec);
-        if (!_quiet) {
-          printf("ep = %d  t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ",
-              (int)ep, (int)t, accuracy, precision, recall);
-          printf("fscore = %.3f  11ptAvgPrec = %.3f %s", fscore, avg11ptPrec,
-              clock.format().c_str());
-        }
-        if (*perf > bestPerf) {
-          bestPerf = *perf;
-          thetaBest.setParams(theta);
-        }
+        assert(_validationSetHandler);
+        _validationSetHandler->evaluate(theta, t);
         timer.resume();
       }
     }
@@ -266,18 +199,30 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
 
   // If we evaluated on a validation set, return the best set of parameters we
   // found. Otherwise, return the current parameters theta.
+  bool havePerformanceStatistic = false;
   if (doValid) {
-    theta.setParams(thetaBest);
-    if (!_quiet) {
-      cout << name() << ": Highest performance achieved on validation set was "
-          << bestPerf << " " << _perfMeasure << endl;
+    assert(_validationSetHandler);
+    const Parameters& thetaBest = _validationSetHandler->getBestParams();
+    // If predictions were never actually made on the validation set (due to
+    // not enough iterations, for example), then the dimensionality of
+    // thetaBest will be zero, as per its initializaiton.
+    if (thetaBest.getDimWU() > 0) {
+      theta.setParams(thetaBest);
+      // Return the best validation set performance instead of the objective
+      // value, since the former is more useful for model selection.
+      bestPerf = _validationSetHandler->getBestScore();
+      if (!_quiet) {
+        cout << name() << ": Highest performance achieved on validation set was "
+            << _validationSetHandler->getBestScore() << " "
+            << _validationSetHandler->getPerfMeasure() << endl;
+      }
+      havePerformanceStatistic = true;
     }
   }
   
-  // If the bestPerf value hasn't been altered from its initial -1, which
-  // serves as a flag, then set it to the objective function value. This is
-  // necessary if we are inside an EmOptimizer, for example.
-  if (bestPerf == -1) {
+  // If we didn't compute any performance statistic, then return the objective
+  // value instead.
+  if (!havePerformanceStatistic) {
     assert(!doValid); // we shouldn't arrive here if we used a validation set
     timer::cpu_timer clock;
     if (!_quiet) {

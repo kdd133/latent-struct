@@ -37,10 +37,6 @@ class BmrmOptimizer : public Optimizer {
       return _name;
     }
     
-    virtual bool usesValidationSet() const {
-      return true;
-    }
-
   private:
     
     std::size_t _maxIters; // maximum number of iterations

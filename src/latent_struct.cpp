@@ -51,6 +51,7 @@
 #include "StringEditModel.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
+#include "ValidationSetHandler.h"
 #include "WordAlignmentFeatureGen.h"
 #include "WordPairReader.h"
 #include <algorithm>
@@ -561,7 +562,8 @@ initial weights")
   }
   
   boost::shared_ptr<Dataset> validationData;
-  if (!help && optInner->usesValidationSet() && validationFileSpecified) {
+  shared_ptr<ValidationSetHandler> vsh;
+  if (!help && validationFileSpecified) {
     // Enumerate the examples in the validation set such that the ids do not
     // overlap with the training set.
     const size_t nextId = trainData.getExamples()[trainData.numExamples()-1].
@@ -578,7 +580,12 @@ initial weights")
     assert(nextId == validationData->getExamples()[0].x()->getId());
     cout << "Read " << validationData->numExamples() << " validation examples, "
         << validationData->getLabelSet().size() << " classes\n";
-    optInner->setValidation(validationData);
+    vsh.reset(new ValidationSetHandler(validationData, objective));
+    if (vsh->processOptions(argc, argv)) {
+      cout << "ValidationSetHandler::processOptions() failed." << endl;
+      return 1;
+    }
+    optInner->setValidationSetHandler(vsh);
   }
 
   // Wrap the optimizer in an EM procedure if requested.

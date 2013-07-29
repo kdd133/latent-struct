@@ -43,10 +43,6 @@ class StochasticGradientOptimizer : public Optimizer {
       return true;
     }
     
-    virtual bool usesValidationSet() const {
-      return true;
-    }
-    
   private:
     
     std::size_t _maxIters; // maximum number of iterations
@@ -68,18 +64,8 @@ class StochasticGradientOptimizer : public Optimizer {
     
     int _seed; // seed for random number generator
     
-    // fraction of examples to use as validation set (if a distinct validation
-    // set is not provided)
-    double _valSetFraction;
-    
-    // # of threads used to parallelize computing validation set score 
-    std::size_t _threads;
-    
     // update parameters based on minibatches of this many examples
     std::size_t _minibatchSize;
-    
-    // the performance measure that determines the "best" set of parameters
-    std::string _perfMeasure;
     
     double objectiveValueForLearningRate(const Parameters& theta,
         const std::list<int>& sample, const std::list<int>* minibatches,
