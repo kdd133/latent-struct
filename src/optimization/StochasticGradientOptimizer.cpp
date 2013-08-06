@@ -94,6 +94,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // Get a random ordering for the examples.
   shared_array<int> ordering = Utility::randPerm(m, _seed);
   
+  if (_validationSetHandler)
+    _validationSetHandler->clearBest();
+  
   // This variable is used to simplify some of the if statements below.
   const bool doValid = _validationSetHandler && _reportValStats > 0;
   

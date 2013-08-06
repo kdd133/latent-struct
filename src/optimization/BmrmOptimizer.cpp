@@ -87,6 +87,9 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   assert(d > 0);
   const double beta = _regularizer->getBeta();
   
+  if (_validationSetHandler)
+    _validationSetHandler->clearBest();
+  
   const double TINY = 1e-6; // Add this value to D to ensure pos-def.
   const double ALPHA_TOL = 1e-12; // Value below which alpha is considered zero
 
@@ -254,7 +257,7 @@ JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
   // parameters w.
   if (_validationSetHandler) {
     const Parameters& wBest = _validationSetHandler->getBestParams();
-    assert(wBest.getDimWU() > 0);
+    assert(wBest.getDimTotal() == d);
     w.setParams(wBest);
     // Return the best validation set performance instead of the objective
     // value, since the former is more useful for model selection.

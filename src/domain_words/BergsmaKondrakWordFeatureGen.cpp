@@ -220,7 +220,7 @@ SparseRealVec* BergsmaKondrakWordFeatureGen::getFeatures(const Pattern& x,
   }
   
   const size_t d = _alphabet->size();
-  SparseRealVec* fv = new SparseRealVec(_alphabet->size());
+  SparseRealVec* fv = new SparseRealVec(d);
   
   unordered_map<int, int>::const_iterator it;
   for (it = phrase_pair_counts.begin(); it != phrase_pair_counts.end(); ++it) {

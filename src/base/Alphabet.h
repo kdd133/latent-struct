@@ -41,6 +41,8 @@ class Alphabet {
   
     // Disallows additions to this alphabet.
     void lock();
+    
+    void unlock();
   
     size_t size() const;
     
@@ -88,6 +90,10 @@ inline bool Alphabet::isLocked() const {
 
 inline const Alphabet::DictType& Alphabet::getDict() const {
   return _dict;
+}
+
+inline void Alphabet::unlock() {
+  _locked = false;
 }
 
 #endif

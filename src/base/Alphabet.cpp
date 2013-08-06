@@ -23,6 +23,7 @@ using namespace std;
 // its index. If the string is absent and addIfAbsent=false or _locked=true,
 // return -1.
 int Alphabet::lookup(string key, Label label, bool addIfAbsent) {
+  assert(key.size() > 0);
   int index = -1;
   DictType::const_iterator it = _dict.find(key);
   if (it != _dict.end()) {
@@ -97,6 +98,7 @@ void Alphabet::addLabel(Label label) {
 // contiguous set of indices (see long comment in lookup() method above).
 void Alphabet::lock() {
   int nextIndex = 0;
+  _labelIndices.clear();
   set<Label>::const_iterator it;
   for (it = _uniqueLabels.begin(); it != _uniqueLabels.end(); ++it) {
     const Label y = *it;

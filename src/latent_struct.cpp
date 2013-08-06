@@ -566,8 +566,7 @@ initial weights")
   if (!help && validationFileSpecified) {
     // Enumerate the examples in the validation set such that the ids do not
     // overlap with the training set.
-    const size_t nextId = trainData.getExamples()[trainData.numExamples()-1].
-        x()->getId() + 1;
+    const size_t nextId = trainData.getMaxId() + 1;
     validationData.reset(new Dataset(threads));
     cout << "Loading " << validationFilename << " ...\n";
     timer::auto_cpu_timer loadValidationTimer;

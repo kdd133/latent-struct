@@ -122,8 +122,8 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   const int d = theta.getDimTotal();
   assert(d > 0);
   
-  Parameters thetaBest;
-  thetaBest.setParams(theta);
+  if (_validationSetHandler)
+    _validationSetHandler->clearBest();
   
   LbfgsInstance inst;
   inst.obj = _objective;
@@ -209,7 +209,7 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   // parameters theta.
   if (_validationSetHandler) {
     const Parameters& thetaBest = _validationSetHandler->getBestParams();
-    assert(thetaBest.getDimWU() > 0);
+    assert(thetaBest.getDimTotal() == d);
     theta.setParams(thetaBest);
     // Return the best validation set performance instead of the objective
     // value, since the former is more useful for model selection.
