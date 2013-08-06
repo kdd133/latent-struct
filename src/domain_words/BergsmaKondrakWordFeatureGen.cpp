@@ -249,14 +249,14 @@ void BergsmaKondrakWordFeatureGen::appendPhrasePair(const vector<string>& s,
   int count = 0;
   BOOST_FOREACH(int i, sw) {
     phrasePair << s[i];
-    if (count++)
+    if (++count < sw.size())
       phrasePair << CHAR_JOINER;
   }
   phrasePair << SUB_JOINER;
   count = 0;
   BOOST_FOREACH(int j, tw) {
     phrasePair << t[j];
-    if (count++)
+    if (++count < tw.size())
       phrasePair << CHAR_JOINER;
   }
   // At test time, the alphabet will presumably be locked, and we don't
