@@ -24,6 +24,7 @@
 #include "KlementievRothSentenceFeatureGen.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "Label.h"
+#include "LabelScoreTable.h"
 #include "LbfgsOptimizer.h"
 #include "LogLinearBinary.h"
 #include "LogLinearBinaryObs.h"
@@ -49,6 +50,7 @@
 #include "SentencePairReader.h"
 #include "StochasticGradientOptimizer.h"
 #include "StringEditModel.h"
+#include "StringPair.h"
 #include "TrainingObjective.h"
 #include "Utility.h"
 #include "ValidationSetHandler.h"
@@ -97,6 +99,7 @@ int main(int argc, char** argv) {
   double negativeRatio = 0.0;
   double trainFraction = 1.0;
   double weightsNoise;
+  int activeLearnIters = 0;
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
@@ -157,6 +160,8 @@ int main(int argc, char** argv) {
   options.add_options()
     ("add-begin-end", opt::bool_switch(&addBeginEndMarkers), "add begin-/end-\
 of-sequence markers to the examples")
+    ("active-learn-iters", opt::value<int>(&activeLearnIters)->default_value(0),
+"perform active learning for the given number of iterations (experimental)")
     ("beta,b", opt::value<vector<double> >(&betas)->default_value(
         vector<double>(1, 1.0), "1.0"), "the L2 regularization constant used \
 in the training objective, i.e., (beta/2)*||w||^2")
@@ -715,6 +720,117 @@ initial weights")
     }
     else
       cout << "Warning: Unable to write " << optsFname << endl;
+  }
+  
+  if (activeLearnIters > 0) {
+    // Let train be the seed set, eval be the pool, and validation be the dev (no holdout test).
+    // The seed set should contain all the positives and one randomly chosen negative.
+    // The eval set should contain the remaining negatives.
+    assert(validationData);
+    
+    const double beta = betas.front();
+    const double tol = tolerances.front();
+    const string poolFilename = evalFilenames.front();
+    regularizer->setBeta(beta);
+    
+    Dataset poolData(threads);
+    const size_t nextId = max(validationData->getMaxId(), trainData.getMaxId()) + 1;
+    if (Utility::loadDataset(*reader, poolFilename, poolData, nextId)) {
+      cout << "Error: Unable to load eval file " << poolFilename << endl;
+      return 1;
+    }
+    cout << "Read " << poolData.numExamples() << " eval examples, " <<
+        poolData.getLabelSet().size() << " classes\n";
+
+    for (int iter = 0; iter < activeLearnIters; iter++) {
+      if (poolData.numExamples() == 0) {
+        cout << "There are no examples left in the pool! Terminating.\n";
+        break;
+      }
+      
+      // train on trainData (early stopping, and thus fval, based on validationData)
+      // note: validationData will already be setup to use; no need to pass it explicitly here
+      {
+        cout << "==== AL: Training\n";
+        timer::auto_cpu_timer timer;
+        double fval = 0.0;
+        Optimizer::status status = optimizer->train(theta0, fval, tol);
+        if (status == Optimizer::FAILURE) {
+          cout << "Optimizer returned FAILURE status. Breaking from AL loop.\n";
+          break;
+        }
+      }
+      
+      // call TrainingObjective::predict on poolData
+      // note: we use the trainData label set, since the pool contains only
+      // negative examples
+      cout << "==== AL: Predicting on pool data\n";
+      LabelScoreTable scores(poolData.getMaxId() + 1,
+          trainData.getLabelSet().size());
+      {
+        timer::auto_cpu_timer timer;
+        objective->predict(theta0, poolData, scores);
+      }
+      
+      // find the most positive (highest score for label 1?) prediction x on
+      // poolData
+      cout << "==== AL: Performing selective sampling\n";
+      const Example* maxScoreExample = &poolData.getExamples()[0];
+      double maxScore = scores.getScore(maxScoreExample->x()->getId(),
+          TrainingObjective::kPositive);
+      {
+        timer::auto_cpu_timer timer;
+        vector<Example>::const_iterator it = poolData.getExamples().begin();
+        ++it; // skip the first example
+        for (; it != poolData.getExamples().end(); ++it) {
+          size_t id = it->x()->getId();
+          double score = scores.getScore(id, TrainingObjective::kPositive);
+//        cout << score << " " << (const StringPair&)(*it->x()) << endl;
+          if (score > maxScore) {
+            maxScore = score;
+            maxScoreExample = &(*it);
+          }
+        }
+        cout << (const StringPair&)(*maxScoreExample->x()) << endl;
+      }
+
+      // add x to trainData, remove x from poolData
+      {
+        cout << "==== AL: Updating train and pool data\n";
+        timer::auto_cpu_timer timer;
+        trainData.addExample(*maxScoreExample);
+        Dataset newPoolData(threads);
+        vector<Example>::const_iterator it = poolData.getExamples().begin();
+        for (; it != poolData.getExamples().end(); ++it) {
+          if (&(*it) != maxScoreExample) // skip the selected example
+            newPoolData.addExample(*it);
+        }
+        poolData = newPoolData;
+        cout << "The pool size is now " << poolData.numExamples() << "; " <<
+            "the training size is " << trainData.numExamples() << endl;
+      }
+
+      // The new example x may contain features we haven't seen before, so
+      // we need to update the alphabet and parameters. We simply recreate them
+      // from scratch here for the sake of convenience.
+      {
+        cout << "==== AL: Updating alphabet and parameters\n";
+        timer::auto_cpu_timer timer;
+        alphabet->unlock();
+        {
+          size_t maxNumFvs = 0, totalNumFvs = 0;
+          objective->gatherFeatures(maxNumFvs, totalNumFvs);
+          assert(maxNumFvs > 0 && totalNumFvs > 0);
+          alphabet = objective->combineAlphabets(trainData.getLabelSet());
+        }
+        alphabet->lock();
+        theta0 = objective->getDefaultParameters(alphabet->size());
+        initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
+            instantiatedLabels, fgenLat);          
+        assert(theta0.w.getDim() == alphabet->size());
+      }
+    }    
+    return 0;
   }
 
   // Train weights for each combination of the beta and tolerance parameters.
