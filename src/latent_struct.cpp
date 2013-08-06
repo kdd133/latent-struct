@@ -100,6 +100,7 @@ int main(int argc, char** argv) {
   double trainFraction = 1.0;
   double weightsNoise;
   int activeLearnIters = 0;
+  int samplePool = 0;
   int seed = 0;
   size_t threads = 1;
   string dirPath("./");
@@ -201,6 +202,9 @@ threading or fst caching")
     ("sample-negative-ratio", opt::value<double>(&negativeRatio),
         "for each positive example in the training set, sample this number of \
 negative examples (implies --keep-all-positives)")
+    ("sample-pool", opt::value<int>(&samplePool)->default_value(0),
+        "in active learning mode, randomly sample a sub-pool of the given size \
+prior to selective sampling")
     ("sample-train", opt::value<double>(&trainFraction),
         "learn on this fraction of the train data (uniformly sampled, \
 without replacement); if greater than 1, the value is interpreted as the \
@@ -765,24 +769,35 @@ initial weights")
       // note: we use the trainData label set, since the pool contains only
       // negative examples
       cout << "==== AL: Predicting on pool data\n";
+      Dataset subPoolData(threads);
       LabelScoreTable scores(poolData.getMaxId() + 1,
           trainData.getLabelSet().size());
-      {
+      {        
         timer::auto_cpu_timer timer;
-        objective->predict(theta0, poolData, scores);
+        if (samplePool == 0 || samplePool >= poolData.numExamples()) {
+          subPoolData = poolData; // FIXME: expensive copy
+        }
+        else {
+          cout << "==== AL: Drawing " << samplePool << " examples from pool\n";
+          assert(samplePool > 0);
+          shared_array<int> s = Utility::randPerm(poolData.numExamples(), seed);
+          for (int i = 0; i < samplePool; i++)
+            subPoolData.addExample(poolData.getExamples()[s[i]]);
+        }
+        objective->predict(theta0, subPoolData, scores);
       }
       
       // find the most positive (highest score for label 1?) prediction x on
       // poolData
       cout << "==== AL: Performing selective sampling\n";
-      const Example* maxScoreExample = &poolData.getExamples()[0];
+      const Example* maxScoreExample = &subPoolData.getExamples()[0];
       double maxScore = scores.getScore(maxScoreExample->x()->getId(),
           TrainingObjective::kPositive);
       {
         timer::auto_cpu_timer timer;
-        vector<Example>::const_iterator it = poolData.getExamples().begin();
+        vector<Example>::const_iterator it = subPoolData.getExamples().begin();
         ++it; // skip the first example
-        for (; it != poolData.getExamples().end(); ++it) {
+        for (; it != subPoolData.getExamples().end(); ++it) {
           size_t id = it->x()->getId();
           double score = scores.getScore(id, TrainingObjective::kPositive);
 //        cout << score << " " << (const StringPair&)(*it->x()) << endl;
