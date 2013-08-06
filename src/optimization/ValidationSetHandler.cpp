@@ -29,14 +29,8 @@ ValidationSetHandler::ValidationSetHandler(shared_ptr<Dataset> dataset,
   
   // Initialize a data structure that will be used to store the predictions made
   // on the validation set. 
-  size_t maxId = 0;
-  BOOST_FOREACH(const Example& ex, _validationSet->getExamples()) {
-    const size_t id = ex.x()->getId();
-    if (id > maxId)
-      maxId = id;
-  }
-  _labelScores.reset(new LabelScoreTable(maxId + 1, _objective->getDataset()
-      .getLabelSet().size()));
+  _labelScores.reset(new LabelScoreTable(_validationSet->getMaxId() + 1,
+      _objective->getDataset().getLabelSet().size()));
 }
 
 void ValidationSetHandler::clearBest() {

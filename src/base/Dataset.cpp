@@ -15,13 +15,15 @@
 
 using namespace std;
 
-Dataset::Dataset(size_t partitions) : _numPartitions(partitions) {
+Dataset::Dataset(size_t partitions) : _numPartitions(partitions), _maxId(0) {
   for (size_t i = 0; i < _numPartitions; i++)
     _partitions.push_back(list<Example>());
 }
 
 void Dataset::addExample(const Example& ex) {
   _examples.push_back(ex);
+  if (ex.x()->getId() > _maxId)
+    _maxId = ex.x()->getId(); 
   _labels.insert(ex.y());
   _partitions[_examples.size() % _numPartitions].push_back(ex);
 }
@@ -31,6 +33,7 @@ void Dataset::clear() {
   //_labels.clear(); // Keep the label set for e.g., copying from train to eval
   for (size_t i = 0; i < _numPartitions; i++)
     _partitions[i].clear();
+  _maxId = 0;
 }
 
 void Dataset::addLabels(const set<Label>& labels) {

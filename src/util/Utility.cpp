@@ -73,22 +73,11 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
   assert(numWeightVectors > 0);
   assert(numWeightVectors == identifiers.size());
   
-  // Determine the maximum pattern id in the eval data.
-  size_t maxId = 0;
-  BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
-    // TODO: Sizing the matrix based on the max id in the dataset rather than
-    // on the number of examples is convenient, but can be wasteful of memory
-    // if the ids are not contiguous.
-    const size_t id = ex.x()->getId();
-    if (id > maxId)
-      maxId = id;
-  }
-  
   // Create a table, one for each weight vector, that will store the predictions
   // for that weight vector.
   boost::ptr_vector<LabelScoreTable> labelScores;
   for (size_t i = 0; i < numWeightVectors; i++) {
-    labelScores.push_back(new LabelScoreTable(maxId + 1,
+    labelScores.push_back(new LabelScoreTable(evalData.getMaxId() + 1,
         evalData.getLabelSet().size()));
   }
   
@@ -144,17 +133,8 @@ void Utility::evaluate(const Parameters& w, shared_ptr<TrainingObjective> obj,
   assert(obj->getModel(0).getFgenLatent()->getAlphabet()->isLocked());
   assert(obj->getModel(0).getFgenObserved()->getAlphabet()->isLocked());
   
-  size_t maxId = 0;
-  BOOST_FOREACH(const Example& ex, evalData.getExamples()) {
-    // TODO: Sizing the matrix based on the max id in the dataset rather than
-    // on the number of examples is convenient, but can be wasteful of memory
-    // if the ids are not contiguous.
-    const size_t id = ex.x()->getId();
-    if (id > maxId)
-      maxId = id;
-  }
-  
-  LabelScoreTable labelScores(maxId + 1, evalData.getLabelSet().size());
+  LabelScoreTable labelScores(evalData.getMaxId() + 1,
+      evalData.getLabelSet().size());
   obj->predict(w, evalData, labelScores);
   
   double accuracy, precision, recall, fscore, avg11ptPrec;

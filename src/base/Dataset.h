@@ -42,6 +42,8 @@ class Dataset {
     const std::set<Label>& getLabelSet() const;
     
     void addLabels(const std::set<Label>& labels);
+    
+    std::size_t getMaxId() const;
 
   private:
   
@@ -52,6 +54,9 @@ class Dataset {
     std::vector<std::list<Example> > _partitions;
     
     std::set<Label> _labels;
+    
+    // The maximum id among the examples in this Dataset.
+    std::size_t _maxId;
 };
 
 inline std::size_t Dataset::numExamples() const {
@@ -77,6 +82,10 @@ inline const std::vector<Example>& Dataset::getExamples() const {
 
 inline const std::set<Label>& Dataset::getLabelSet() const {
   return _labels;
+}
+
+inline std::size_t Dataset::getMaxId() const {
+  return _maxId;
 }
 
 #endif

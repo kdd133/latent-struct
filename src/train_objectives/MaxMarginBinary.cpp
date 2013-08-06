@@ -89,12 +89,7 @@ void MaxMarginBinary::initLatentFeatureVectors(const Parameters& theta) {
   // If we sub-sampled the dataset, there is no longer a 1-to-1 correspondence
   // between ids and indices, so we need to know the maximum id that is present.
   // (Or, we could use a ptr_map, but that would hurt time efficiency.)
-  size_t maxId = 0;
-  BOOST_FOREACH(const Example& ex, _dataset.getExamples()) {
-    const size_t id = ex.x()->getId();
-    if (id > maxId)
-      maxId = id;
-  }
+  const size_t maxId = _dataset.getMaxId();
   
   for (size_t i = 0; i < maxId; i++)
     _imputedFvs.push_back(new SparseRealVec());
