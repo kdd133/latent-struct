@@ -727,18 +727,20 @@ initial weights")
   }
   
   if (activeLearnIters > 0) {
-    // Let train be the seed set, eval be the pool, and validation be the dev (no holdout test).
-    // The seed set should contain all the positives and one randomly chosen negative.
+    // Let train be the seed set, eval be the pool, and validation (optional)
+    // be the dev (and there's no holdout test).
+    // The seed set should contain all the positives and one randomly chosen
+    // negative.
     // The eval set should contain the remaining negatives.
-    assert(validationData);
-    
+
     const double beta = betas.front();
     const double tol = tolerances.front();
     const string poolFilename = evalFilenames.front();
     regularizer->setBeta(beta);
     
     Dataset poolData(threads);
-    const size_t nextId = max(validationData->getMaxId(), trainData.getMaxId()) + 1;
+    const size_t nextId = max(validationData ? validationData->getMaxId() : 0,
+        trainData.getMaxId()) + 1;
     if (Utility::loadDataset(*reader, poolFilename, poolData, nextId)) {
       cout << "Error: Unable to load eval file " << poolFilename << endl;
       return 1;
@@ -752,10 +754,13 @@ initial weights")
         break;
       }
       
-      // train on trainData (early stopping, and thus fval, based on validationData)
-      // note: validationData will already be setup to use; no need to pass it explicitly here
+      // train on trainData (early stopping, and thus fval, based on
+      // validationData)
+      // note: validationData will already be setup to use; no need to pass it
+      // explicitly here
       {
         cout << "==== AL: Training\n";
+        theta0.zero();
         timer::auto_cpu_timer timer;
         double fval = 0.0;
         Optimizer::status status = optimizer->train(theta0, fval, tol);
@@ -780,7 +785,8 @@ initial weights")
         else {
           cout << "==== AL: Drawing " << samplePool << " examples from pool\n";
           assert(samplePool > 0);
-          shared_array<int> s = Utility::randPerm(poolData.numExamples(), seed);
+          shared_array<int> s = Utility::randPerm(poolData.numExamples(),
+              seed + iter);
           for (int i = 0; i < samplePool; i++)
             subPoolData.addExample(poolData.getExamples()[s[i]]);
         }
@@ -817,17 +823,22 @@ initial weights")
         Dataset newPoolData(threads);
         vector<Example>::const_iterator it = poolData.getExamples().begin();
         for (; it != poolData.getExamples().end(); ++it) {
-          if (&(*it) != maxScoreExample) // skip the selected example
+          // skip the selected example
+          if (it->x()->getId() != maxScoreExample->x()->getId())
             newPoolData.addExample(*it);
         }
         poolData = newPoolData;
         cout << "The pool size is now " << poolData.numExamples() << "; " <<
             "the training size is " << trainData.numExamples() << endl;
       }
-
+      
       // The new example x may contain features we haven't seen before, so
       // we need to update the alphabet and parameters. We simply recreate them
       // from scratch here for the sake of convenience.
+      // If we did not load (presumably) all the features that will be available
+      // in training data (i.e., train + pool), then we need to "grow" the
+      // feature set and parameter vector as we proceed.
+      if (!loadFeatures)
       {
         cout << "==== AL: Updating alphabet and parameters\n";
         timer::auto_cpu_timer timer;
@@ -839,9 +850,7 @@ initial weights")
           alphabet = objective->combineAlphabets(trainData.getLabelSet());
         }
         alphabet->lock();
-        theta0 = objective->getDefaultParameters(alphabet->size());
-        initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
-            instantiatedLabels, fgenLat);          
+        theta0 = objective->getDefaultParameters(alphabet->size());        
         assert(theta0.w.getDim() == alphabet->size());
       }
     }    

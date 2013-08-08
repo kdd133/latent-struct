@@ -22,10 +22,12 @@ Dataset::Dataset(size_t partitions) : _numPartitions(partitions), _maxId(0) {
 
 void Dataset::addExample(const Example& ex) {
   _examples.push_back(ex);
-  if (ex.x()->getId() > _maxId)
-    _maxId = ex.x()->getId(); 
+  const size_t id = ex.x()->getId(); 
+  if (id > _maxId)
+    _maxId = id; 
   _labels.insert(ex.y());
-  _partitions[_examples.size() % _numPartitions].push_back(ex);
+  // Assign the example to a partition based on its id.
+  _partitions[id % _numPartitions].push_back(ex);
 }
 
 void Dataset::clear() {
