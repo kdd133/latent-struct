@@ -80,11 +80,14 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   // Note: The above setting of theta updated the model used here by obj.
   SparseRealVec gradFv(d);
   obj->valueAndGradient(theta, fval, gradFv);
-  reg->addRegularization(theta, fval, gradFv);
   
-  // Copy the new gradient back into g, for return to lbfgs.
-  for (int i = 0; i < d; i++)
-    g[i] = gradFv(i);
+  // If the regularizer does not support writing the gradient directly to g,
+  // then we copy it manually.
+  if (!reg->addRegularization(theta, fval, gradFv, g, d)) {
+    reg->addRegularization(theta, fval, gradFv);  
+    for (int i = 0; i < d; i++)
+      g[i] = gradFv(i);
+  }
   
   if (!inst->quiet)
     cout << timer.format();

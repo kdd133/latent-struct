@@ -14,6 +14,7 @@
 #include "Label.h"
 #include "Parameters.h"
 #include "Ublas.h"
+#include <assert.h>
 
 class Regularizer {
 
@@ -25,6 +26,15 @@ class Regularizer {
 
     virtual void addRegularization(const Parameters& theta, double& fval,
         SparseRealVec& grad) const = 0;
+    
+    // This variant writes the gradient to a dense vector (double array), which
+    // can be much faster for algorithms that require it.
+    // The return value is false if the regularizer does not implement this
+    // variant.
+    virtual bool addRegularization(const Parameters& theta, double& fval,
+        const SparseRealVec& gradNoReg, double* grad, int d) const {
+      return false; // not supported by default
+    }
     
     // Some regularizers may need to store additional parameters (and
     // corresponding features) beyond what the training objective requires.

@@ -25,6 +25,9 @@ class RegularizerL2 : public Regularizer {
     virtual void addRegularization(const Parameters& theta, double& fval,
         SparseRealVec& grad) const;
         
+    virtual bool addRegularization(const Parameters& theta, double& fval,
+        const SparseRealVec& gradNoReg, double* grad, int d) const;
+        
     static const std::string& name() {
       static const std::string _name = "L2";
       return _name;

@@ -68,3 +68,38 @@ void RegularizerL2::addRegularization(const Parameters& theta, double& fval,
       grad(i) += theta[i] * _beta;
   }
 }
+
+bool RegularizerL2::addRegularization(const Parameters& theta, double& fval,
+    const SparseRealVec& g, double* grad, int d) const {
+  assert(d == g.size());
+  
+  // Note: The _beta value (from the parent class) will be ignored if either
+  // _betaW > 0 or _betaU > 0. If _betaW == 0 and _betaU > 0, the w parameters
+  // will not be regularized, and vice versa.
+  if (_betaW > 0 || _betaU > 0) {
+    if (_betaW > 0) {
+      const int n = theta.w.getDim();
+      fval += _betaW/2 * theta.w.squaredL2Norm();
+      for (size_t i = 0; i < n; ++i) {
+        const size_t index = theta.indexW() + i;
+        grad[index] = g[index] + theta.w[i] * _betaW; // add beta*theta
+      }
+    }
+    if (_betaU > 0) {
+      assert(theta.hasU());
+      const int n = theta.u.getDim();
+      fval += _betaU/2 * theta.u.squaredL2Norm();
+      for (size_t i = 0; i < n; ++i) {
+        const size_t index = theta.indexU() + i; 
+        grad[index] = g[index] + theta.u[i] * _betaU;
+      }
+    }
+  }
+  else {
+    assert(_beta > 0);
+    fval += _beta/2 * theta.squaredL2Norm();
+    for (size_t i = 0; i < d; ++i)
+      grad[i] = g[i] + theta[i] * _beta;
+  }
+  return true;
+}
