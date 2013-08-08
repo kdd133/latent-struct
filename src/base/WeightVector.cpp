@@ -9,6 +9,7 @@
 
 #include "Ublas.h"
 #include "WeightVector.h"
+#include <algorithm>
 #include <assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_array.hpp>
@@ -87,8 +88,7 @@ void WeightVector::add(const int index, const double update) {
 }
 
 void WeightVector::zero() {
-  for (int i = 0; i < _dim; i++)
-    _weights[i] = 0;
+  std::fill(_weights.get(), _weights.get()+_dim, 0);
   _scale = 1;
 }
 
@@ -96,8 +96,7 @@ void WeightVector::setWeights(const double* rawWeights, int len) {
   assert(rawWeights != _weights.get());
   if (len !=  _dim)
     reAlloc(len);
-  for (int index = 0; index < _dim; index++)
-    _weights[index] = rawWeights[index];
+  std::copy(rawWeights, rawWeights+len, _weights.get());
   _scale = 1;
 }
 
@@ -105,8 +104,7 @@ void WeightVector::setWeights(const WeightVector& w) {
   if (this != &w) {
     if (w._dim !=  _dim)
       reAlloc(w._dim);
-    for (int index = 0; index < _dim; index++)
-      _weights[index] = w._weights[index];
+    std::copy(w._weights.get(), w._weights.get()+_dim, _weights.get());
     _scale = w._scale;
   }
 }
