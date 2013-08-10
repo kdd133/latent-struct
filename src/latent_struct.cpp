@@ -760,7 +760,7 @@ initial weights")
       // explicitly here
       {
         cout << "==== AL: Training\n";
-        theta0.zero();
+//      theta0.zero(); // cold start
         timer::auto_cpu_timer timer;
         double fval = 0.0;
         Optimizer::status status = optimizer->train(theta0, fval, tol);
@@ -850,7 +850,8 @@ initial weights")
           alphabet = objective->combineAlphabets(trainData.getLabelSet());
         }
         alphabet->lock();
-        theta0 = objective->getDefaultParameters(alphabet->size());        
+        theta0 = objective->getDefaultParameters(alphabet->size());
+        // note: theta0 is set to zero (i.e., all zeros) at this point
         assert(theta0.w.getDim() == alphabet->size());
       }
     }    

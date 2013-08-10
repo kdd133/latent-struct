@@ -211,6 +211,12 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
   // according to the chosen performance metric. Otherwise, return the current
   // parameters theta.
   if (_validationSetHandler) {
+    if (!_validationSetHandler->wasEvaluated()) {
+      // It's possible that we never evaluated on the validation set, for
+      // example, if L-BFGS's convergence criterion was satisfied by the initial
+      // parameters that were given.
+      _validationSetHandler->evaluate(theta, 0);
+    }
     const Parameters& thetaBest = _validationSetHandler->getBestParams();
     assert(thetaBest.getDimTotal() == d);
     theta.setParams(thetaBest);

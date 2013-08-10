@@ -36,6 +36,7 @@ ValidationSetHandler::ValidationSetHandler(shared_ptr<Dataset> dataset,
 void ValidationSetHandler::clearBest() {
   _thetaBest = Parameters();
   _scoreBest = -numeric_limits<double>::infinity();
+  _wasEvaluated = false;
 }
 
 void ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
@@ -65,6 +66,9 @@ void ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
     printf("fscore = %.3f  11ptAvgPrec = %.3f  best = %.3f %s", fscore,
         avg11ptPrec, _scoreBest, clock.format().c_str());
   }
+  
+  if (!_wasEvaluated)
+    _wasEvaluated = true;
 }
 
 int ValidationSetHandler::processOptions(int argc, char** argv) {

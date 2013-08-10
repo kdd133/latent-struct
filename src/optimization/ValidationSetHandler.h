@@ -45,6 +45,10 @@ class ValidationSetHandler {
     
     void evaluate(const Parameters& theta, int iterationNum);
     
+    bool wasEvaluated() const {
+      return _wasEvaluated;
+    }
+    
   private:
   
     boost::shared_ptr<Dataset> _validationSet;
@@ -60,6 +64,10 @@ class ValidationSetHandler {
     std::string _perfMeasure;
     
     bool _quiet;
+    
+    // Value is true if the evaluate() method was called at least once. Gets
+    // reset to false whenever clearBest() is called.
+    bool _wasEvaluated;
 };
 
 #endif
