@@ -27,7 +27,7 @@ class ValidationSetHandler {
     ValidationSetHandler(boost::shared_ptr<Dataset> dataset,
         boost::shared_ptr<TrainingObjective> objective);
         
-    virtual int processOptions(int argc, char** argv);
+    int processOptions(int argc, char** argv);
     
     const Parameters& getBestParams() const {
       return _thetaBest;

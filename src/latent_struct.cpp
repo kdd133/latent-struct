@@ -812,7 +812,10 @@ initial weights")
             maxScoreExample = &(*it);
           }
         }
-        cout << (const StringPair&)(*maxScoreExample->x()) << endl;
+        const double scoreNegativeLabel = scores.getScore(
+            maxScoreExample->x()->getId(), !TrainingObjective::kPositive);
+        cout << (const StringPair&)(*maxScoreExample->x()) << " " << maxScore <<
+            " " << scoreNegativeLabel << endl;
       }
 
       // add x to trainData, remove x from poolData

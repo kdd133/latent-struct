@@ -64,10 +64,9 @@ inline int StringPair::getSize() const {
 inline std::ostream& operator<<(std::ostream& out, const StringPair& sp) {
   for (std::size_t i = 0; i < sp._source.size(); ++i)
     out << sp._source[i] << " ";
-  out << std::endl;
+  out << "--> ";
   for (std::size_t i = 0; i < sp._target.size(); ++i)
     out << sp._target[i] << " ";
-  out << std::endl;
   return out;
 }
 
