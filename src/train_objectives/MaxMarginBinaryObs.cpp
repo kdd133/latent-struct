@@ -27,7 +27,11 @@ void MaxMarginBinaryObs::valueAndGradientPart(const Parameters& theta,
     const Label k, double& funcVal, SparseRealVec& gradFv) {
   
   funcVal = 0;
-  gradFv.clear();
+  assert(!theta.hasU()); // There should be no latent variables.
+  
+  // It is faster to accumulate using a dense vector.
+  RealVec gradDense(theta.w.getDim());
+  gradDense.clear();
   
   const Label ypos = TrainingObjective::kPositive;
   for (Dataset::iterator it = begin; it != end; ++it) {
@@ -42,10 +46,11 @@ void MaxMarginBinaryObs::valueAndGradientPart(const Parameters& theta,
     
     // Gradient contribution is 0 if z=y*w'*phi >= 1, and -y*phi otherwise. 
     if (z < 1)
-      gradFv += -yi * (*phi);
+      noalias(gradDense) += -yi * (*phi);
 
     if (own) delete phi;
   }
+  noalias(gradFv) = gradDense;
 }
 
 void MaxMarginBinaryObs::predictPart(const Parameters& theta, Model& model,

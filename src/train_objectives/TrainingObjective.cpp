@@ -111,8 +111,8 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
   fval = 0;
   for (size_t i = 0; i < numParts; i++) {
     threads[i].join(); // Wait for the thread to finish.
-    gradFv += grads[i];
     fval += fvals[i];
+    noalias(gradFv) += grads[i];
   }
   
   valueAndGradientFinalize(theta, fval, gradFv);

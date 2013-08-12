@@ -86,7 +86,7 @@ lbfgsfloatval_t LbfgsOptimizer::evaluate(void* instance, const lbfgsfloatval_t* 
   if (!reg->addRegularization(theta, fval, gradFv, g, d)) {
     reg->addRegularization(theta, fval, gradFv);  
     for (int i = 0; i < d; i++)
-      g[i] = gradFv(i);
+      g[i] = gradFv[i];
   }
   
   if (!inst->quiet)

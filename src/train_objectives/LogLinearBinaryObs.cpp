@@ -26,7 +26,11 @@ void LogLinearBinaryObs::valueAndGradientPart(const Parameters& theta,
     const Label k, double& funcVal, SparseRealVec& gradFv) {
   
   funcVal = 0;
-  gradFv.clear();
+  assert(!theta.hasU()); // There should be no latent variables.
+  
+  // It is faster to accumulate using a dense vector.
+  RealVec gradDense(theta.w.getDim());
+  gradDense.clear();
   
   const Label ypos = TrainingObjective::kPositive;
   for (Dataset::iterator it = begin; it != end; ++it) {
@@ -38,10 +42,11 @@ void LogLinearBinaryObs::valueAndGradientPart(const Parameters& theta,
     assert(phi);
     const double mass = -yi * theta.w.innerProd(*phi);
     funcVal += Utility::log1Plus(exp(mass));
-    gradFv += (*phi) * (-yi * (1 - Utility::sigmoid(-mass)));
+    noalias(gradDense) += (*phi) * (-yi * (1 - Utility::sigmoid(-mass)));
     
     if (own) delete phi;
-  }
+  }  
+  noalias(gradFv) = gradDense;
 }
 
 void LogLinearBinaryObs::predictPart(const Parameters& theta, Model& model,

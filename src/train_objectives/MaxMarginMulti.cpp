@@ -33,7 +33,10 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
   vector<SparseRealVec> feats(k, SparseRealVec(d));  
   
   funcVal = 0;
-  gradFv.clear();
+  
+  // It is faster to accumulate using a dense vector.
+  RealVec gradDense(d);
+  gradDense.clear();
   
   // This if statement should never be executed while the objective is being
   // optimized, since the (EM) optimizer will perform the initialization.
@@ -58,23 +61,24 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     }
     
     // Update the gradient and function value.
-    gradFv += feats[yMax];
+    noalias(gradDense) += feats[yMax];
     funcVal += score[yMax];
     
     // Subtract the observed features and score for the correct label yi.
     bool own = false;
     SparseRealVec* phi_yi = model.observedFeatures(xi, yi, own);
     assert(phi_yi);
-    gradFv -= (*phi_yi);
+    noalias(gradDense) -= (*phi_yi);
     funcVal -= theta.w.innerProd(*phi_yi);
     if (own) delete phi_yi;
   }
+  noalias(gradFv) = gradDense;
 }
 
 void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
     double& funcVal, SparseRealVec& gradFv) {    
   // Subtract the sum of the imputed vectors from the gradient.
-  gradFv -= (*_imputedFv);
+  noalias(gradFv) -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
   funcVal = Utility::hinge(funcVal - theta.w.innerProd(*_imputedFv)); 
 }

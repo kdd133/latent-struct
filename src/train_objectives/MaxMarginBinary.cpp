@@ -28,7 +28,10 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
   
   SparseRealVec feats(d);
   funcVal = 0;
-  gradFv.clear();
+  
+  // It is faster to accumulate using a dense vector.
+  RealVec gradDense(d);
+  gradDense.clear();
   
   // This if statement should never be executed while the objective is being
   // optimized, since the (EM) optimizer will perform the initialization.
@@ -48,7 +51,7 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
       // gets latent+obs feats
       z = yi * model.maxFeatures(theta.w, &feats, xi, ypos);
       if (z < 1)
-        gradFv += -yi * feats;
+        noalias(gradDense) += -yi * feats;
     }
     else {
       const size_t i = xi.getId();
@@ -59,13 +62,14 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
       assert(phiObs);
       z = yi * (theta.w.innerProd(*phiObs) + theta.w.innerProd(_imputedFvs[i]));
       if (z < 1) {
-        gradFv += -yi * (_imputedFvs[i]);
-        gradFv += -yi * (*phiObs);
+        noalias(gradDense) += -yi * (_imputedFvs[i]);
+        noalias(gradDense) += -yi * (*phiObs);
       }
       if (own) delete phiObs;
     }
     funcVal += Utility::hinge(1 - z);
   }
+  noalias(gradFv) = gradDense;
 }
 
 void MaxMarginBinary::setLatentFeatureVectorsPart(const Parameters& theta,
