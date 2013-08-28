@@ -131,6 +131,8 @@ bool WeightVector::read(const std::string& fname, int dim) {
 
 bool WeightVector::write(const std::string& fname) const {
   using namespace std;
+  if (_dim == 0)
+    return true; // there are no weights to write, so we're done
   ofstream fout(fname.c_str());
   if (!fout.good())
     return false;
