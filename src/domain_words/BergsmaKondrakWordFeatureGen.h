@@ -50,6 +50,8 @@ class BergsmaKondrakWordFeatureGen : public ObservedFeatureGen {
     
     bool _addMismatches;
     
+    bool _collapseMismatches;
+    
     bool _addBias;
       
     void getPhrasePairs(const std::vector<std::string>& s,

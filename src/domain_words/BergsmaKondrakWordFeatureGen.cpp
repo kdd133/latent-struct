@@ -35,7 +35,7 @@ const string BergsmaKondrakWordFeatureGen::MISMATCH_PREFIX = "MM:";
 BergsmaKondrakWordFeatureGen::BergsmaKondrakWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _normalize(normalize),
-    _addMismatches(true), _addBias(true) {
+    _addMismatches(true), _collapseMismatches(true), _addBias(true) {
 }
 
 int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
@@ -50,8 +50,11 @@ int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
   bool noBias = false;
   bool noNormalize = false;
   bool noMismatches = false;
+  bool noCollapseMismatches = false;
   options.add_options()
     ("bk-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
+    ("bk-no-collapse-mismatches", opt::bool_switch(&noCollapseMismatches),
+        "do not collapse mismatch features (i.e., preserve epsilons)")
     ("bk-no-mismatches", opt::bool_switch(&noMismatches),
         "do not include mismatch features")
     ("bk-no-normalize", opt::bool_switch(&noNormalize),
@@ -72,6 +75,8 @@ int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
   
   if (noBias)
     _addBias = false;
+  if (noCollapseMismatches)
+    _collapseMismatches = false;
   if (noMismatches)
     _addMismatches = false;
   if (noNormalize)
@@ -276,12 +281,14 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
   string prevCharT = t[0];
   assert(prevCharS == prevCharT); // the first characters (^) must always match
   bool prevMatch = true;
-
+  
   for (int i = 0; i < s.size(); i++) {
-    bool currMatch = s[i] == t[i];
+    const bool currMatch = s[i] == t[i];
     if (!currMatch) {
-      prevCharS += s[i];
-      prevCharT += t[i];
+      if (!_collapseMismatches || s[i] != FeatureGenConstants::EPSILON)
+        prevCharS += s[i];
+      if (!_collapseMismatches || t[i] != FeatureGenConstants::EPSILON)
+        prevCharT += t[i];
     }
     else {
       if (prevMatch) {
@@ -292,7 +299,8 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
         // Found a mismatch, so add the corresponding feature.
         prevCharS += s[i];
         prevCharT += t[i];
-        {
+        assert(prevCharS.size() && prevCharT.size());
+        {          
           stringstream mismatch;
           mismatch << MISMATCH_PREFIX << prevCharS << SUB_JOINER << prevCharT;
           int fId = _alphabet->lookup(mismatch.str(), y, true);
@@ -301,9 +309,14 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
         }
         
         // Also create a mismatch feature without the left and right context.
-        string shortS = prevCharS.substr(1, prevCharS.length() - 2);
-        string shortT = prevCharT.substr(1, prevCharT.length() - 2);
         {
+          string shortS = prevCharS.substr(1, prevCharS.length() - 2);
+          string shortT = prevCharT.substr(1, prevCharT.length() - 2);
+          assert(shortS.size() || shortT.size()); // one of these may be empty
+          if (shortS.size() == 0)
+            shortS = FeatureGenConstants::EPSILON;
+          if (shortT.size() == 0)
+            shortT = FeatureGenConstants::EPSILON;
           stringstream mismatch;
           mismatch << MISMATCH_PREFIX << shortS << SUB_JOINER << SUB_JOINER
               << shortT;
