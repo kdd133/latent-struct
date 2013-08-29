@@ -22,12 +22,23 @@ class StringPairAligned : public StringPair {
   public:
     StringPairAligned(std::vector<std::string> source,
         std::vector<std::string> target) : StringPair(source, target) {
+      _longest = source.size() > target.size() ? source.size() : target.size();
       Utility::levenshtein(source, target, _source, _target, _substitutionCost);
     }
+    
+    // Returns the length of the longer string (excluding epsilon symbols).
+    virtual int getSize() const;
     
   private:
     
     static const int _substitutionCost = 99999;
+    
+    // The length of the longest string that was passed to the constructor.
+    int _longest;
 };
+
+inline int StringPairAligned::getSize() const {
+  return _longest;
+}
 
 #endif
