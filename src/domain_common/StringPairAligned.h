@@ -10,6 +10,7 @@
 #ifndef _STRINGPAIRALIGNED_H
 #define _STRINGPAIRALIGNED_H
 
+#include "FeatureGenConstants.h"
 #include "StringPair.h"
 #include "Utility.h"
 #include <ostream>
@@ -23,6 +24,10 @@ class StringPairAligned : public StringPair {
     StringPairAligned(std::vector<std::string> source,
         std::vector<std::string> target) : StringPair(source, target) {
       _longest = source.size() > target.size() ? source.size() : target.size();
+      if (source.front() == FeatureGenConstants::BEGIN_CHAR) {
+        assert(source.back() == FeatureGenConstants::END_CHAR);
+        _longest -= 2;
+      }        
       _editDistance = Utility::levenshtein(source, target, _source, _target,
           _substitutionCost);
     }
