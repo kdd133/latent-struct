@@ -41,6 +41,7 @@ class BergsmaKondrakWordFeatureGen : public ObservedFeatureGen {
     static const std::string CHAR_JOINER;
     static const std::string SUB_JOINER;
     static const std::string MISMATCH_PREFIX;
+    static const std::string NED_FEATURE;
     
     static void getMismatches(const std::vector<std::string>& s,
         const std::vector<std::string>& t, boost::unordered_map<int, int>& fv,

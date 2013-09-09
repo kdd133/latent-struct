@@ -45,6 +45,8 @@ class BergsmaKondrakPhrasePairs : public ObservedFeatureGen {
     bool _addMismatches;
     
     bool _addBias;
+    
+    bool _addNed;
 };
 
 #endif

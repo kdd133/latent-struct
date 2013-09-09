@@ -26,7 +26,7 @@ using namespace std;
 BergsmaKondrakPhrasePairs::BergsmaKondrakPhrasePairs(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _normalize(normalize), _addMismatches(true),
-    _addBias(true) {
+    _addBias(true), _addNed(false) {
 }
 
 int BergsmaKondrakPhrasePairs::processOptions(int argc, char** argv) {
@@ -36,6 +36,8 @@ int BergsmaKondrakPhrasePairs::processOptions(int argc, char** argv) {
   bool noNormalize = false;
   bool noMismatches = false;
   options.add_options()
+    ("bk-ned", opt::bool_switch(&_addNed),
+        "include the normalized edit distance feature")
     ("bk-no-bias", opt::bool_switch(&noBias), "do not add a bias feature")
     ("bk-no-mismatches", opt::bool_switch(&noMismatches),
         "do not include mismatch features")
@@ -107,6 +109,23 @@ SparseRealVec* BergsmaKondrakPhrasePairs::getFeatures(const Pattern& x,
       return fv;
     }
     (*fv)(index) = it->second;
+  }
+  
+  if (_addNed) {
+    // Include a normalized edit distance feature, which is defined as the edit
+    // distance divided by the length of the longer word.
+    double ned = pair.getEditDistance();
+    // If we're normalizing, this feature will end up being normalized twice,
+    // so we skip normalization here in that case. 
+    if (!_normalize) {
+      const double normalization = pair.getSize();
+      assert(normalization > 0);
+      ned /= normalization;
+    }
+    const int fId = _alphabet->lookup(BergsmaKondrakWordFeatureGen::NED_FEATURE,
+        y, true);
+    if (fId >= 0)
+      (*fv)[fId] = ned;
   }
   
   if (_normalize) {

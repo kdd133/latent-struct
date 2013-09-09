@@ -31,6 +31,7 @@ using namespace std;
 const string BergsmaKondrakWordFeatureGen::CHAR_JOINER = "+";
 const string BergsmaKondrakWordFeatureGen::SUB_JOINER = ",";
 const string BergsmaKondrakWordFeatureGen::MISMATCH_PREFIX = "MM:";
+const string BergsmaKondrakWordFeatureGen::NED_FEATURE = "NED";
 
 BergsmaKondrakWordFeatureGen::BergsmaKondrakWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
@@ -246,6 +247,9 @@ SparseRealVec* BergsmaKondrakWordFeatureGen::getFeatures(const Pattern& x,
       assert(normalization > 0);
       ned /= normalization;
     }
+    const int fId = _alphabet->lookup(NED_FEATURE, y, true);
+    if (fId >= 0)
+      (*fv)[fId] = ned;
   }
   
   if (_normalize) {
