@@ -36,14 +36,13 @@ BergsmaKondrakWordFeatureGen::BergsmaKondrakWordFeatureGen(
     boost::shared_ptr<Alphabet> alphabet, bool normalize) :
     ObservedFeatureGen(alphabet), _substringSize(2), _normalize(normalize),
     _addMismatches(true), _collapseMismatches(true), _addBias(true),
-    _addNed(true) {
+    _addNed(false) {
 }
 
 int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   bool noBias = false;
-  bool noNed = false;
   bool noNormalize = false;
   bool noMismatches = false;
   bool noCollapseMismatches = false;
@@ -53,8 +52,8 @@ int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
         "do not collapse mismatch features (i.e., preserve epsilons)")
     ("bk-no-mismatches", opt::bool_switch(&noMismatches),
         "do not include mismatch features")
-    ("bk-no-ned", opt::bool_switch(&noNed),
-        "do not include the normalized edit distance feature")
+    ("bk-ned", opt::bool_switch(&_addNed),
+        "include the normalized edit distance feature")
     ("bk-no-normalize", opt::bool_switch(&noNormalize),
         "do not normalize by the length of the longer word")
     ("substring-size", opt::value<int>(&_substringSize)->default_value(2),
@@ -77,8 +76,6 @@ int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
     _collapseMismatches = false;
   if (noMismatches)
     _addMismatches = false;
-  if (noNed)
-    _addNed = false;
   if (noNormalize)
     _normalize = false;
 
