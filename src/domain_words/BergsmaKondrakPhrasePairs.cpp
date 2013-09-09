@@ -76,7 +76,6 @@ SparseRealVec* BergsmaKondrakPhrasePairs::getFeatures(const Pattern& x,
     // Note: At test time, the alphabet will presumably be locked, so even though
     // addIfAbsent=true, features not seen during training won't be added/used.
     int fId = _alphabet->lookup(phrasePair, y, true);
-    cout << phrasePair << endl;
     if (fId >= 0)
       phrasePairCounts[fId]++;
   }
