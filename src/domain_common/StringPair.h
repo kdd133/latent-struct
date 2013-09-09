@@ -10,26 +10,36 @@
 #ifndef _STRINGPAIR_H
 #define _STRINGPAIR_H
 
+#include "FeatureGenConstants.h"
+#include "Pattern.h"
+#include <assert.h>
 #include <boost/foreach.hpp>
 #include <string>
 #include <vector>
-
-#include "Pattern.h"
 
 // A data structure that stores a pair of strings, and provides simple methods
 // for accessing them.
 class StringPair : public Pattern {
   public:
     StringPair(std::vector<std::string> source, std::vector<std::string> target) :
-      _source(source), _target(target) {}
+      _source(source), _target(target), _hasBeginEnd(false) {
+      if (source.front() == FeatureGenConstants::BEGIN_CHAR) {
+        assert(source.back() == FeatureGenConstants::END_CHAR);
+        _hasBeginEnd = true;
+      }
+    }
       
     // Assume the source and target strings are arrays of characters (i.e.,
     // there are no "phrase-like" characters that span more than one position).
-    StringPair(std::string source, std::string target) {
+    StringPair(std::string source, std::string target) : _hasBeginEnd(false) {
       for (std::size_t i = 0; i < source.size(); ++i)
         _source.push_back(source.substr(i, 1));
       for (std::size_t i = 0; i < target.size(); ++i)
         _target.push_back(target.substr(i, 1));
+      if (_source.front() == FeatureGenConstants::BEGIN_CHAR) {
+        assert(_source.back() == FeatureGenConstants::END_CHAR);
+        _hasBeginEnd = true;
+      }
     }
     
     virtual const std::vector<std::string>& getSource() const;
@@ -46,7 +56,8 @@ class StringPair : public Pattern {
     std::vector<std::string> _source;
 
     std::vector<std::string> _target;
-
+    
+    bool _hasBeginEnd;
 };
 
 inline const std::vector<std::string>& StringPair::getSource() const {
@@ -58,7 +69,10 @@ inline const std::vector<std::string>& StringPair::getTarget() const {
 }
 
 inline int StringPair::getSize() const {
-  return _source.size() > _target.size() ? _source.size() : _target.size();
+  int size = _source.size() > _target.size() ? _source.size() : _target.size();
+  if (_hasBeginEnd)
+    return size - 2; // we don't want to count the begin/end markers
+  return size;
 }
 
 inline std::ostream& operator<<(std::ostream& out, const StringPair& sp) {

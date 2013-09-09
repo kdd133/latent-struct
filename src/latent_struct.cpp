@@ -10,6 +10,7 @@
 #include "AlignmentFeatureGen.h"
 #include "AlignmentHypergraph.h"
 #include "Alphabet.h"
+#include "BergsmaKondrakPhrasePairs.h"
 #include "BergsmaKondrakWordFeatureGen.h"
 #include "BiasFeatureGen.h"
 #include "BmrmOptimizer.h"
@@ -42,6 +43,7 @@
 #include "Optimizer.h"
 #include "Parameters.h"
 #include "Pattern.h"
+#include "PhrasePairsReader.h"
 #include "Regularizer.h"
 #include "RegularizerL2.h"
 #include "RegularizerNone.h"
@@ -130,6 +132,7 @@ int main(int argc, char** argv) {
   stringstream fgenMsgObs;
   fgenMsgObs << "observed feature generator {" << BiasFeatureGen::name() << CMA
       << EmptyObservedFeatureGen::name() << CMA
+      << BergsmaKondrakPhrasePairs::name() << CMA
       << BergsmaKondrakWordFeatureGen::name() << CMA
       << KlementievRothWordFeatureGen::name() << CMA
       << KlementievRothSentenceFeatureGen::name() << "}";      
@@ -151,6 +154,7 @@ int main(int argc, char** argv) {
   readerMsg << "reader that parses lines from input file {" <<
       CognatePairReader::name() << CMA <<
       CognatePairAlignerReader::name() << CMA <<
+      PhrasePairsReader::name() << CMA <<
       SentencePairReader::name() << CMA <<
       WordPairReader::name() << "}";  
   stringstream regMsg;
@@ -327,6 +331,8 @@ initial weights")
     shared_ptr<ObservedFeatureGen> fgenObs;
     if (fgenNameObs == BiasFeatureGen::name())
       fgenObs.reset(new BiasFeatureGen(alphabet));
+    else if (fgenNameObs == BergsmaKondrakPhrasePairs::name())
+      fgenObs.reset(new BergsmaKondrakPhrasePairs(alphabet));
     else if (fgenNameObs == BergsmaKondrakWordFeatureGen::name())
       fgenObs.reset(new BergsmaKondrakWordFeatureGen(alphabet));
     else if (fgenNameObs == KlementievRothWordFeatureGen::name())
@@ -384,6 +390,8 @@ initial weights")
     reader.reset(new CognatePairReader());
   else if (readerName == CognatePairAlignerReader::name())
     reader.reset(new CognatePairAlignerReader());
+  else if (readerName == PhrasePairsReader::name())
+    reader.reset(new PhrasePairsReader());
   else if (readerName == SentencePairReader::name())
     reader.reset(new SentencePairReader());
   else if (readerName == WordPairReader::name())
@@ -760,7 +768,7 @@ initial weights")
       // explicitly here
       {
         cout << "==== AL: Training\n";
-//      theta0.zero(); // cold start
+        theta0.zero();
         timer::auto_cpu_timer timer;
         double fval = 0.0;
         Optimizer::status status = optimizer->train(theta0, fval, tol);

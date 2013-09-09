@@ -41,6 +41,10 @@ class BergsmaKondrakWordFeatureGen : public ObservedFeatureGen {
     static const std::string CHAR_JOINER;
     static const std::string SUB_JOINER;
     static const std::string MISMATCH_PREFIX;
+    
+    static void getMismatches(const std::vector<std::string>& s,
+        const std::vector<std::string>& t, boost::unordered_map<int, int>& fv,
+        const Label y, Alphabet& alphabet, bool collapseMismatches);
 
   private:
   
@@ -63,10 +67,6 @@ class BergsmaKondrakWordFeatureGen : public ObservedFeatureGen {
     void appendPhrasePair(const std::vector<std::string>& s,
         const std::vector<std::string>& t, const std::deque<int>& sw,
         const std::deque<int>& tw, boost::unordered_map<int, int>& fv,
-        const Label y);
-        
-    void getMismatches(const std::vector<std::string>& s,
-        const std::vector<std::string>& t, boost::unordered_map<int, int>& fv,
         const Label y);
 };
 

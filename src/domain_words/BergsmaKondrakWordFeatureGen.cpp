@@ -40,12 +40,6 @@ BergsmaKondrakWordFeatureGen::BergsmaKondrakWordFeatureGen(
 }
 
 int BergsmaKondrakWordFeatureGen::processOptions(int argc, char** argv) {
-  const string NONE = "None";
-  stringstream vowelsHelp;
-  vowelsHelp << "the name of a file whose first line contains a string of "
-      << "vowels (case-insensitive), e.g., \"aeiou\" (sans quotes), (note: "
-      << "this option activates consonant/vowel n-gram features); pass \""
-      << NONE << "\" instead of a filename to disable";
   namespace opt = boost::program_options;
   opt::options_description options(name() + " options");
   bool noBias = false;
@@ -218,7 +212,7 @@ SparseRealVec* BergsmaKondrakWordFeatureGen::getFeatures(const Pattern& x,
       getPhrasePairs(s, t, sk, tk, phrase_pair_counts, matched.get(), y);
   
   if (_addMismatches)
-    getMismatches(s, t, phrase_pair_counts, y);
+    getMismatches(s, t, phrase_pair_counts, y, *_alphabet, _collapseMismatches);
   
   // Add a bias feature if this option is enabled.
   // TODO: In the future, it would be cleaner to be able to activate multiple
@@ -293,7 +287,8 @@ void BergsmaKondrakWordFeatureGen::appendPhrasePair(const vector<string>& s,
 // Ported from characterPairs.cpp in Shane Bergsma's implementation.
 // See http://webdocs.cs.ualberta.ca/~bergsma/Cognates/
 void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
-    const vector<string>& t, unordered_map<int, int>& fv, const Label y) {
+    const vector<string>& t, unordered_map<int, int>& fv, const Label y,
+    Alphabet& alphabet, bool collapseMismatches) {
   assert(s.size() == t.size());
 
   string prevCharS = s[0];
@@ -304,9 +299,9 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
   for (int i = 0; i < s.size(); i++) {
     const bool currMatch = s[i] == t[i];
     if (!currMatch) {
-      if (!_collapseMismatches || s[i] != FeatureGenConstants::EPSILON)
+      if (!collapseMismatches || s[i] != FeatureGenConstants::EPSILON)
         prevCharS += s[i];
-      if (!_collapseMismatches || t[i] != FeatureGenConstants::EPSILON)
+      if (!collapseMismatches || t[i] != FeatureGenConstants::EPSILON)
         prevCharT += t[i];
     }
     else {
@@ -322,7 +317,7 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
         {          
           stringstream mismatch;
           mismatch << MISMATCH_PREFIX << prevCharS << SUB_JOINER << prevCharT;
-          int fId = _alphabet->lookup(mismatch.str(), y, true);
+          int fId = alphabet.lookup(mismatch.str(), y, true);
           if (fId >= 0)
             fv[fId]++;
         }
@@ -339,7 +334,7 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
           stringstream mismatch;
           mismatch << MISMATCH_PREFIX << shortS << SUB_JOINER << SUB_JOINER
               << shortT;
-          int fId = _alphabet->lookup(mismatch.str(), y, true);
+          int fId = alphabet.lookup(mismatch.str(), y, true);
           if (fId >= 0)
             fv[fId]++;
         }

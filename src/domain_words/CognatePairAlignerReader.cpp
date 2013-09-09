@@ -8,6 +8,7 @@
  */
 
 #include "CognatePairAlignerReader.h"
+#include "CognatePairReader.h"
 #include "FeatureGenConstants.h"
 #include "Label.h"
 #include "Pattern.h"

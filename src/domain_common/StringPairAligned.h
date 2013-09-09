@@ -23,11 +23,7 @@ class StringPairAligned : public StringPair {
   public:
     StringPairAligned(std::vector<std::string> source,
         std::vector<std::string> target) : StringPair(source, target) {
-      _longest = source.size() > target.size() ? source.size() : target.size();
-      if (source.front() == FeatureGenConstants::BEGIN_CHAR) {
-        assert(source.back() == FeatureGenConstants::END_CHAR);
-        _longest -= 2;
-      }        
+      _longest = StringPair::getSize(); // record this before inserting epsilons
       _editDistance = Utility::levenshtein(source, target, _source, _target,
           _substitutionCost);
     }
