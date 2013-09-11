@@ -91,8 +91,8 @@ bool containsMatch(const deque<int>& win, const bool* match) {
   return false;
 }
 
-bool matchesAreConsistent(const vector<string>& s, const vector<string>& t,
-    const deque<int>& sw, const deque<int>& tw, const bool* match) {
+bool matchesAreConsistent(const deque<int>& sw, const deque<int>& tw,
+    const bool* match) {
   BOOST_FOREACH(int index, sw) {
     // If there's a match at an index in the source window, but this index is
     // not in the target window, then we don't have a valid phrase pair.
@@ -157,7 +157,7 @@ void BergsmaKondrakWordFeatureGen::getPhrasePairs(const vector<string>& s,
     
     // Add a phrase pair for the initial source and target windows, provided
     // that the criteria for a valid pair are satisfied.
-    if (matchesAreConsistent(s, t, s_win, t_win, match))
+    if (matchesAreConsistent(s_win, t_win, match))
       appendPhrasePair(s, t, s_win, t_win, fv, y);
       
     // Slide the target window to the right and extract additional phrases.
@@ -170,8 +170,8 @@ void BergsmaKondrakWordFeatureGen::getPhrasePairs(const vector<string>& s,
       if (t[j] != EPS) {
         t_win.push_back(j);
         t_win.pop_front();
-        if (containsMatch(t_win, match) && matchesAreConsistent(s, t, s_win,
-            t_win, match)) {
+        if (containsMatch(t_win, match) && matchesAreConsistent(s_win, t_win,
+            match)) {
           appendPhrasePair(s, t, s_win, t_win, fv, y);
         }
       }
