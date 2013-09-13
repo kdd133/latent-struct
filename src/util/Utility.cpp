@@ -296,15 +296,15 @@ int Utility::levenshtein(const vector<string>& s, const vector<string>& t,
         const int ins = cost[i-1][j]+1;
         const int del = cost[i][j-1]+1;
         const int sub = cost[i-1][j-1]+subCost;
-        cost[i][j] = ins;
-        lastOp[i][j] = INS;
+        cost[i][j] = sub;
+        lastOp[i][j] = SUB;
         if (del < cost[i][j]) {
           cost[i][j] = del;
           lastOp[i][j] = DEL;
         }
-        if (sub < cost[i][j]) {
-          cost[i][j] = sub;
-          lastOp[i][j] = SUB;
+        if (ins < cost[i][j]) {
+          cost[i][j] = ins;
+          lastOp[i][j] = INS;
         }
       }
     }

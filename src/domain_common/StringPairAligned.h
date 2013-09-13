@@ -35,7 +35,7 @@ class StringPairAligned : public StringPair {
     
   private:
     
-    static const int _substitutionCost = 99999;
+    static const int _substitutionCost = 3;
     
     // The length of the longest string that was passed to the constructor.
     int _longest;
