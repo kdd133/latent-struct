@@ -48,7 +48,7 @@ class WeightVector {
     
     void zero();
     
-    bool read(const std::string& fname, int dim);
+    bool read(const std::string& fname, int dim, int indexOffset = 0);
     
     bool write(const std::string& fname) const;
     

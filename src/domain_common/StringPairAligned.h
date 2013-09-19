@@ -28,6 +28,16 @@ class StringPairAligned : public StringPair {
           _substitutionCost);
     }
     
+    // This constructor is accepts an already-aligned pair of strings; i.e.,
+    // epsilon symbols are already present.
+    StringPairAligned(std::vector<std::string> source,
+        std::vector<std::string> target, int longest, int editDistance) :
+        StringPair(source, target), _longest(longest),
+        _editDistance(editDistance) {
+      if (_hasBeginEnd) // this gets set in the StringPair constructor
+        _longest -= 2;
+    }
+    
     // Returns the length of the longer string (excluding epsilon symbols).
     virtual int getSize() const;
     

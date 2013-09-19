@@ -62,7 +62,8 @@ class Model {
       const Label label, bool& callerOwns) = 0;
       
     virtual void printAlignment(std::ostream& out, const WeightVector& w,
-      const Pattern& pattern, const Label label) = 0;
+      const Pattern& pattern, const Label label,
+      bool includeObservedFeatures = true) = 0;
     
     virtual void emptyCache() = 0;
     

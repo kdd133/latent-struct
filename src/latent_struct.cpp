@@ -38,6 +38,7 @@
 #include "MaxMarginBinary.h"
 #include "MaxMarginBinaryObs.h"
 #include "MaxMarginMulti.h"
+#include "MaxMarginPipelineUW.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
@@ -77,6 +78,20 @@
 
 using namespace boost;
 using namespace std;
+
+/* Uncomment the following line to use the two-layer pipeline classifier. Note
+ * that you can only use an existing model for classification at this time, as
+ * training the pipeline is not yet supported.
+ * Example options are: --eval=data/FVInput/gr-en.prepared.0.58.test
+ * --model=StringEdit --obj=MaxMarginPipelineUW --reader=CognatePair
+ * --fgen-lat=WordAlignment --order=0 --no-normalize --no-state-ngrams
+ * --exact-match-state --fgen-obs=BKWord --substring-size=3 --add-begin-end
+ * --bk-ned --w-alphabet=gr-alphabet_w.txt --w-weights=gr-weights_w.txt
+ * --u-weights=gr-weights_u.txt --u-alphabet=gr-alphabet_u.txt
+ * The input files for the u model can be created using the script
+ * make_alignment_alphabet.py
+ */
+//#define UWPIPELINEDEMO
 
 int main(int argc, char** argv) {
   // Store the options in string format for later writing to an output file.
@@ -234,6 +249,25 @@ criterion used by the optimizer")
 initial weights")
     ("help", "display a help message")
   ;
+  
+#ifdef UWPIPELINEDEMO
+  string uAlphabetFname;
+  string wAlphabetFname;
+  string uFname;
+  string wFname;
+  
+  options.add_options()
+    ("u-alphabet", opt::value<string>(&uAlphabetFname)->default_value(
+        "<u alphabet filename>"), "file from which to load the u alphabet")
+    ("w-alphabet", opt::value<string>(&wAlphabetFname)->default_value(
+        "<w alphabet filename>"), "file from which to load the w alphabet")
+    ("u-weights", opt::value<string>(&uFname)->default_value(
+        "<u weights filename>"), "file from which to load the u weight vector")
+    ("w-weights", opt::value<string>(&wFname)->default_value(
+        "<w weights filename>"), "file from which to load the w weight vector")
+  ;
+#endif
+
   opt::variables_map vm;
   opt::store(opt::command_line_parser(argc, argv).options(options)
       .allow_unregistered().run(), vm);
@@ -243,9 +277,14 @@ initial weights")
   const bool trainFileSpecified = vm.count("train");
   const bool evalFileSpecified = vm.count("eval");
   const bool validationFileSpecified = vm.count("validation");
+#ifndef UWPIPELINEDEMO
   const bool loadFeatures = loadFeaturesFilename.size() > 0;
   const bool saveFeatures = saveFeaturesFilename.size() > 0;
-  
+#else
+  const bool loadFeatures = true;
+  const bool saveFeatures = false;
+#endif
+
   if (!trainFileSpecified && !evalFileSpecified) {
       cout << "Invalid arguments: Either --train or --eval is required\n"
         << options << endl;
@@ -279,11 +318,12 @@ initial weights")
   
   if (!iends_with(dirPath, "/"))
     dirPath += "/";
-    
-  const string alphabetFname = dirPath + "alphabet.txt";
+  
   bool cachingEnabled = false;
   bool resumed = false; // Are we resuming an incomplete run?
   vector<Model*> models;
+#ifndef UWPIPELINEDEMO
+  const string alphabetFname = dirPath + "alphabet.txt"; 
   
   shared_ptr<Alphabet> loadedAlphabet(new Alphabet(false, false));
   if (filesystem::exists(alphabetFname)) {
@@ -301,11 +341,47 @@ initial weights")
         ", so treating this as a resumed run. Any evaluation output files " <<
         "will be overwritten.\n";
   }
+#else
+  if (!filesystem::exists(uAlphabetFname)) {
+    cout << "Error: " << uAlphabetFname << " does not exist.\n";
+    return 1;
+  }
+  if (!filesystem::exists(wAlphabetFname)) {
+    cout << "Error: " << wAlphabetFname << " does not exist.\n";
+    return 1;
+  }
+  int wAlphabetOrigSize = -1; // we'll need this later when we load the weights
+  shared_ptr<Alphabet> wAlphabet(new Alphabet(false, false));
+  if (!wAlphabet->read(wAlphabetFname)) {
+    cout << "Error: Unable to read " << wAlphabetFname << endl;
+    return 1;
+  }
+  // This Alphabet-merging code hasn't been tested for multiclass.
+  assert(wAlphabet->size() == wAlphabet->numFeaturesPerClass());
+  if (wAlphabetOrigSize <= 0)
+    wAlphabetOrigSize = wAlphabet->size();
+    
+  Alphabet uAlphabet(false, false);
+  if (!uAlphabet.read(uAlphabetFname)) {
+    cout << "Error: Unable to read " << uAlphabetFname << endl;
+    return 1;
+  }
+  
+  // Append the u features to the w alphabet.
+  for (int i = 0; i < uAlphabet.numFeaturesPerClass(); i++) {
+    string f = uAlphabet.reverseLookup(i);
+    wAlphabet->lookup(f, TrainingObjective::kPositive, true);
+  }
+#endif
 
   for (size_t th = 0; th < threads; th++) {
+#ifdef UWPIPELINEDEMO
+    shared_ptr<Alphabet> alphabet = wAlphabet;
+#else
     shared_ptr<Alphabet> alphabet(new Alphabet(false, false));
     if (resumed)
       alphabet = loadedAlphabet;
+#endif
       
     // initialize the latent feature generator
     shared_ptr<AlignmentFeatureGen> fgenLat;
@@ -517,6 +593,8 @@ initial weights")
     objective.reset(new MaxMarginMulti(trainData, models));
     optEM = true; // EM is currently required for optimizing this objective
   }
+  else if (objName == MaxMarginPipelineUW::name())
+    objective.reset(new MaxMarginPipelineUW(trainData, models));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized objective name was given: "
@@ -639,6 +717,7 @@ initial weights")
   shared_ptr<Alphabet> alphabet = fgenLat->getAlphabet();
   assert(alphabet == fgenObs->getAlphabet()); // Assume the alphabet is shared
 
+#ifndef UWPIPELINEDEMO
   if (loadFeatures) {
     if (!filesystem::exists(loadFeaturesFilename)) {
       cout << "Error: " << loadFeaturesFilename << " does not exist.\n";
@@ -669,6 +748,7 @@ initial weights")
       return 0;
     }
   }
+#endif
 
   // Enable caching at this point, if requested.
   if (cachingEnabled) {
@@ -713,6 +793,22 @@ initial weights")
   regularizer->setupParameters(theta0, *alphabet, instantiatedLabels,
       seed);
   alphabet->lock(); // We can lock the Alphabet at this point.
+  
+#ifdef UWPIPELINEDEMO
+  assert(theta0.hasU());
+  if (!filesystem::exists(uFname)) {
+    cout << "Error: " << uFname << " does not exist.\n";
+    return 1;
+  }
+  if (!filesystem::exists(wFname)) {
+    cout << "Error: " << wFname << " does not exist.\n";
+    return 1;
+  }
+  // We offset the u weights by wAlphabetOrigSize, since the corresponding
+  // features are indexed from wAlphabetOrigSize,...,alphabet->size()-1.
+  theta0.w.read(wFname, alphabet->size());
+  theta0.u.read(uFname, alphabet->size(), wAlphabetOrigSize);  
+#else
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
       instantiatedLabels, fgenLat);
   if (theta0.hasU()) {
@@ -720,7 +816,7 @@ initial weights")
     initWeights(theta0.u, weightsInit, weightsNoise, seed + 1, alphabet,
         instantiatedLabels, fgenLat);
   }
-  
+
   // If an output directory was specfied, save the alphabet and options.
   if (writeFiles && !resumed) {
     if (!alphabet->write(alphabetFname))
@@ -734,7 +830,8 @@ initial weights")
     else
       cout << "Warning: Unable to write " << optsFname << endl;
   }
-  
+#endif
+
   if (activeLearnIters > 0) {
     // Let train be the seed set, eval be the pool, and validation (optional)
     // be the dev (and there's no holdout test).
@@ -994,6 +1091,10 @@ initial weights")
     }
   }
   
+#ifdef UWPIPELINEDEMO
+  weightVectors.push_back(theta0);
+#endif
+
   // Load the eval examples from the specified file.
   if (!split && evalFileSpecified && weightVectors.size() > 0) {
     int evalId = 0;

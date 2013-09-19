@@ -147,7 +147,7 @@ bool Alphabet::read(const string& fname) {
     // Populate _uniqueLabels with the entries that are not "gaps" (i.e., -1).
     for (size_t i = 0; i < _labelIndices.size(); ++i)
       if (_labelIndices[i] >= 0)
-        _uniqueLabels.insert(_labelIndices[i]);
+        _uniqueLabels.insert(i);
   }
   
   // Populate the feature dictionary.

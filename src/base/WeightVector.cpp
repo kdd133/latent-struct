@@ -109,7 +109,7 @@ void WeightVector::setWeights(const WeightVector& w) {
   }
 }
 
-bool WeightVector::read(const std::string& fname, int dim) {
+bool WeightVector::read(const std::string& fname, int dim, int indexOffset) {
   using namespace std;
   reAlloc(dim);
   ifstream fin(fname.c_str(), ifstream::in);
@@ -123,7 +123,7 @@ bool WeightVector::read(const std::string& fname, int dim) {
     int index = lexical_cast<int>(*it++);
     double value = lexical_cast<double>(*it++);
     assert(it == fields.end());
-    add(index, value);
+    add(index + indexOffset, value);
   }
   fin.close();
   return true;

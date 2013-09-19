@@ -85,7 +85,7 @@ class StringEditModel : public Model {
       const Label label, bool& callerOwns);
       
     virtual void printAlignment(std::ostream& out, const WeightVector& w,
-      const Pattern& pattern, const Label label);
+      const Pattern& pattern, const Label label, bool observedFeatures = true);
     
     static const std::string& name() {
       static const std::string _name = "StringEdit";
@@ -650,10 +650,10 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
 
 template <typename Graph>
 void StringEditModel<Graph>::printAlignment(std::ostream& out,
-    const WeightVector& w, const Pattern& x, const Label y) {
+    const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   using namespace std;
   
-  Graph* graph = getGraph(_fstCache, w, x, y);
+  Graph* graph = getGraph(_fstCache, w, x, y, includeObs);
   assert(graph);
   
   list<int> alignmentOps;
