@@ -35,7 +35,7 @@ class Alphabet {
     int lookup(std::string feat, Label label, bool addIfAbsent);
     
     // Return the string that is associated with the given index.
-    std::string reverseLookup(std::size_t index) const;
+    std::string reverseLookup(int index) const;
     
     bool isLocked() const;
   
@@ -44,9 +44,9 @@ class Alphabet {
     
     void unlock();
   
-    size_t size() const;
+    std::size_t size() const;
     
-    size_t numFeaturesPerClass() const;
+    std::size_t numFeaturesPerClass() const;
     
     bool read(const std::string& fname);
     
@@ -79,8 +79,8 @@ class Alphabet {
     std::set<Label> _uniqueLabels;
 };
 
-inline std::string Alphabet::reverseLookup(std::size_t index) const {
-  assert(index < _entries.size());
+inline std::string Alphabet::reverseLookup(int index) const {
+  assert(index < (int)_entries.size());
   return _entries.at(index);
 }
 
