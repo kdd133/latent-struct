@@ -109,10 +109,10 @@ void Inference<Semiring>::logExpectedFeatureCooccurrencesSample(const Graph& g,
 
   const Hypernode* node = g.root();  
   while (node != g.goal()) {
-    LogWeight insideScore = betas[node->getId()].score();
+    //LogWeight insideScore = betas[node->getId()].score();
     BOOST_FOREACH(const Hyperedge* e, node->getEdges()) {
       assert(e);
-      LogWeight edgeWeight = e->getWeight();
+      //LogWeight edgeWeight = e->getWeight();
       BOOST_FOREACH(const Hypernode* child, e->getChildren()) {
         assert(child);
         
