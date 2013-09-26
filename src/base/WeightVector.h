@@ -42,6 +42,8 @@ class WeightVector {
     
     int getDim() const { return _dim; }
     
+    void setWeight(int index, const double value);
+    
     void setWeights(const WeightVector& wv);
     
     void setWeights(const double* w, int len);

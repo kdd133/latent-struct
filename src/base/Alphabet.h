@@ -61,6 +61,8 @@ class Alphabet {
     // the index according to a given label. A value of -1 is returned if the
     // dictionary does not contain the feature.
     int getFeatureIndex(std::string feat);
+    
+    const std::set<Label>& getUniqueLabels() const;
 
   private:
     
@@ -94,6 +96,10 @@ inline const Alphabet::DictType& Alphabet::getDict() const {
 
 inline void Alphabet::unlock() {
   _locked = false;
+}
+
+inline const std::set<Label>& Alphabet::getUniqueLabels() const {
+  return _uniqueLabels;
 }
 
 #endif

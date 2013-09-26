@@ -137,6 +137,12 @@ int main(int argc, char** argv) {
   vector<double> tolerances;
   vector<string> evalFilenames;
   
+  bool stagedTraining = false;
+  string uAlphabetFname(blank);
+  string wAlphabetFname(blank);
+  string uFname(blank);
+  string wFname(blank);
+  
   // Enumerate the choices for each option that involves a class name.
   const string CMA = ", ";
   stringstream fgenMsgLat;
@@ -248,15 +254,12 @@ criterion used by the optimizer")
         0.01), "Gaussian variance parameter used when applying noise to \
 initial weights")
     ("help", "display a help message")
-  ;
-  
-#ifdef UWPIPELINEDEMO
-  string uAlphabetFname;
-  string wAlphabetFname;
-  string uFname;
-  string wFname;
-  
-  options.add_options()
+    
+    // The following are used only by staged training and u-w pipeline demo.
+    ("staged-training", opt::bool_switch(&stagedTraining),
+        "perform staged training by loading the w-alphabet and w-weights, then \
+initializing w based on the loaded model (other features are initialized \
+according to weights-init")
     ("u-alphabet", opt::value<string>(&uAlphabetFname)->default_value(
         "<u alphabet filename>"), "file from which to load the u alphabet")
     ("w-alphabet", opt::value<string>(&wAlphabetFname)->default_value(
@@ -266,8 +269,7 @@ initial weights")
     ("w-weights", opt::value<string>(&wFname)->default_value(
         "<w weights filename>"), "file from which to load the w weight vector")
   ;
-#endif
-
+  
   opt::variables_map vm;
   opt::store(opt::command_line_parser(argc, argv).options(options)
       .allow_unregistered().run(), vm);
@@ -966,7 +968,36 @@ initial weights")
     }    
     return 0;
   }
-
+  
+  // If we're performing staged training (i.e., we have already trained a
+  // presumably "simpler" classifier and now we want to add more features),
+  // then we initialize the model we're about to train with the weights of the
+  // model from the previous stage. Features that are unique to the current
+  // model are initialized according to the --weights-init option.
+  if (stagedTraining) {
+    assert(!theta0.hasU()); // u-w models do not yet support staged training
+    shared_ptr<Alphabet> alphabetPrevStage(new Alphabet(false, false));
+    if (!alphabetPrevStage->read(wAlphabetFname)) {
+      cout << "Error: Unable to read " << wAlphabetFname << endl;
+      return 1;
+    }    
+    WeightVector wPrevStage(alphabetPrevStage->size());
+    wPrevStage.read(wFname, alphabetPrevStage->size());
+    cout << "Staged training: Initializing weights from " << wFname <<
+        " using " << wAlphabetFname << endl;
+    Alphabet::DictType::const_iterator it = alphabetPrevStage->getDict().begin();
+    for (; it != alphabetPrevStage->getDict().end(); ++it) {
+      string f = it->first;
+      int indexPrevStage = it->second;
+      assert(indexPrevStage >= 0);
+      BOOST_FOREACH(Label y, alphabetPrevStage->getUniqueLabels()) {
+        int index = alphabet->lookup(f, y, false);
+        if (index >= 0)
+          theta0.w.setWeight(index, wPrevStage[indexPrevStage]);
+      }
+    }
+  }
+  
   // Train weights for each combination of the beta and tolerance parameters.
   // Note that the fsts (if caching is enabled) will be reused after being
   // built during the first parameter combination.
@@ -982,7 +1013,7 @@ initial weights")
           alphabet->size()));
 
       Parameters& theta = weightVectors.back();
-      theta.setParams(theta0); // FIXME: This line is causing an assert failure
+      theta.setParams(theta0);
       assert(weightVectors.size() > 0);
       const size_t wvIndex = weightVectors.size() - 1;
       

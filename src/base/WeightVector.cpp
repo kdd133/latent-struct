@@ -92,6 +92,11 @@ void WeightVector::zero() {
   _scale = 1;
 }
 
+void WeightVector::setWeight(int index, const double value) {
+  assert(index >= 0 && index < _dim);
+  _weights[index] = value / _scale;
+}
+
 void WeightVector::setWeights(const double* rawWeights, int len) {
   assert(rawWeights != _weights.get());
   if (len !=  _dim)
