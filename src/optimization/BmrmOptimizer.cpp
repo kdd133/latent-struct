@@ -45,7 +45,7 @@ using namespace std;
 BmrmOptimizer::BmrmOptimizer(shared_ptr<TrainingObjective> objective,
                              shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _quiet(false),
-    _noShrinking(false), _perfMeasure("fscore") {
+    _noShrinking(false) {
 }
 
 int BmrmOptimizer::processOptions(int argc, char** argv) {
@@ -56,9 +56,6 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
         "maximum number of iterations")
     ("no-shrinking", opt::bool_switch(&_noShrinking),
         "disable the shrinking heuristic")
-    ("performance-measure", opt::value<string>(&_perfMeasure)->default_value(
-        "fscore"), "the statistic that determines the 'best' set of parameters \
-{accuracy, fscore, 11pt_avg_prec}")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("help", "display a help message")
   ;
@@ -66,14 +63,6 @@ int BmrmOptimizer::processOptions(int argc, char** argv) {
   opt::store(opt::command_line_parser(argc, argv).options(options)
       .allow_unregistered().run(), vm);
   opt::notify(vm);
-  
-  to_lower(_perfMeasure);
-  if (_perfMeasure != "fscore" && _perfMeasure != "accuracy" &&
-      _perfMeasure != "11pt_avg_prec") {
-    cout << "Invalid arguments: Unrecognized performance measure\n";
-    cout << options << endl;
-    return 1;
-  }
   
   if (vm.count("help"))
     cout << options << endl;
@@ -106,7 +95,7 @@ Optimizer::status BmrmOptimizer::train(Parameters& w, double& min_Jw,
   // not matter. We'll silently set it to zero here, because taking the
   // starting point from the last EM iteration sometimes causes issues (i.e.,
   // we may be starting at the minimizer).
-  w.zero();
+  //w.zero();
   
   // Compute the initial objective value and gradient.
   _objective->valueAndGradient(w, Remp, grad_t);
@@ -271,7 +260,7 @@ JwCP = %0.4e  epsilon_t = %0.4e", name().c_str(), (int)t, (int)bs, Jw,
   
   if (!converged) {
     if (!_quiet) {
-      cout << name() << ": Max iterations reached; objective value " << Jw
+      cout << name() << ": Max iterations reached; objective value " << min_Jw
           << endl;
     }
     return Optimizer::MAX_ITERS_CONVEX;
