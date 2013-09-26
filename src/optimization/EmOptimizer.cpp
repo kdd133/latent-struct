@@ -14,6 +14,7 @@
 #include "Regularizer.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
+#include "ValidationSetHandler.h"
 #include <assert.h>
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
@@ -30,7 +31,7 @@ EmOptimizer::EmOptimizer(shared_ptr<TrainingObjective> objective,
                          shared_ptr<Regularizer> regularizer,
                          shared_ptr<Optimizer> opt) :
     Optimizer(objective, regularizer), _convexOpt(opt), _maxIters(20),
-      _abortOnConsecMaxIters(false), _quiet(false) {
+      _abortOnConsecMaxIters(false), _quiet(false), _ignoreIncrease(false) {
 }
 
 int EmOptimizer::processOptions(int argc, char** argv) {
@@ -42,6 +43,8 @@ int EmOptimizer::processOptions(int argc, char** argv) {
 on two consecutive EM iterations")
     ("em-max-iters", opt::value<int>(&_maxIters)->default_value(20),
         "maximum number of iterations")
+    ("em-ignore-increase", opt::bool_switch(&_ignoreIncrease),
+        "continue iterating if the objective value is seen to increase")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
   ;
   opt::variables_map vm;
@@ -75,6 +78,7 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     if (status == Optimizer::FAILURE) {
       cout << name() << " iter = " << iter <<
           ": Inner solver reported a failure. Terminating.\n";
+      getBestOnValidation(w, valCur);
       return Optimizer::FAILURE;
     }
     
@@ -83,10 +87,13 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
           " current=" << valCur;
       cout << " timer:" << timer.format();
     }
-      
+    if (_validationSetHandler)
+      _validationSetHandler->evaluate(w, iter);
+
     if (status == Optimizer::BACKWARD_PROGRESS) {
       cout << name() << " iter = " << iter <<
           ": Inner solver reported backward progress. Terminating.\n";
+      getBestOnValidation(w, valCur);
       return status;
     }
     
@@ -96,6 +103,7 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
           cout << name() << " iter = " << iter <<
               ": Inner solver reached max iterations on two " <<
               "consecutive EM iterations. Terminating\n";
+          getBestOnValidation(w, valCur);
           return Optimizer::MAX_ITERS_CONVEX;
         }
         innerMaxItersPrev = true;
@@ -106,8 +114,15 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
     }
     
     if (valCur - valPrev > 0) {
+      if (_ignoreIncrease) {
+        cout << name() << " iter = " << iter <<
+            ": [Warning] Objective value increased.\n";
+        valPrev = valCur;
+        continue; // i.e., skip the convergence check
+      }
       cout << name() << " iter = " << iter <<
           ": Objective value increased?! Terminating.\n";
+      getBestOnValidation(w, valCur);
       return Optimizer::BACKWARD_PROGRESS;
     }
     
@@ -125,7 +140,27 @@ Optimizer::status EmOptimizer::train(Parameters& w, double& valCur,
   if (!converged) {
     cout << name() << ": Max iterations reached; objective value " << valCur
         << endl;
+    getBestOnValidation(w, valCur);
     return Optimizer::MAX_ITERS_ALTERNATING;
   }
+  getBestOnValidation(w, valCur);
   return Optimizer::CONVERGED;
+}
+
+void EmOptimizer::getBestOnValidation(Parameters& w, double& score) const {
+  // If we evaluated on a validation set, return the best parameters we obtained
+  // according to the chosen performance metric. Otherwise, return the current
+  // parameters w.
+  if (_validationSetHandler) {
+    const Parameters& wBest = _validationSetHandler->getBestParams();
+    assert(wBest.getDimTotal() > 0);
+    assert(wBest.getDimTotal() == w.getDimTotal());
+    w.setParams(wBest);
+    score = _validationSetHandler->getBestScore();
+    if (!_quiet) {
+      cout << name() << ": Highest performance achieved on validation set was "
+          << _validationSetHandler->getBestScore() << " "
+          << _validationSetHandler->getPerfMeasure() << endl;
+    }
+  }
 }

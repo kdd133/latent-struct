@@ -681,7 +681,6 @@ according to weights-init")
       cout << "ValidationSetHandler::processOptions() failed." << endl;
       return 1;
     }
-    optInner->setValidationSetHandler(vsh);
   }
 
   // Wrap the optimizer in an EM procedure if requested.
@@ -695,6 +694,8 @@ according to weights-init")
   }
   else
     optimizer = optInner; // Note: processOptions has already been called
+    
+  optimizer->setValidationSetHandler(vsh); // still OK if vsh is null
 
   if (help) {
     cout << options << endl;

@@ -40,6 +40,12 @@ class EmOptimizer : public Optimizer {
     
   private:
   
+    // Sets theta to the best Parameters found during the optimization
+    // procedure; sets score to the corresponding score for the given evaluation
+    // measure. If no validation set was provided, theta and score are not
+    // modified.
+    void getBestOnValidation(Parameters& theta, double& score) const;
+  
     boost::shared_ptr<Optimizer> _convexOpt; // the convex optimizer
   
     int _maxIters; // maximum number of iterations
@@ -49,6 +55,9 @@ class EmOptimizer : public Optimizer {
     bool _abortOnConsecMaxIters;
     
     bool _quiet; // suppress optimization output
+    
+    // If false, the algorithm will terminate if the objective value increases.
+    bool _ignoreIncrease;
 };
 
 #endif
