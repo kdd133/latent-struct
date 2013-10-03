@@ -128,6 +128,11 @@ class StringEditModel : public Model {
     // If true, the graph will include an arc that fires a feature for the start
     // state; this arc is included in all paths through the graph.
     bool _includeStartArc;
+    
+    // If true, omit features for pairs of distinct aligned characters. In other
+    // words, disallow substitutions for unigrams. Insertions and deletions of
+    // single characters are included regardless of this option.
+    bool _identicalUnigramsOnly;
 
     // A cache for Fsts that include an arc for the observed features. 
     boost::ptr_map<ExampleId, Graph> _fstCache;
@@ -197,13 +202,17 @@ void StringEditModel<Graph>::addZeroOrderStates() {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
-        string opName = "Sub" + sStr + tStr;
-        EditOperation* op = new OpSubstitute(_ops.size(), &start, opName, s, t);
-        _ops.push_back(op);
-        start.addValidOperation(op);
+        // If _identicalUnigramsOnly is true, omit Sub operations for pairs of
+        // unigrams.
+        if (!_identicalUnigramsOnly || s > 1 || t > 1) {
+          string opName = "Sub" + sStr + tStr;
+          EditOperation* op = new OpSubstitute(_ops.size(), &start, opName, s, t);
+          _ops.push_back(op);
+          start.addValidOperation(op);
+        }
             
         if (s == t) { // can't possibly match phrases of different lengths
-          opName =  "Mat" + sStr + tStr;
+          string opName =  "Mat" + sStr + tStr;
           EditOperation* op = new OpMatch(_ops.size(), &start, opName, s);
           _ops.push_back(op);
           start.addValidOperation(op);
@@ -268,9 +277,11 @@ void StringEditModel<Graph>::addFirstOrderStates() {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) {
-        StateType* state = new StateType(_states.size(), "sub" + sStr + tStr);
-        sub[s][t] = state;
-        _states.push_back(state);
+        if (!_identicalUnigramsOnly || s > 1 || t > 1) {
+          StateType* state = new StateType(_states.size(), "sub" + sStr + tStr);
+          sub[s][t] = state;
+          _states.push_back(state);
+        }
       }
       else {
         StateType* state = new StateType(_states.size(), "rep" + sStr + tStr);
@@ -314,16 +325,20 @@ void StringEditModel<Graph>::addFirstOrderStates() {
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
       if (_useMatch) { // Distinguish between Substitutes and Matches.
-        string opName = "Sub" + sStr + tStr;
-        EditOperation* op = new OpSubstitute(_ops.size(), sub[s][t], opName,
-            s, t);
-        _ops.push_back(op);
-        BOOST_FOREACH(StateType& source, _states) {
-          source.addValidOperation(op);
+        // If _identicalUnigramsOnly is true, omit Sub operations for pairs of
+        // unigrams.
+        if (!_identicalUnigramsOnly || s > 1 || t > 1) {
+          string opName = "Sub" + sStr + tStr;
+          EditOperation* op = new OpSubstitute(_ops.size(), sub[s][t], opName,
+              s, t);
+          _ops.push_back(op);
+          BOOST_FOREACH(StateType& source, _states) {
+            source.addValidOperation(op);
+          }
         }
-            
+
         if (s == t) { // can't possibly match phrases of different lengths
-          opName =  "Mat" + sStr + tStr;
+          string opName = "Mat" + sStr + tStr;
           EditOperation* op = new OpMatch(_ops.size(), mat[s], opName, s);
           _ops.push_back(op);
           BOOST_FOREACH(StateType& source, _states) {
@@ -347,6 +362,8 @@ template <typename Graph>
 void StringEditModel<Graph>::addSecondOrderStates() {
   using namespace boost;
   using namespace std;
+  
+  assert(!_identicalUnigramsOnly); // not supported at this time
   
   // FIXME: Longer phrase lengths are not actually supported here yet, since we
   // have more operations than states; this means the history can be ambiguous.
@@ -503,6 +520,8 @@ int StringEditModel<Graph>::processOptions(int argc, char** argv) {
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
 match state when identical source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
+    ("identical-unigrams-only", opt::bool_switch(&_identicalUnigramsOnly),
+        "exclude alignment features for unigrams that are not identical")
     ("no-final-arc-feats", opt::bool_switch(&_noFinalArcFeats),
         "if true, do not fire a feature for each arc in the FST that connects \
 to the final state")
@@ -533,6 +552,12 @@ to the final state")
   
   if (_order < 0 || _order > 2) {
     cout << "Invalid arguments: --order can be 0, 1, or 2 in this version\n";
+    return 1;
+  }
+  
+  if (_identicalUnigramsOnly && _order == 2) {
+    cout << "Invalid arguments: --identical-unigrams-only cannot be combined" <<
+        " with --order=2 in this version.\n";
     return 1;
   }
   

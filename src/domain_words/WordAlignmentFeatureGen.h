@@ -74,8 +74,6 @@ class WordAlignmentFeatureGen : public AlignmentFeatureGen {
     
     bool _stateUnigramsOnly;
     
-    bool _identicalUnigramsOnly;
-    
     boost::regex _regVowel;
   
     boost::regex _regConsonant;

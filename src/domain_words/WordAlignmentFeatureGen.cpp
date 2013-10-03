@@ -36,8 +36,7 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(shared_ptr<Alphabet> alphabet)
     : AlignmentFeatureGen(alphabet), _order(1), _includeStateNgrams(true),
     _includeAlignNgrams(true), _includeCollapsedAlignNgrams(true),
     _includeBigramFeatures(false), _normalize(true), _regexEnabled(false),
-    _alignUnigramsOnly(false), _stateUnigramsOnly(false),
-    _identicalUnigramsOnly(false) {
+    _alignUnigramsOnly(false), _stateUnigramsOnly(false) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -60,8 +59,6 @@ higher order alignment n-grams, even if --order > 0")
     ("bigram-features", opt::bool_switch(&_includeBigramFeatures), "include a \
 source-unigram to target-bigram feature (and vice versa), where each n-gram \
 is extracted from the phrase pairs involved in the current edit operation")
-    ("identical-unigrams-only", opt::bool_switch(&_identicalUnigramsOnly),
-"exclude alignment features for unigrams that are not identical")
     ("no-align-ngrams", opt::bool_switch(&noAlign), "do not include n-gram \
 features of the aligned strings")
     ("no-collapsed-align-ngrams", opt::bool_switch(&noCollapse), "do not \
@@ -94,13 +91,6 @@ higher order state sequence n-grams, even if --order > 0")
     _normalize = false;
   if (noState)
     _includeStateNgrams = false;
-    
-  if (_includeCollapsedAlignNgrams && _identicalUnigramsOnly) {
-    // This can probably be supported, but is not in the current implementation. 
-    cout << "Invalid arguments: --identical-unigrams-only requires \
---no-collapsed-align-ngrams\n";
-    return 1;
-  }
 
   if (vowelsFname != "" && !iequals(vowelsFname, NONE))
   {
@@ -205,21 +195,11 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
       // alignment unigram feature if the operation was a noop.
       if (_includeAlignNgrams && (!_alignUnigramsOnly || n == 1) &&
           (op.getId() != OpNone::ID || n > 1)) {
-        // If the --identical-unigrams-only option is enabled, we omit features
-        // for pairs of distinct aligned characters. Insertions and deletions
-        // of single characters are always included.
-        // FIXME: This should really be implemented in StringEditModel, where
-        // we could prevent these edges from being added in the first place. 
-        if (!(_identicalUnigramsOnly && n == 1 &&
-            history[k].source != FeatureGenConstants::EPSILON &&
-            history[k].target != FeatureGenConstants::EPSILON &&
-            history[k].source != history[k].target)) {
-          addFeatureId("A:" + alignNgram, y, featureIds);
-          if (_regexEnabled) {
-            const string temp = regex_replace(alignNgram, _regConsonant, C);
-            const string alignNgramVC = regex_replace(temp, _regVowel, V);
-            addFeatureId("A:" + alignNgramVC, y, featureIds);
-          }
+        addFeatureId("A:" + alignNgram, y, featureIds);
+        if (_regexEnabled) {
+          const string temp = regex_replace(alignNgram, _regConsonant, C);
+          const string alignNgramVC = regex_replace(temp, _regVowel, V);
+          addFeatureId("A:" + alignNgramVC, y, featureIds);
         }
       }
       if (k > left)
