@@ -208,6 +208,8 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
         // If the --identical-unigrams-only option is enabled, we omit features
         // for pairs of distinct aligned characters. Insertions and deletions
         // of single characters are always included.
+        // FIXME: This should really be implemented in StringEditModel, where
+        // we could prevent these edges from being added in the first place. 
         if (!(_identicalUnigramsOnly && n == 1 &&
             history[k].source != FeatureGenConstants::EPSILON &&
             history[k].target != FeatureGenConstants::EPSILON &&

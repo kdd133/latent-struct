@@ -240,16 +240,18 @@ SparseRealVec* BergsmaKondrakWordFeatureGen::getFeatures(const Pattern& x,
     // Include a normalized edit distance feature, which is defined as the edit
     // distance divided by the length of the longer word.
     double ned = pair.getEditDistance();
-    // If we're normalizing, this feature will end up being normalized twice,
-    // so we skip normalization here in that case. 
-    if (!_normalize) {
-      const double normalization = pair.getSize();
-      assert(normalization > 0);
-      ned /= normalization;
+    if (ned > 0) { // There's no need to put an explicit 0 in the sparse vector!
+      // If we're normalizing, this feature will end up being normalized twice,
+      // so we skip normalization here in that case. 
+      if (!_normalize) {
+        const double normalization = pair.getSize();
+        assert(normalization > 0);
+        ned /= normalization;
+      }
+      const int fId = _alphabet->lookup(NED_FEATURE, y, true);
+      if (fId >= 0)
+        (*fv)[fId] = ned;
     }
-    const int fId = _alphabet->lookup(NED_FEATURE, y, true);
-    if (fId >= 0)
-      (*fv)[fId] = ned;
   }
   
   if (_normalize) {
