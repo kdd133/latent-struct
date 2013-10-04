@@ -238,6 +238,13 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
       for (int k = j + 1; k < jNew; k++)
         targetConsumed += FeatureGenConstants::PHRASE_SEP + t[k];
       assert(sourceConsumed.size() > 0 || targetConsumed.size() > 0);
+      
+      // By definition, we should never get an EPSILON-EPSILON alignment
+      // character; however, it could happen if, e.g., we accidentally use a
+      // CognatePairAligner as the reader, since it inserts EPSILON symbols in
+      // the strings.
+      assert(sourceConsumed != FeatureGenConstants::EPSILON ||
+          targetConsumed != FeatureGenConstants::EPSILON);
 
       // Append the state and the consumed strings to the alignment history.
       AlignmentPart part = {op->getName(), sourceConsumed, targetConsumed};

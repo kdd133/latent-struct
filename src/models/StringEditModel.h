@@ -363,14 +363,15 @@ void StringEditModel<Graph>::addSecondOrderStates() {
   using namespace boost;
   using namespace std;
   
-  assert(!_identicalUnigramsOnly); // not supported at this time
-  
   // FIXME: Longer phrase lengths are not actually supported here yet, since we
   // have more operations than states; this means the history can be ambiguous.
+  // That is, the states do not encode phrase lengths, so when looking at the
+  // history one cannot know whether, e.g., the transition to state "sub" was
+  // via the edit operation "Ins1" or "Ins2".
   assert(_maxSourcePhraseLength == 1 && _maxTargetPhraseLength == 1);
   
   // Note: Chosen so as not to overlap with anything in FeatureGenConstants.
-  const string trans = "^";
+  const string trans = "/";
   
   const string start = "sta";
   const string transToStart = trans + start;
@@ -380,7 +381,12 @@ void StringEditModel<Graph>::addSecondOrderStates() {
   baseEditNames.push_back("del");
   if (_useMatch) {
     baseEditNames.push_back("mat");
-    baseEditNames.push_back("sub");
+    // If _identicalUnigramsOnly is true, we won't have a Sub11 operation, so
+    // we'll only need a sub state if we are dealing with longer phrases.
+    if (!_identicalUnigramsOnly || _maxSourcePhraseLength > 1 ||
+        _maxTargetPhraseLength > 1) {
+      baseEditNames.push_back("sub");
+    }    
   }
   else
     baseEditNames.push_back("rep");
@@ -456,21 +462,27 @@ void StringEditModel<Graph>::addSecondOrderStates() {
         const string opName = opBaseName + lexical_cast<string>(sourceLen) +
             lexical_cast<string>(targetLen);
         if (iends_with(dest.getName(), opBaseName)) {
-          EditOperation* op;
+          EditOperation* op = 0;
           if (_useMatch) {
-            op = new OpSubstitute(_ops.size(), &dest, opName, sourceLen,
-                targetLen);
+            // If _identicalUnigramsOnly is true, omit Sub operations for pairs
+            // of unigrams.
+            if (!_identicalUnigramsOnly || sourceLen > 1 || targetLen > 1) {
+              op = new OpSubstitute(_ops.size(), &dest, opName, sourceLen,
+                  targetLen);
+            }
           }
           else {
             op = new OpReplace(_ops.size(), &dest, opName, sourceLen,
                 targetLen);
           }
-          _ops.push_back(op);
-          const string destFirst = dest.getName().substr(0, 3);
-          BOOST_FOREACH(StateType& source, _states) {
-            if (!iends_with(source.getName(), transToStart) &&
-                iends_with(source.getName(), destFirst)) {
-              source.addValidOperation(op);
+          if (op) {
+            _ops.push_back(op);
+            const string destFirst = dest.getName().substr(0, 3);
+            BOOST_FOREACH(StateType& source, _states) {
+              if (!iends_with(source.getName(), transToStart) &&
+                  iends_with(source.getName(), destFirst)) {
+                source.addValidOperation(op);
+              }
             }
           }
         }
@@ -552,12 +564,6 @@ to the final state")
   
   if (_order < 0 || _order > 2) {
     cout << "Invalid arguments: --order can be 0, 1, or 2 in this version\n";
-    return 1;
-  }
-  
-  if (_identicalUnigramsOnly && _order == 2) {
-    cout << "Invalid arguments: --identical-unigrams-only cannot be combined" <<
-        " with --order=2 in this version.\n";
     return 1;
   }
   
