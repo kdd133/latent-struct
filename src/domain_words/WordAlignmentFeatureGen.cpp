@@ -214,12 +214,23 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
   if (_includeCollapsedAlignNgrams && !_alignUnigramsOnly && _order > 0 &&
       histLen > 1) {
     string s, t;
+    bool atLeastOneEpsilon = false;
     for (int k = histLen - 1, n = 1; k >= left; k--, n++) {
       if (history[k].source != FeatureGenConstants::EPSILON)
         s = history[k].source + sep + s;
+      else if (!atLeastOneEpsilon)
+        atLeastOneEpsilon = true;
       if (history[k].target != FeatureGenConstants::EPSILON)
         t = history[k].target + sep + t;
+      else if (!atLeastOneEpsilon)
+        atLeastOneEpsilon = true;
         
+      // If we haven't encountered at least one epsilon symbol, then there's no
+      // point in creating a collapsed feature because it will not convey any
+      // more information given the alignment feature.
+      if (!atLeastOneEpsilon)
+        continue;
+
       // Omit zero order feature (effectively a duplicate of the A: feature).
       if (_includeAlignNgrams && n == 1)
         continue;
