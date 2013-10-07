@@ -92,6 +92,15 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
     _root = &_nodes[_nodes.size()-1];
   }
   
+  // If there are no edit operations to apply, we don't need to build a graph.
+  // Presumably (as the assert below checks), this implies that we have only
+  // observed features, and no latent features.
+  if (startFinishStateType.getValidOperations().size() == 0) {
+    // We must be using only observed features.
+    assert(includeObservedFeaturesArc);
+    return;
+  }
+
   if (includeStartArc) {
     SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, noOp, history);
     assert(fv && (fv->size() > 0 || _fgen->getAlphabet()->size() == 0));
