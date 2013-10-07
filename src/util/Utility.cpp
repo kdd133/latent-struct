@@ -384,7 +384,10 @@ double Utility::avg11ptPrecision(std::vector<prediction>& predictions) {
   for (int i = predictions.size()-1; i >= 0; i--) {
     double currentRecall = positiveCount[i] / (double)posTotal;
     double currentPrecision = positiveCount[i] / (double)(i+1);
-    for (int ri = 0; ri <= currentRecall * 10; ri++) {
+    // The use of 10+(small constant) prevents a rounding error when the code
+    // is compiled with the -Ofast optimization flag.
+    const int currentRecallTimes10 = currentRecall * 10.0000001;
+    for (int ri = 0; ri <= currentRecallTimes10; ri++) {
       if (currentPrecision > precisionAtRecall[ri])
         precisionAtRecall[ri] = currentPrecision;
     }
