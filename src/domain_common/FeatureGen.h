@@ -34,6 +34,12 @@ class FeatureGen {
       return _alphabet;
     }
     
+    virtual bool isEmpty() {
+      // "Empty" feature generators that do not produce any features must
+      // override this and return true.
+      return false;
+    }
+    
   protected:
   
     boost::shared_ptr<Alphabet> _alphabet;

@@ -50,6 +50,10 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
       static const std::string _name = "Empty";
       return _name;
     }
+    
+    virtual bool isEmpty() {
+      return true;
+    }
 
 };
 #endif

@@ -11,7 +11,6 @@
 #define _STRINGEDITMODEL_H
 
 #include "AlignmentFeatureGen.h"
-#include "EmptyAlignmentFeatureGen.h"
 #include "ExpectationSemiring.h"
 #include "Inference.h"
 #include "InputReader.h"
@@ -534,7 +533,6 @@ int StringEditModel<Graph>::processOptions(int argc, char** argv) {
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
 match state when identical source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
-    ("fgen-latent", opt::value<string>(&fgenNameLat))
     ("identical-unigrams-only", opt::bool_switch(&_identicalUnigramsOnly),
         "exclude alignment features for unigrams that are not identical")
     ("no-final-arc-feats", opt::bool_switch(&_noFinalArcFeats),
@@ -567,10 +565,8 @@ to the final state")
   
   // If we're not extracting any features from the latent representation, then
   // there's no need to build a graph.
-  // Note: The second part of the if statement relies on the fact that "Empty"
-  // is the default latent feature generator in latent_struct.cpp.
-  if (fgenNameLat == EmptyAlignmentFeatureGen::name() ||
-      fgenNameLat.size() == 0) {
+  if (_fgenAlign->isEmpty()) {
+    assert(!_fgenObserved->isEmpty());
     // We need a dummy start state in order to keep AlignmentHypergraph happy.
     _states.push_back(new StateType(0, "sta"));
     return 0;

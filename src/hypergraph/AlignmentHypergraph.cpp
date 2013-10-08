@@ -216,7 +216,7 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
     const StateType* destStateType = op->apply(s, t, sourceStateType, i, j,
         iNew, jNew);
     if (destStateType != 0) { // was the operation successfully applied?
-      assert(iNew >= 0 && jNew >= 0);
+      assert(iNew >= i && jNew >= j);
       StateId& destStateId = _stateIdTable[iNew][jNew][destStateType->getId()];
       // If the destination state already exists in the fst, we need to check
       // to see if this particular arc is already present, in which case there

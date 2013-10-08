@@ -43,7 +43,10 @@ class EmptyObservedFeatureGen : public ObservedFeatureGen {
       static const std::string _name = "Empty";
       return _name;
     }
-
+    
+    virtual bool isEmpty() {
+      return true;
+    }
 };
 
 #endif

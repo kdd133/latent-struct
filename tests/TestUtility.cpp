@@ -29,12 +29,12 @@ BOOST_AUTO_TEST_CASE(testUtility)
   source.push_back("g");
   
   int cost = Utility::levenshtein(source, target, sourceAligned, targetAligned,
-    99999);
+    3);
   BOOST_CHECK_EQUAL(cost, 5);
   BOOST_CHECK_EQUAL(sourceAligned.size(), targetAligned.size());
 
-  const string desiredSource = "-sitt-ing";
-  const string desiredTarget = "k-itte-n-";
+  const string desiredSource = "s-itti-ng";
+  const string desiredTarget = "-kitt-en-";
 
   // Conver each vector of strings representing an alignment into one string. 
   string alignedSource, alignedTarget;
