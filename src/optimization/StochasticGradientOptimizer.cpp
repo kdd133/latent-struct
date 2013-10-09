@@ -40,13 +40,12 @@ using namespace std;
 StochasticGradientOptimizer::StochasticGradientOptimizer(
     shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
-    _eta(0.01), _reportAvgCost(100), _reportValStats(1000), _reportObjVal(true),
+    _eta(0.01), _reportAvgCost(0), _reportValStats(1000), _reportObjVal(0),
     _quiet(false), _seed(0), _minibatchSize(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   namespace opt = program_options;
-  bool noObjVal = false;
   opt::options_description options(name() + " options");
   options.add_options()
     ("estimate-learning-rate", opt::bool_switch(&_autoEta),
@@ -57,11 +56,11 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         "maximum number of iterations")
     ("minibatch-size", opt::value<size_t>(&_minibatchSize)->default_value(1),
         "update parameters based on minibatches of this many examples")
-    ("no-report-objective-value", opt::bool_switch(&noObjVal),
-        "do not compute/report the objective value along with validation stats")
     ("quiet", opt::bool_switch(&_quiet), "suppress optimizer output")
     ("report-avg-cost", opt::value<size_t>(&_reportAvgCost)->
-        default_value(100), "report the avg. cost every n updates")
+        default_value(0), "report the avgerage cost every n updates")
+    ("report-objective-value", opt::value<size_t>(&_reportObjVal)->
+        default_value(0), "report the objective value every n updates")
     ("report-validation-stats", opt::value<size_t>(&_reportValStats)->
         default_value(1000), "report validation performance every n updates")
     ("seed", opt::value<int>(&_seed)->default_value(0),
@@ -72,9 +71,6 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
   opt::store(opt::command_line_parser(argc, argv).options(options)
       .allow_unregistered().run(), vm);
   opt::notify(vm);
-  
-  if (noObjVal)
-    _reportObjVal = false;
   
   if (vm.count("help"))
     cout << options << endl;
@@ -175,8 +171,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         timer.start();
       }
       
-      // Compute and report the actual objective value.
-      if (_reportObjVal && !_quiet) {
+      // Compute and report the actual objective value. This is done every
+      // _reportObjVal updates, and after the first update.
+      if (!_quiet && _reportObjVal > 0 && (t == 1 || t % _reportObjVal == 0)) {
         timer.stop();
         timer::cpu_timer clock;
         cout << name() << ": Computing objective value...  ";
@@ -184,7 +181,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         double fval;
         SparseRealVec gradTemp(d);
         _objective->valueAndGradient(theta, fval, gradTemp);
-        printf("obj = %.5f ", fval);
+        printf("t = %d  obj = %.5f ", (int)t, fval);
         cout << clock.format();
         timer.resume();
       }
