@@ -364,6 +364,22 @@ double WordAlignmentFeatureGen::getDefaultFeatureWeight(const string& f,
     }
     assert(0);
   }
+  else if (opType == "A") {          // Alignment feature (e.g., "A:o>-_k>k")
+    double value = 0;
+    const double a = 1.0/3.0;
+    const double b = 1.0 - a;
+    while (!it.at_end()) {
+      // The most recent (rightmost) edit should dominate (carry more weight),
+      // so we interpolate the sign with a fraction of the previous value.
+      const string sourcePhrase = *it++;
+      const string targetPhrase = *it++;
+      if (sourcePhrase == targetPhrase)
+        value = a*value + b*sign; // A match is good
+      else
+        value = a*value - b*sign; // Everything else is (assumed to be) bad
+    }
+    return value;
+  }
   else if (opType == "S") {          // State transition feature
     double value = 0;
     const double a = 1.0/3.0;
