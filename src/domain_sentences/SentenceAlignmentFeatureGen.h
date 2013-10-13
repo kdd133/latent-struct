@@ -33,8 +33,8 @@ class SentenceAlignmentFeatureGen : public AlignmentFeatureGen {
     
     //i: Current position in the source string.
     //j: Current position in the target string.
-    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
-      int j, const EditOperation& op,
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label,
+      int iPrev, int jPrev, int i, int j, const EditOperation& op,
       const std::vector<AlignmentPart>& editHistory);
       
     virtual int processOptions(int argc, char** argv);

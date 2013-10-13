@@ -78,7 +78,7 @@ features of the state sequence")
 }
 
 SparseRealVec* SentenceAlignmentFeatureGen::getFeatures(const Pattern& x,
-    Label y, int iNew, int jNew, const EditOperation& op,
+    Label y, int iPrev, int jPrev, int iNew, int jNew, const EditOperation& op,
     const vector<AlignmentPart>& history) {
     
   // TODO: May want to do the tokenizing in the reader, store in a

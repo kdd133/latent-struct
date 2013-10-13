@@ -36,7 +36,8 @@ WordAlignmentFeatureGen::WordAlignmentFeatureGen(shared_ptr<Alphabet> alphabet)
     : AlignmentFeatureGen(alphabet), _order(1), _includeStateNgrams(true),
     _includeAlignNgrams(true), _includeCollapsedAlignNgrams(true),
     _includeBigramFeatures(false), _normalize(true), _regexEnabled(false),
-    _alignUnigramsOnly(false), _stateUnigramsOnly(false) {
+    _alignUnigramsOnly(false), _stateUnigramsOnly(false),
+    _windowFeatureSize(0) {
 }
 
 int WordAlignmentFeatureGen::processOptions(int argc, char** argv) {
@@ -71,6 +72,9 @@ features of the state sequence")
     ("state-unigrams-only", opt::bool_switch(&_stateUnigramsOnly), "exclude \
 higher order state sequence n-grams, even if --order > 0")
     ("vowels-file", opt::value<string>(&vowelsFname), vowelsHelp.str().c_str())
+    ("window-size", opt::value<int>(&_windowFeatureSize), "if the value of \
+this option is n, extract a (2n+1)-gram feature centered at the source and \
+target positions of each edit; for n=0 no such features are extracted")
     ("help", "display a help message")
   ;
   opt::variables_map vm;
@@ -136,8 +140,8 @@ Gen need to be updated!\n";
 }
 
 SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
-    Label y, int sourcePos, int targetPos, const EditOperation& op,
-    const vector<AlignmentPart>& history) {
+    Label y, int sourcePosPrev, int targetPosPrev, int sourcePos, int targetPos,
+    const EditOperation& op, const vector<AlignmentPart>& history) {
     
   const int histLen = history.size();
   assert(sourcePos >= 0 && targetPos >= 0);
@@ -249,6 +253,55 @@ SparseRealVec* WordAlignmentFeatureGen::getFeatures(const Pattern& x,
         const string collapsedVC = regex_replace(temp, _regVowel, V);
         addFeatureId("C:" + collapsedVC, y, featureIds);
       }
+    }
+  }
+  
+  // A window feature is an n-gram centered at the current edit positions in
+  // the source and target strings. If the window size is set to n, we extract
+  // a feature that prepends the n characters to the left of the edit, and then
+  // appends the n characters to the right of the edit. This is done for both
+  // the source and target sides to produce a given feature. Note that although
+  // it may be the case that _order > 0, a window feature is only extracted
+  // from the most recent edit operation.
+  if (_windowFeatureSize > 0) {
+    // We may need to look at the source and/or target strings.
+    const vector<string>& sourceSeq = ((const StringPair&)x).getSource();
+    const vector<string>& targetSeq = ((const StringPair&)x).getTarget();
+    
+    const AlignmentPart& edit = history.back();    
+    for (int n = 1; n <= _windowFeatureSize; n++) {
+      string sourceWin = edit.source;
+      string targetWin = edit.target;
+      for (int i = 1; i <= n; i++) {
+        string s;
+        
+        if (sourcePosPrev - i >= 0)
+          s = sourceSeq[sourcePosPrev - i];
+        else
+          s = FeatureGenConstants::BEGIN_CHAR;
+        sourceWin = s + FeatureGenConstants::PHRASE_SEP + sourceWin;
+        
+        if (sourcePos + i - 1 < sourceSeq.size())
+          s = sourceSeq[sourcePos + i - 1];
+        else
+          s = FeatureGenConstants::END_CHAR;
+        sourceWin = sourceWin + FeatureGenConstants::PHRASE_SEP + s;
+        
+        if (targetPosPrev - i >= 0)
+          s = targetSeq[targetPosPrev - i];
+        else
+          s = FeatureGenConstants::BEGIN_CHAR;
+        targetWin = s + FeatureGenConstants::PHRASE_SEP + targetWin;
+        
+        if (targetPos + i - 1 < targetSeq.size())
+          s = targetSeq[targetPos + i - 1];
+        else
+          s = FeatureGenConstants::END_CHAR;
+        targetWin = targetWin + FeatureGenConstants::PHRASE_SEP + s;
+      }
+      stringstream f;
+      f << "W:" << sourceWin << FeatureGenConstants::OP_SEP << targetWin;
+      addFeatureId(f.str(), y, featureIds);
     }
   }
   

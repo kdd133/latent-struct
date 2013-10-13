@@ -102,7 +102,8 @@ void AlignmentHypergraph::build(const WeightVector& w, const Pattern& x, Label l
   }
 
   if (includeStartArc) {
-    SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, noOp, history);
+    SparseRealVec* fv = _fgen->getFeatures(pair, label, 0, 0, 0, 0, noOp,
+        history);
     assert(fv && (fv->size() > 0 || _fgen->getAlphabet()->size() == 0));
     const StateId preStartStateId = addNode();
     addEdge(noOp.getId(), startFinishStateType.getId(), preStartStateId,
@@ -195,7 +196,8 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
       AlignmentPart part = {noOp.getName(), FeatureGenConstants::EPSILON,
           FeatureGenConstants::EPSILON};
       history.push_back(part);
-      SparseRealVec* fv = _fgen->getFeatures(pair, label, i, j, noOp, history);
+      SparseRealVec* fv = _fgen->getFeatures(pair, label, i, j, i, j, noOp,
+          history);
       assert(fv && (fv->size() > 0 || _fgen->getAlphabet()->size() == 0));
       addEdge(noOp.getId(), startFinishStateType.getId(), sourceStateId,
           _goal->getId(), fv, w);
@@ -258,7 +260,7 @@ void AlignmentHypergraph::applyOperations(const WeightVector& w,
       // Append the state and the consumed strings to the alignment history.
       AlignmentPart part = {op->getName(), sourceConsumed, targetConsumed};
       history.push_back(part);
-      SparseRealVec* fv = _fgen->getFeatures(pair, label, iNew, jNew, *op,
+      SparseRealVec* fv = _fgen->getFeatures(pair, label, i, j, iNew, jNew, *op,
           history);
       addEdge(op->getId(), destStateType->getId(), sourceStateId, destStateId,
           fv, w);

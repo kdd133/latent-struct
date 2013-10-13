@@ -29,8 +29,8 @@ class EmptyAlignmentFeatureGen : public AlignmentFeatureGen {
     EmptyAlignmentFeatureGen(boost::shared_ptr<Alphabet> alphabet) :
       AlignmentFeatureGen(alphabet) {}
     
-    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
-        int j, const EditOperation& op,
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label,
+        int iPrev, int jPrev, int i, int j, const EditOperation& op,
         const std::vector<AlignmentPart>& editHistory) {
       return new SparseRealVec(_alphabet->size()); // zero vector
     }

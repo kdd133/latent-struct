@@ -32,8 +32,8 @@ class AlignmentFeatureGen : public FeatureGen {
     
     //i: Current position in the source string.
     //j: Current position in the target string.
-    virtual SparseRealVec* getFeatures(const Pattern& x, Label label, int i,
-      int j, const EditOperation& op,
+    virtual SparseRealVec* getFeatures(const Pattern& x, Label label,
+      int iPrev, int jPrev, int i, int j, const EditOperation& op,
       const std::vector<AlignmentPart>& editHistory) = 0;
 
     virtual double getDefaultFeatureWeight(const std::string& feature,
