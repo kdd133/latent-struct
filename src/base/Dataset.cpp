@@ -26,8 +26,15 @@ void Dataset::addExample(const Example& ex) {
   if (id > _maxId)
     _maxId = id; 
   _labels.insert(ex.y());
-  // Assign the example to a partition based on its id.
-  _partitions[id % _numPartitions].push_back(ex);
+  _partitions[_examples.size() % _numPartitions].push_back(ex);
+  
+  // Assign the example to a partition based on its id. This is problematic if
+  // we're sampling, as it can lead to unbalanced partitions, which is bad for
+  // parallelization. The reason we would want to partition this way is when
+  // we're doing active learning, since an example in the pool will then be
+  // assigned to the same Model (and cache) when it is selected for the
+  // training set. Otherwise, the example would get cached twice.
+//  _partitions[id % _numPartitions].push_back(ex);
 }
 
 void Dataset::clear() {

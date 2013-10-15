@@ -13,6 +13,7 @@
 #include "Optimizer.h"
 #include "Parameters.h"
 #include "ValidationSetHandler.h"
+#include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <lbfgs.h>
 #include <string>
@@ -49,7 +50,15 @@ class LbfgsOptimizer : public Optimizer {
     // progress when it actually can.
     int _restarts; 
     
+    int _minibatchSize; // if zero, perform batch optimization (default)
+    
+    int _maxMinibatches; // terminate after processing this many minibatches
+    
+    int _seed; // seed for random number generator (for sampling minibatches)
+    
     bool _quiet; // suppress optimization output
+    
+    bool _minibatchCaching; // enable caching of graphs within each minibatch
 
     static lbfgsfloatval_t evaluate(void* instance, const lbfgsfloatval_t* x,
         lbfgsfloatval_t* g, const int d, const lbfgsfloatval_t step);
@@ -65,7 +74,16 @@ class LbfgsOptimizer : public Optimizer {
       Parameters* theta;
       bool quiet;
       boost::shared_ptr<ValidationSetHandler> vsh;
+      boost::shared_array<std::list<int> > mb; // the minibatches
+      int batchNum; // the current minibatch to train on
     } LbfgsInstance;
+    
+    // Returns true if a termination condition is satisfied.
+    bool getLbfgsStatus(int returnCode, Optimizer::status& status) const;
+    
+    // Returns the number of minibatches; the actual batches are stored in mb.
+    int sampleMinibatches(boost::shared_array<std::list<int> >& mb, int seed)
+      const;
 };
 
 #endif
