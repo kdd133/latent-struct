@@ -222,10 +222,17 @@ Optimizer::status LbfgsOptimizer::train(Parameters& theta, double& fval,
           for (size_t mi = 0; mi < _objective->getNumModels(); mi++)
             _objective->getModel(mi).setCacheEnabled(false);
         }
-        _validationSetHandler->evaluate(theta, b);
+        bool maxNoImproveReached = _validationSetHandler->evaluate(theta, b);
         if (caching) { // restore caching if it was originally enabled
           for (size_t mi = 0; mi < _objective->getNumModels(); mi++)
             _objective->getModel(mi).setCacheEnabled(true);
+        }
+        if (maxNoImproveReached) {
+          if (!_quiet) {
+            cout << name() << ": Max number of evaluations without seeing " <<
+                "an improvement in the performance measure. Terminating.\n";
+          }
+          break;
         }
       }
 

@@ -43,7 +43,9 @@ class ValidationSetHandler {
       return _perfMeasure;
     }
     
-    void evaluate(const Parameters& theta, int iterationNum);
+    // Return true if the performance measure has not improved after a
+    // number of iterations specified by the --max-no-improvement option.
+    bool evaluate(const Parameters& theta, int iterationNum);
     
     bool wasEvaluated() const {
       return _wasEvaluated;
@@ -68,6 +70,15 @@ class ValidationSetHandler {
     // Value is true if the evaluate() method was called at least once. Gets
     // reset to false whenever clearBest() is called.
     bool _wasEvaluated;
+    
+    // If the specified number of consecutive evaluations are performed without
+    // seeing an improvement in the performance measure, evaluate() will return
+    // a flag. If this value is zero, evaluate() always returns false.
+    int _maxNoImprove;
+    
+    // This variable stores the number of consecutive evaluations that have
+    // been performed without seeing an improvement in the performance measure.
+    int _numNoImprove;
 };
 
 #endif

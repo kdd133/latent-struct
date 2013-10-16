@@ -25,7 +25,8 @@ using namespace std;
 ValidationSetHandler::ValidationSetHandler(shared_ptr<Dataset> dataset,
     shared_ptr<TrainingObjective> objective) : _validationSet(dataset),
     _objective(objective), _scoreBest(-numeric_limits<double>::infinity()),
-    _perfMeasure("11pt_avg_prec"), _quiet(false) {
+    _perfMeasure("11pt_avg_prec"), _quiet(false), _maxNoImprove(0),
+    _numNoImprove(0) {
   
   // Initialize a data structure that will be used to store the predictions made
   // on the validation set. 
@@ -39,7 +40,7 @@ void ValidationSetHandler::clearBest() {
   _wasEvaluated = false;
 }
 
-void ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
+bool ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
   double accuracy, precision, recall, fscore, avg11ptPrec;
   timer::cpu_timer clock;
   if (!_quiet) {
@@ -58,7 +59,10 @@ void ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
   if (*score > _scoreBest) {
     _scoreBest = *score;
     _thetaBest.setParams(theta);
+    _numNoImprove = 0;
   }
+  else
+    _numNoImprove++;
   
   if (!_quiet) {
     printf("t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ", iter, accuracy,
@@ -69,12 +73,18 @@ void ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
   
   if (!_wasEvaluated)
     _wasEvaluated = true;
+    
+  // If _maxNoImprove is 0, we always return false (the option is disabled).
+  return _maxNoImprove > 0 && _numNoImprove > _maxNoImprove;
 }
 
 int ValidationSetHandler::processOptions(int argc, char** argv) {
   namespace opt = boost::program_options;
   opt::options_description options("ValidationSetHandler options");
   options.add_options()
+    ("max-no-improvement", opt::value<int>(&_maxNoImprove)->default_value(0),
+        "if this many consecutive evaluations are performed without seeing \
+an improvement in the performance measure, evaluate() will return a flag")
     ("performance-measure", opt::value<string>(&_perfMeasure)->default_value(
         "11pt_avg_prec"), "the statistic that determines the 'best' set of \
 parameters, determined on a validation set {accuracy, fscore, 11pt_avg_prec}")
