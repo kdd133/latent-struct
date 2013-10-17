@@ -79,6 +79,9 @@ class ValidationSetHandler {
     // This variable stores the number of consecutive evaluations that have
     // been performed without seeing an improvement in the performance measure.
     int _numNoImprove;
+    
+    // Only report validation performance every n times evaluate() is called.
+    int _reportValStats;
 };
 
 #endif

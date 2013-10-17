@@ -40,8 +40,8 @@ using namespace std;
 StochasticGradientOptimizer::StochasticGradientOptimizer(
     shared_ptr<TrainingObjective> objective, shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _maxIters(250), _autoEta(false),
-    _eta(0.01), _reportAvgCost(0), _reportValStats(1000), _reportObjVal(0),
-    _quiet(false), _seed(0), _minibatchSize(1) {
+    _eta(0.01), _reportAvgCost(0), _reportObjVal(0), _quiet(false), _seed(0),
+    _minibatchSize(1) {
 }
 
 int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
@@ -61,8 +61,6 @@ int StochasticGradientOptimizer::processOptions(int argc, char** argv) {
         default_value(0), "report the avgerage cost every n updates")
     ("report-objective-value", opt::value<size_t>(&_reportObjVal)->
         default_value(0), "report the objective value every n updates")
-    ("report-validation-stats", opt::value<size_t>(&_reportValStats)->
-        default_value(1000), "report validation performance every n updates")
     ("seed", opt::value<int>(&_seed)->default_value(0),
         "seed for random number generator")
     ("help", "display a help message")
@@ -92,9 +90,6 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   
   if (_validationSetHandler)
     _validationSetHandler->clearBest();
-  
-  // This variable is used to simplify some of the if statements below.
-  const bool doValid = _validationSetHandler && _reportValStats > 0;
   
   // Group the training examples into minibatches based on the random ordering.
   int numMinibatches = ceil(m / (float)_minibatchSize);
@@ -186,11 +181,9 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
         timer.resume();
       }
       
-      // Evaluate the performance of model on the held-out data. This is done
-      // every _reportValStats updates, and after the first update.
-      if (doValid && (t == 1 || t % _reportValStats == 0)) {
+      // Evaluate the performance of model on the held-out data.
+      if (_validationSetHandler) {
         timer.stop();
-        assert(_validationSetHandler);
         _validationSetHandler->evaluate(theta, t);
         timer.resume();
       }
@@ -200,8 +193,7 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // If we evaluated on a validation set, return the best set of parameters we
   // found. Otherwise, return the current parameters theta.
   bool havePerformanceStatistic = false;
-  if (doValid) {
-    assert(_validationSetHandler);
+  if (_validationSetHandler) {
     const Parameters& thetaBest = _validationSetHandler->getBestParams();
     // If predictions were never actually made on the validation set (due to
     // not enough iterations, for example), then the dimensionality of
@@ -223,7 +215,8 @@ Optimizer::status StochasticGradientOptimizer::train(Parameters& theta,
   // If we didn't compute any performance statistic, then return the objective
   // value instead.
   if (!havePerformanceStatistic) {
-    assert(!doValid); // we shouldn't arrive here if we used a validation set
+    // We shouldn't arrive here if we used a validation set.
+    assert(!_validationSetHandler);
     timer::cpu_timer clock;
     if (!_quiet) {
       cout << name() << ": Computing objective value...  ";

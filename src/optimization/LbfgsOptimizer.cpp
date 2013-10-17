@@ -31,7 +31,7 @@ using namespace std;
 LbfgsOptimizer::LbfgsOptimizer(shared_ptr<TrainingObjective> objective,
                                shared_ptr<Regularizer> regularizer) :
     Optimizer(objective, regularizer), _restarts(3), _minibatchSize(0),
-    _maxMinibatches(100), _seed(0), _quiet(false) {
+    _maxMinibatches(100), _seed(0), _quiet(false), _minibatchCaching(false) {
   lbfgs_parameter_init(&_params);
 }
 
@@ -117,7 +117,7 @@ int LbfgsOptimizer::progress(void* instance, const lbfgsfloatval_t* x,
     const lbfgsfloatval_t xnorm, const lbfgsfloatval_t gnorm,
     const lbfgsfloatval_t step, int n, int k, int ls) {
     
-  cout << "LbfgsOptimizer: ";
+  cout << name() << ": ";
   cout << "iter = " << k << ", ";
   cout << "fx = " << fx << ", ";
   cout << "ls = " << ls << ", ";

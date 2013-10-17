@@ -54,9 +54,6 @@ class StochasticGradientOptimizer : public Optimizer {
     // report the average cost after every n updates
     std::size_t _reportAvgCost; 
     
-    // report validation set performance every n updates
-    std::size_t _reportValStats;
-    
     // report objective value every n updates
     std::size_t _reportObjVal;
     

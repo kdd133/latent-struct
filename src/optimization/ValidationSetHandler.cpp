@@ -26,7 +26,7 @@ ValidationSetHandler::ValidationSetHandler(shared_ptr<Dataset> dataset,
     shared_ptr<TrainingObjective> objective) : _validationSet(dataset),
     _objective(objective), _scoreBest(-numeric_limits<double>::infinity()),
     _perfMeasure("11pt_avg_prec"), _quiet(false), _maxNoImprove(0),
-    _numNoImprove(0) {
+    _numNoImprove(0), _reportValStats(0) {
   
   // Initialize a data structure that will be used to store the predictions made
   // on the validation set. 
@@ -40,7 +40,12 @@ void ValidationSetHandler::clearBest() {
   _wasEvaluated = false;
 }
 
-bool ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
+bool ValidationSetHandler::evaluate(const Parameters& theta, int timestep) {
+  // If _reportValStats is zero, we always evaluate. Moreover, we always
+  // evaluate the first time this method is called.
+  if (_reportValStats > 0 && timestep % _reportValStats != 0 && _wasEvaluated)
+    return false;
+
   double accuracy, precision, recall, fscore, avg11ptPrec;
   timer::cpu_timer clock;
   if (!_quiet) {
@@ -65,7 +70,7 @@ bool ValidationSetHandler::evaluate(const Parameters& theta, int iter) {
     _numNoImprove++;
   
   if (!_quiet) {
-    printf("t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ", iter, accuracy,
+    printf("t = %d  acc = %.3f  prec = %.3f  rec = %.3f  ", timestep, accuracy,
         precision, recall);
     printf("fscore = %.3f  11ptAvgPrec = %.3f  best = %.3f %s", fscore,
         avg11ptPrec, _scoreBest, clock.format().c_str());
@@ -88,6 +93,8 @@ an improvement in the performance measure, evaluate() will return a flag")
     ("performance-measure", opt::value<string>(&_perfMeasure)->default_value(
         "11pt_avg_prec"), "the statistic that determines the 'best' set of \
 parameters, determined on a validation set {accuracy, fscore, 11pt_avg_prec}")
+    ("report-validation-stats", opt::value<int>(&_reportValStats)->
+        default_value(0), "evaluate on validation set every n requests")
     ("quiet", opt::bool_switch(&_quiet), "suppress output")
     ("help", "display a help message")
   ;
