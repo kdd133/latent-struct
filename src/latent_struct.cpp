@@ -22,6 +22,7 @@
 #include "EmptyObservedFeatureGen.h"
 #include "Example.h"
 #include "InputReader.h"
+#include "KBestViterbiSemiring.h"
 #include "KlementievRothSentenceFeatureGen.h"
 #include "KlementievRothWordFeatureGen.h"
 #include "Label.h"
@@ -78,6 +79,8 @@
 
 using namespace boost;
 using namespace std;
+
+int KBestViterbiSemiring::k;
 
 /* Uncomment the following line to use the two-layer pipeline classifier. Note
  * that you can only use an existing model for classification at this time, as
@@ -200,6 +203,8 @@ in the training objective, i.e., (beta/2)*||w||^2")
         EmptyAlignmentFeatureGen::name()), fgenMsgLat.str().c_str())
     ("fgen-observed", opt::value<string>(&fgenNameObs)->default_value(
         EmptyObservedFeatureGen::name()), fgenMsgObs.str().c_str())
+    ("k-best-list", opt::value<int>(&KBestViterbiSemiring::k)->default_value(0),
+        "extract the k top-scoring latent structures")
     ("keep-all-positives", opt::bool_switch(&keepAllPositives),
         "if --sample-train is enabled, this option ensures that all the \
 positive examples present in the data are retained")

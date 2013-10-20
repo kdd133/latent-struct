@@ -12,8 +12,10 @@
 
 #include "AlignmentFeatureGen.h"
 #include "ExpectationSemiring.h"
+#include "Hyperedge.h"
 #include "Inference.h"
 #include "InputReader.h"
+#include "KBestViterbiSemiring.h"
 #include "Label.h"
 #include "LogSemiring.h"
 #include "LogWeight.h"
@@ -36,6 +38,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_array.hpp>
 #include <boost/program_options.hpp>
@@ -47,6 +50,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 
 template <typename Graph>
@@ -294,9 +298,6 @@ void StringEditModel<Graph>::addFirstOrderStates() {
   //// Add edit operations ////
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-    using boost::lexical_cast;
-    using std::string;
-    
     string opName = "Del" + lexical_cast<string>(s);
     EditOperation* op = new OpDelete(_ops.size(), del[s], opName, s);
     _ops.push_back(op);
@@ -318,9 +319,6 @@ void StringEditModel<Graph>::addFirstOrderStates() {
   }
   
   for (int s = 1; s <= _maxSourcePhraseLength; s++) {
-    using boost::lexical_cast;
-    using std::string;
-    
     const string sStr = lexical_cast<string>(s);
     for (int t = 1; t <= _maxTargetPhraseLength; t++) {
       const string tStr = lexical_cast<string>(t);
@@ -697,76 +695,92 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   Graph* graph = getGraph(_fstCache, w, x, y, includeObs);
   assert(graph);
   
-  list<int> alignmentOps;
-  Inference<ViterbiSemiring>::viterbiPath(*graph, alignmentOps);
+  vector<list<const Hyperedge*> > alignments;
+  
+  if (KBestViterbiSemiring::k <= 0) {
+    list<const Hyperedge*> alignment;
+    Inference<ViterbiSemiring>::viterbiPath(*graph, alignment);
+    alignments.push_back(alignment);
+  }
+  else {
+    Inference<KBestViterbiSemiring>::viterbiPathsK(*graph, alignments);
+    assert(alignments.size() == KBestViterbiSemiring::k);
+  }
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
-  
-  stringstream alignedSource, alignedTarget;
-  int i = 0, j = 0, iNew = -1, jNew = -1;
-  size_t alignPos = 0;
-  const StateType* source = &_states.front();
-  assert(source->getName() == "sta");
-  
-  // Recall that AlignmentTransducer places the ops in reverse order.
-  list<int>::const_iterator it;
-  for (it = alignmentOps.begin(); it != alignmentOps.end(); ++it) {
-    const int opId = *it;
-    if (opId == OpNone::ID)
-      continue;
-    assert(opId >= 0);
-    
-    // FIXME: This inner loop is inefficient. We should create a lookup table
-    // that maps op ids to ops.
-    BOOST_FOREACH(const EditOperation* op, source->getValidOperations()) {
-      if (op->getId() == opId) {
-        source = op->apply(s, t, source, i, j, iNew, jNew);
-        assert(source);
-        assert(source->getId() >= 0);
-        assert(iNew >= i && jNew >= j);
-        int iPhraseLen = iNew - i;
-        int jPhraseLen = jNew - j;
-        
-        out << op->getName() << " "; // Print the name of the edit operation.
-        alignedSource << "|";
-        alignedTarget << "|";
-        
-        if (iNew > i) {
-          alignedSource << s[i];
-          for (size_t k = i + 1; k < iNew; k++)
-            alignedSource << " " << s[k];
-        }
-        if (jNew > j) {
-          alignedTarget << t[j];
-          for (size_t k = j + 1; k < jNew; k++)
-            alignedTarget << " " << t[k];
-        }
-        
-        if (jPhraseLen < iPhraseLen) {
-          alignedTarget << (jPhraseLen > 0 ? "  " : " ");
-          for (size_t k = jPhraseLen + 1; k < iPhraseLen; k++)
-            alignedTarget << " " << " ";
-        }
-        else if (iPhraseLen < jPhraseLen) {
-          alignedSource << (iPhraseLen > 0 ? "  " : " ");
-          for (size_t k = iPhraseLen + 1; k < jPhraseLen; k++)
-            alignedSource << " " << " ";
-        }
 
-        i = iNew;
-        j = jNew;
-        alignPos++;
-        break;
+  out << pair << endl;
+
+  for (int k = 0; k < alignments.size(); k++) {
+    const list<const Hyperedge*>& edges = alignments[k];
+    LogWeight weight(1);
+    BOOST_FOREACH(const Hyperedge* edge, edges)
+      weight *= edge->getWeight();
+    out << "Alignment " << k << " (weight = " << weight << "):" << endl;
+    stringstream alignedSource, alignedTarget;
+    int i = 0, j = 0, iNew = -1, jNew = -1;
+    size_t alignPos = 0;
+    const StateType* source = &_states.front();
+    assert(source->getName() == "sta");
+    
+    BOOST_FOREACH(const Hyperedge* edge, edges) {
+      const int opId = edge->getLabel();
+      if (opId == OpNone::ID)
+        continue;
+      assert(opId >= 0);      
+      
+      // FIXME: This inner loop is inefficient. We should create a lookup table
+      // that maps op ids to ops.
+      BOOST_FOREACH(const EditOperation* op, source->getValidOperations()) {
+        if (op->getId() == opId) {
+          source = op->apply(s, t, source, i, j, iNew, jNew);
+          assert(source);
+          assert(source->getId() >= 0);
+          assert(iNew >= i && jNew >= j);
+          int iPhraseLen = iNew - i;
+          int jPhraseLen = jNew - j;
+          
+          out << op->getName() << " "; // Print the name of the edit operation.
+          alignedSource << "|";
+          alignedTarget << "|";
+          
+          if (iNew > i) {
+            alignedSource << s[i];
+            for (size_t k = i + 1; k < iNew; k++)
+              alignedSource << " " << s[k];
+          }
+          if (jNew > j) {
+            alignedTarget << t[j];
+            for (size_t k = j + 1; k < jNew; k++)
+              alignedTarget << " " << t[k];
+          }
+          
+          if (jPhraseLen < iPhraseLen) {
+            alignedTarget << (jPhraseLen > 0 ? "  " : " ");
+            for (size_t k = jPhraseLen + 1; k < iPhraseLen; k++)
+              alignedTarget << " " << " ";
+          }
+          else if (iPhraseLen < jPhraseLen) {
+            alignedSource << (iPhraseLen > 0 ? "  " : " ");
+            for (size_t k = iPhraseLen + 1; k < jPhraseLen; k++)
+              alignedSource << " " << " ";
+          }
+  
+          i = iNew;
+          j = jNew;
+          alignPos++;
+          break;
+        }
       }
     }
+    out << endl;
+    
+    // Print the strings with alignment markers.
+    out << alignedSource.str() << endl;
+    out << alignedTarget.str() << endl;
   }
-  
-  out << endl;
-  // Print the strings with alignment markers.
-  out << alignedSource.str() << endl;
-  out << alignedTarget.str() << endl;
 }
 
 template <typename Graph>

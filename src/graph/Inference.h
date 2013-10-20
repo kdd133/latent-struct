@@ -23,6 +23,7 @@
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
 #include <list>
+#include <vector>
 
 
 template <class Semiring>
@@ -44,10 +45,6 @@ class Inference {
     static double maxFeatureVector(const Graph& g, SparseRealVec* fv);
     static double viterbiScore(const Graph& g);
         
-    // Returns the *reverse* sequence of labels that correspond to the edges
-    // in the Viterbi (max-scoring) path.
-    static void viterbiPath(const Graph& g, std::list<int>& edgeLabels);
-        
     static void insideOutside(const Graph& g, typename
         Semiring::InsideOutsideResult& result);
     
@@ -55,15 +52,15 @@ class Inference {
     
     static boost::shared_array<Semiring> outside(const Graph& g,
         boost::shared_array<Semiring> betas);
-    
-    static double viterbi(const Graph& g, std::list<const Hyperedge*>& bestPath);
-    
-  private:
 
-    typedef struct viterbi_entry {
-      LogWeight score;
-      const Hyperedge* backPointer;
-    } ViterbiEntry;
+    // Returns the sequence of labels that correspond to the edges in the
+    // Viterbi (max-scoring) path, as well as the score of the path.
+    static double viterbiPath(const Graph& g,
+        std::list<const Hyperedge*>& path);
+
+    // Similar to viterbiPath(), but instead returns the k-best paths.
+    static void viterbiPathsK(const Graph& g,
+        std::vector<std::list<const Hyperedge*> >& paths);
 };
 
 template <class Semiring>
@@ -84,13 +81,13 @@ LogWeight Inference<Semiring>::logExpectedFeatures(const Graph& g,
 template <class Semiring>
 double Inference<Semiring>::maxFeatureVector(const Graph& g, SparseRealVec* fv) {
   std::list<const Hyperedge*> bestPath;
-  const double viterbiScore = viterbi(g, bestPath);
+  const double score = viterbiPath(g, bestPath);  
   fv->clear();
   BOOST_FOREACH(const Hyperedge* e, bestPath) {
     assert(e->getChildren().size() == 1); // Only works for graphs at this point
     ublas_util::addExponentiated(*e->getFeatureVector(), *fv);
-  }
-  return viterbiScore;
+  }  
+  return score;
 }
 
 template <class Semiring>
@@ -122,17 +119,46 @@ void Inference<Semiring>::logExpectedFeatureCooccurrencesSample(const Graph& g,
 }
 
 template <class Semiring>
-void Inference<Semiring>::viterbiPath(const Graph& g, std::list<int>& labels) {
-  labels.clear();
-  
-  std::list<const Hyperedge*> bestPath;
-  viterbi(g, bestPath);
-  
-  std::list<const Hyperedge*>::const_iterator it;
-  for (it = bestPath.begin(); it != bestPath.end(); ++it) {
-    assert(*it);
-    labels.push_back((*it)->getLabel());
+void Inference<Semiring>::viterbiPathsK(const Graph& g,
+    std::vector<std::list<const Hyperedge*> >& paths) {
+  boost::shared_array<Semiring> chart = inside(g);
+  const Semiring& r = chart[g.root()->getId()];
+  assert(r.size() > 0);  
+  paths.clear();
+  for (int i = 0; i < r.size(); i++) {
+    std::list<const Hyperedge*> path; // this will hold the ith-best path
+    const Hyperedge* e = r.entries()[i].bp();
+    assert(e); // there should be at least one edge
+    path.push_back(e);    
+    const ViterbiSemiring* from = r.entries()[i].from();
+    if (from) {
+      e = from->bp();
+      // Loop over the "from" back-pointers in the chart entries.
+      while (e != 0) {
+        path.push_back(e);
+        from = from->from();
+        e = from->bp();
+      }
+    }
+    paths.push_back(path);
   }
+}
+
+template <class Semiring>
+double Inference<Semiring>::viterbiPath(const Graph& g,
+    std::list<const Hyperedge*>& path) {  
+  boost::shared_array<Semiring> chart = inside(g);  
+  path.clear();
+  const Hypernode* v = g.root();
+  assert(v);
+  while (v != g.goal()) {
+    const Hyperedge* e = chart[v->getId()].bp();
+    assert(e);
+    assert(e->getChildren().size() == 1); // Only works for graphs at this point
+    path.push_back(e);
+    v = e->getChildren().front();
+  }
+  return chart[g.root()->getId()].score();
 }
 
 template <class Semiring>
@@ -192,7 +218,7 @@ void Inference<Semiring>::insideOutside(const Graph& g,
   
   Semiring::finalizeInsideOutsideResult(result, betas[g.root()->getId()]);
 }
-    
+
 template <class Semiring>
 boost::shared_array<Semiring> Inference<Semiring>::inside(const Graph& g) {
   std::list<const Hypernode*> revTopOrder;
@@ -267,55 +293,6 @@ boost::shared_array<Semiring> Inference<Semiring>::outside(const Graph& g,
     }
   }
   return alphas;
-}
-
-template <class Semiring>
-double Inference<Semiring>::viterbi(const Graph& g,
-    std::list<const Hyperedge*>& path) {
-  std::list<const Hypernode*> revTopOrder;
-  g.getNodesTopologicalOrder(revTopOrder, true);
-  assert(revTopOrder.size() == g.numNodes());
-  path.clear();
-  
-  boost::scoped_array<ViterbiEntry> chart(new ViterbiEntry[g.numNodes()]);
-  for (size_t i = 0; i < g.numNodes(); ++i) {
-    chart[i].score = LogWeight();
-    chart[i].backPointer = 0;
-  }
-  chart[g.goal()->getId()].score = LogWeight(1);
-  
-  // For each node, in reverse topological order...
-  BOOST_FOREACH(const Hypernode* v, revTopOrder) {
-    assert(v);
-    BOOST_FOREACH(const Hyperedge* e, v->getEdges()) {
-      assert(e);
-      LogWeight pathScore = e->getWeight();
-      
-      BOOST_FOREACH(const Hypernode* u, e->getChildren()) {
-        assert(u);
-        pathScore *= chart[u->getId()].score;
-      }
-      
-      ViterbiEntry& nodeEntry = chart[v->getId()];
-      if (!nodeEntry.backPointer || nodeEntry.score < pathScore) {
-        nodeEntry.score = pathScore;
-        nodeEntry.backPointer = e;
-      }
-    }
-  }
-  
-  const Hypernode* v = g.root();
-  assert(v);
-  while (v != g.goal()) {
-    const Hyperedge* e = chart[v->getId()].backPointer;
-    assert(e);
-    assert(e->getChildren().size() == 1); // Only works for graphs at this point
-    path.push_back(e);
-    v = e->getChildren().front();
-  }
-  
-  const double pathScore = chart[g.root()->getId()].score;
-  return pathScore;
 }
 
 #endif
