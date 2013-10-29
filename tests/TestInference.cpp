@@ -3,6 +3,7 @@
 #include "Graph.h"
 #include "Hyperedge.h"
 #include "Hypernode.h"
+#include "KBestViterbiSemiring.h"
 #include <assert.h>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
@@ -10,6 +11,7 @@
 #include <boost/test/unit_test.hpp>
 #include <list>
 
+int KBestViterbiSemiring::k = 0;
 
 class SimpleGraph : public Graph {
   public:

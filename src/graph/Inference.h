@@ -18,6 +18,7 @@
 #include "LogSemiring.h"
 #include "LogWeight.h"
 #include "Ublas.h"
+#include "ViterbiSemiring.h"
 #include <boost/foreach.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/shared_array.hpp>
