@@ -39,7 +39,7 @@
 #include "MaxMarginBinary.h"
 #include "MaxMarginBinaryObs.h"
 #include "MaxMarginMulti.h"
-#include "MaxMarginPipelineUW.h"
+#include "MaxMarginBinaryPipelineUW.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
@@ -86,7 +86,7 @@ int KBestViterbiSemiring::k;
  * that you can only use an existing model for classification at this time, as
  * training the pipeline is not yet supported.
  * Example options are: --eval=data/FVInput/gr-en.prepared.0.58.test
- * --model=StringEdit --obj=MaxMarginPipelineUW --reader=CognatePair
+ * --model=StringEdit --obj=MaxMarginBinaryPipelineUW --reader=CognatePair
  * --fgen-lat=WordAlignment --order=0 --no-normalize --no-state-ngrams
  * --exact-match-state --fgen-obs=BKWord --substring-size=3 --add-begin-end
  * --bk-ned --w-alphabet=gr-alphabet_w.txt --w-weights=gr-weights_w.txt
@@ -600,8 +600,8 @@ according to weights-init")
     objective.reset(new MaxMarginMulti(trainData, models));
     optEM = true; // EM is currently required for optimizing this objective
   }
-  else if (objName == MaxMarginPipelineUW::name())
-    objective.reset(new MaxMarginPipelineUW(trainData, models));
+  else if (objName == MaxMarginBinaryPipelineUW::name())
+    objective.reset(new MaxMarginBinaryPipelineUW(trainData, models));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized objective name was given: "

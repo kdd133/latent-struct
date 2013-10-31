@@ -7,8 +7,8 @@
  * Copyright (c) 2013 Kenneth Dwyer
  */
 
-#ifndef _MAXMARGINPIPELINEUW_H
-#define _MAXMARGINPIPELINEUW_H
+#ifndef _MAXMARGINBINARYPIPELINEUW_H
+#define _MAXMARGINBINARYPIPELINEUW_H
 
 #include "Parameters.h"
 #include "TrainingObjective.h"
@@ -20,21 +20,22 @@ class Dataset;
 class LogWeight;
 class Model;
 
-class MaxMarginPipelineUW : public TrainingObjective {
+class MaxMarginBinaryPipelineUW : public TrainingObjective {
 
   public:
   
-    MaxMarginPipelineUW(const Dataset& dataset, const std::vector<Model*>& models) :
+    MaxMarginBinaryPipelineUW(const Dataset& dataset,
+      const std::vector<Model*>& models) :
       TrainingObjective(dataset, models) {}
     
-    virtual ~MaxMarginPipelineUW() {}
+    virtual ~MaxMarginBinaryPipelineUW() {}
     
     virtual bool isBinary() const { return true; }
     
     virtual bool isUW() const { return true; }
 
     static const std::string& name() {
-      static const std::string _name = "MaxMarginPipelineUW";
+      static const std::string _name = "MaxMarginBinaryPipelineUW";
       return _name;
     }
     

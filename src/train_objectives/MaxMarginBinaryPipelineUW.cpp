@@ -11,7 +11,7 @@
 #include "Example.h"
 #include "FeatureGenConstants.h"
 #include "Label.h"
-#include "MaxMarginPipelineUW.h"
+#include "MaxMarginBinaryPipelineUW.h"
 #include "Model.h"
 #include "Parameters.h"
 #include "StringPairAligned.h"
@@ -28,7 +28,7 @@
 using namespace boost;
 using namespace std;
 
-void MaxMarginPipelineUW::valueAndGradientPart(const Parameters& theta,
+void MaxMarginBinaryPipelineUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, SparseRealVec& gradFv) {
   assert(0); // not yet implemented
@@ -94,8 +94,8 @@ StringPairAligned toStringPairAligned(const string& alignmentString) {
       numEpsilons);
 }
 
-void MaxMarginPipelineUW::predictPart(const Parameters& theta, Model& model,
-    const Dataset::iterator& begin, const Dataset::iterator& end,
+void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
+    Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
   const Label ypos = TrainingObjective::kPositive;
   for (Dataset::iterator it = begin; it != end; ++it) {

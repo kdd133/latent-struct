@@ -83,6 +83,8 @@ void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
   funcVal = Utility::hinge(funcVal - theta.w.innerProd(*_imputedFv)); 
 }
 
+// TODO: Made this more efficient by using a dense accumulator as above?
+// We would only need a lock on _imputedFv after the for loop is finished.
 void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
   const int d = theta.w.getDim();
