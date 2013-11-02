@@ -40,6 +40,7 @@
 #include "MaxMarginBinaryObs.h"
 #include "MaxMarginMulti.h"
 #include "MaxMarginBinaryPipelineUW.h"
+#include "MaxMarginMultiPipelineUW.h"
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "Optimizer.h"
@@ -357,16 +358,11 @@ according to weights-init")
     cout << "Error: " << wAlphabetFname << " does not exist.\n";
     return 1;
   }
-  int wAlphabetOrigSize = -1; // we'll need this later when we load the weights
   shared_ptr<Alphabet> wAlphabet(new Alphabet(false, false));
   if (!wAlphabet->read(wAlphabetFname)) {
     cout << "Error: Unable to read " << wAlphabetFname << endl;
     return 1;
   }
-  // This Alphabet-merging code hasn't been tested for multiclass.
-  assert(wAlphabet->size() == wAlphabet->numFeaturesPerClass());
-  if (wAlphabetOrigSize <= 0)
-    wAlphabetOrigSize = wAlphabet->size();
     
   Alphabet uAlphabet(false, false);
   if (!uAlphabet.read(uAlphabetFname)) {
@@ -602,6 +598,8 @@ according to weights-init")
   }
   else if (objName == MaxMarginBinaryPipelineUW::name())
     objective.reset(new MaxMarginBinaryPipelineUW(trainData, models));
+  else if (objName == MaxMarginMultiPipelineUW::name())
+    objective.reset(new MaxMarginMultiPipelineUW(trainData, models));
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized objective name was given: "
@@ -812,10 +810,8 @@ according to weights-init")
     cout << "Error: " << wFname << " does not exist.\n";
     return 1;
   }
-  // We offset the u weights by wAlphabetOrigSize, since the corresponding
-  // features are indexed from wAlphabetOrigSize,...,alphabet->size()-1.
   theta0.w.read(wFname, alphabet->size());
-  theta0.u.read(uFname, alphabet->size(), wAlphabetOrigSize);  
+  theta0.u.read(uFname, alphabet->size());
 #else
   initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
       instantiatedLabels, fgenLat);
