@@ -15,11 +15,14 @@
 #include "Model.h"
 #include "ObservedFeatureGen.h"
 #include "Parameters.h"
+#include "StringPairAligned.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
 #include "Utility.h"
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/multi_array.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -28,6 +31,7 @@
 #include <boost/random/variate_generator.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/tokenizer.hpp>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -399,4 +403,57 @@ double Utility::avg11ptPrecision(std::vector<prediction>& predictions) {
   for (int ri = 0; ri < 11; ri++)
     prSum += precisionAtRecall[ri];
   return prSum / 11;
+}
+
+StringPairAligned Utility::toStringPairAligned(const string& alignmentString) {
+  typedef tokenizer<char_separator<char> > Tokenizer;
+  char_separator<char> newlineSep("\n");
+  char_separator<char> pipeSep("|");
+  Tokenizer lines(alignmentString, newlineSep);
+  Tokenizer::const_iterator line = lines.begin();
+  ++line; // skip the sequence of edit operations
+  
+  // We define the edit distance to be the total number of epsilon symbols
+  // that appear in the source and target strings. Note that this is not
+  // necessarily the same as the edit distance computed by
+  // Utility::levenshtein, which returns the total cost of the edits. But
+  // since INS and DEL each have unit cost, we will get the same result.
+  int numEpsilons = 0;
+  
+  Tokenizer tokens(*line, pipeSep);
+  Tokenizer::const_iterator t;
+  vector<string> source;
+  int lenSource = 0;
+  for (t = tokens.begin(); t != tokens.end(); ++t) {
+    string s = *t;
+    trim(s);
+    if (s.size() == 0) {
+      source.push_back(FeatureGenConstants::EPSILON);
+      numEpsilons++;
+    }
+    else {
+      source.push_back(s);
+      lenSource++;
+    }
+  }
+  ++line;
+  
+  tokens = Tokenizer(*line, pipeSep);
+  vector<string> target;
+  int lenTarget = 0;
+  for (t = tokens.begin(); t != tokens.end(); ++t) {
+    string s = *t;
+    trim(s);
+    if (s.size() == 0) {
+      target.push_back(FeatureGenConstants::EPSILON);
+      numEpsilons++;
+    }
+    else {
+      target.push_back(s);
+      lenTarget++;
+    }
+  }
+  
+  return StringPairAligned(source, target, max(lenSource, lenTarget),
+      numEpsilons);
 }

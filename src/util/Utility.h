@@ -22,6 +22,7 @@ class Dataset;
 class InputReader;
 class Model;
 class Parameters;
+class StringPairAligned;
 class TrainingObjective;
 
 class Utility {
@@ -80,6 +81,16 @@ class Utility {
                            std::vector<std::string>& sourceEps,
                            std::vector<std::string>& targetEps,
                            int subCost = 1);
+
+    // Parses a string of the form:
+    //
+    // Mat11 Del1 Ins1 Mat11 Mat11 Mat11 Del1 Mat11 
+    // |^|j| |a|k|e|n|$
+    // |^| |s|a|k|e| |$
+    //
+    // and returns a StringPairAligned object.
+    static StringPairAligned toStringPairAligned(
+        const std::string& alignmentString);
                            
   private:
   

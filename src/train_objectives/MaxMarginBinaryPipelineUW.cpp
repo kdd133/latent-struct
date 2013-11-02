@@ -16,10 +16,9 @@
 #include "Parameters.h"
 #include "StringPairAligned.h"
 #include "Ublas.h"
+#include "Utility.h"
 #include <algorithm>
 #include <assert.h>
-#include <boost/algorithm/string.hpp>
-#include <boost/tokenizer.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -32,66 +31,6 @@ void MaxMarginBinaryPipelineUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, SparseRealVec& gradFv) {
   assert(0); // not yet implemented
-}
-
-// Parses a string of the form:
-//
-// Mat11 Del1 Ins1 Mat11 Mat11 Mat11 Del1 Mat11 
-// |^|j| |a|k|e|n|$
-// |^| |s|a|k|e| |$
-//
-// and returns a StringPairAligned object.
-StringPairAligned toStringPairAligned(const string& alignmentString) {
-  typedef tokenizer<char_separator<char> > Tokenizer;
-  char_separator<char> newlineSep("\n");
-  char_separator<char> pipeSep("|");
-  Tokenizer lines(alignmentString, newlineSep);
-  Tokenizer::const_iterator line = lines.begin();
-  ++line; // skip the sequence of edit operations
-  
-  // We define the edit distance to be the total number of epsilon symbols
-  // that appear in the source and target strings. Note that this is not
-  // necessarily the same as the edit distance computed by
-  // Utility::levenshtein, which returns the total cost of the edits. But
-  // since INS and DEL each have unit cost, we will get the same result.
-  int numEpsilons = 0;
-  
-  Tokenizer tokens(*line, pipeSep);
-  Tokenizer::const_iterator t;
-  vector<string> source;
-  int lenSource = 0;
-  for (t = tokens.begin(); t != tokens.end(); ++t) {
-    string s = *t;
-    trim(s);
-    if (s.size() == 0) {
-      source.push_back(FeatureGenConstants::EPSILON);
-      numEpsilons++;
-    }
-    else {
-      source.push_back(s);
-      lenSource++;
-    }
-  }
-  ++line;
-  
-  tokens = Tokenizer(*line, pipeSep);
-  vector<string> target;
-  int lenTarget = 0;
-  for (t = tokens.begin(); t != tokens.end(); ++t) {
-    string s = *t;
-    trim(s);
-    if (s.size() == 0) {
-      target.push_back(FeatureGenConstants::EPSILON);
-      numEpsilons++;
-    }
-    else {
-      target.push_back(s);
-      lenTarget++;
-    }
-  }
-  
-  return StringPairAligned(source, target, max(lenSource, lenTarget),
-      numEpsilons);
 }
 
 void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
@@ -108,7 +47,7 @@ void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
     model.printAlignment(align_ss, theta.u, x, ypos, false);
     
     // Create a StringPairAligned object by parsing the alignment string.
-    StringPairAligned xPrime = toStringPairAligned(align_ss.str());
+    StringPairAligned xPrime = Utility::toStringPairAligned(align_ss.str());
     
     // Compute the "global" features and then classify using w.
     bool own = false;
