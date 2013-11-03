@@ -23,10 +23,9 @@ class StringPair : public Pattern {
   public:
     StringPair(std::vector<std::string> source, std::vector<std::string> target) :
       _source(source), _target(target), _hasBeginEnd(false) {
-      if (source.front() == FeatureGenConstants::BEGIN_CHAR) {
-        assert(source.back() == FeatureGenConstants::END_CHAR);
-        _hasBeginEnd = true;
-      }
+      // We only need to check for begin/end markers in the source string, since
+      // they are either present in both or in neither.
+      setHasBeginEnd(_source);
     }
       
     // Assume the source and target strings are arrays of characters (i.e.,
@@ -36,10 +35,7 @@ class StringPair : public Pattern {
         _source.push_back(source.substr(i, 1));
       for (std::size_t i = 0; i < target.size(); ++i)
         _target.push_back(target.substr(i, 1));
-      if (_source.front() == FeatureGenConstants::BEGIN_CHAR) {
-        assert(_source.back() == FeatureGenConstants::END_CHAR);
-        _hasBeginEnd = true;
-      }
+      setHasBeginEnd(_source);
     }
     
     virtual const std::vector<std::string>& getSource() const;
@@ -58,6 +54,8 @@ class StringPair : public Pattern {
     std::vector<std::string> _target;
     
     bool _hasBeginEnd;
+    
+    void setHasBeginEnd(std::vector<std::string> source);
 };
 
 inline const std::vector<std::string>& StringPair::getSource() const {
@@ -82,6 +80,31 @@ inline std::ostream& operator<<(std::ostream& out, const StringPair& sp) {
   for (std::size_t i = 0; i < sp._target.size(); ++i)
     out << sp._target[i] << " ";
   return out;
+}
+
+// Locate the first and last characters that are not epsilon symbols. If these
+// are the BEGIN_CHAR and END_CHAR symbols, respectively, then we set the flag
+// to true.
+inline void StringPair::setHasBeginEnd(std::vector<std::string> vecStr) {
+  int firstNonEpsilon = -1;
+  int lastNonEpsilon = -1;
+  for (int i = 0; i < vecStr.size(); i++)
+    if (vecStr[i] != FeatureGenConstants::EPSILON) {
+      firstNonEpsilon = i;
+      break;
+    }
+  for (int i = vecStr.size()-1; i >= 0; i--)
+    if (vecStr[i] != FeatureGenConstants::EPSILON) {
+      lastNonEpsilon = i;
+      break;
+    }
+  assert(firstNonEpsilon >= 0 && lastNonEpsilon >= 0);
+  if (vecStr[firstNonEpsilon] == FeatureGenConstants::BEGIN_CHAR) {
+    assert(vecStr[lastNonEpsilon] == FeatureGenConstants::END_CHAR);
+    _hasBeginEnd = true;
+  }
+  else
+    _hasBeginEnd = false;
 }
 
 #endif
