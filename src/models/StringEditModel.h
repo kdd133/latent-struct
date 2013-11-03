@@ -711,14 +711,12 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   const vector<string>& s = pair.getSource();
   const vector<string>& t = pair.getTarget();
 
-  out << pair << endl;
-
   for (int k = 0; k < alignments.size(); k++) {
     const list<const Hyperedge*>& edges = alignments[k];
     LogWeight weight(1);
     BOOST_FOREACH(const Hyperedge* edge, edges)
       weight *= edge->getWeight();
-    out << "Alignment " << k << " (weight = " << weight << "):" << endl;
+    out << "Alignment " << k << " ( weight = " << weight << " ):" << endl;
     stringstream alignedSource, alignedTarget;
     int i = 0, j = 0, iNew = -1, jNew = -1;
     size_t alignPos = 0;

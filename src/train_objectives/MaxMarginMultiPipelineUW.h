@@ -13,21 +13,23 @@
 #include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
+#include <boost/thread/mutex.hpp>
+#include <boost/unordered_map.hpp>
 #include <string>
 #include <vector>
 
 class Dataset;
 class LogWeight;
 class Model;
+class StringPairAligned;
 
 class MaxMarginMultiPipelineUW : public TrainingObjective {
 
   public:
   
     MaxMarginMultiPipelineUW(const Dataset& dataset,
-      const std::vector<Model*>& models) :
-      TrainingObjective(dataset, models) {}
-    
+      const std::vector<Model*>& models) : TrainingObjective(dataset, models) {}
+
     virtual ~MaxMarginMultiPipelineUW() {}
     
     virtual bool isBinary() const { return false; }
@@ -40,6 +42,18 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     }
     
   private:
+  
+    boost::unordered_map<std::pair<std::size_t, Label>,
+      std::vector<StringPairAligned> > _kBestMap;
+
+    boost::mutex _lock; // used to synchronize access to _kBestMap
+      
+    double bestAlignmentScore(const std::vector<StringPairAligned>& alignments,
+        const WeightVector& weights, Model& model, const Label y);
+    
+    virtual void initializeKBestPart(const Parameters& theta, Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      const Label k);
   
     virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,

@@ -84,12 +84,13 @@ class Utility {
 
     // Parses a string of the form:
     //
+    // Alignment 0 ( weight = 16.1181 )
     // Mat11 Del1 Ins1 Mat11 Mat11 Mat11 Del1 Mat11 
     // |^|j| |a|k|e|n|$
     // |^| |s|a|k|e| |$
     //
     // and returns a StringPairAligned object.
-    static StringPairAligned toStringPairAligned(
+    static std::vector<StringPairAligned> toStringPairAligned(
         const std::string& alignmentString);
                            
   private:

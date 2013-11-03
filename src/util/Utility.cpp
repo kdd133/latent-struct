@@ -405,55 +405,65 @@ double Utility::avg11ptPrecision(std::vector<prediction>& predictions) {
   return prSum / 11;
 }
 
-StringPairAligned Utility::toStringPairAligned(const string& alignmentString) {
+vector<StringPairAligned> Utility::toStringPairAligned(const string&
+    alignmentString) {
   typedef tokenizer<char_separator<char> > Tokenizer;
   char_separator<char> newlineSep("\n");
   char_separator<char> pipeSep("|");
   Tokenizer lines(alignmentString, newlineSep);
   Tokenizer::const_iterator line = lines.begin();
-  ++line; // skip the sequence of edit operations
-  
-  // We define the edit distance to be the total number of epsilon symbols
-  // that appear in the source and target strings. Note that this is not
-  // necessarily the same as the edit distance computed by
-  // Utility::levenshtein, which returns the total cost of the edits. But
-  // since INS and DEL each have unit cost, we will get the same result.
-  int numEpsilons = 0;
-  
-  Tokenizer tokens(*line, pipeSep);
   Tokenizer::const_iterator t;
-  vector<string> source;
-  int lenSource = 0;
-  for (t = tokens.begin(); t != tokens.end(); ++t) {
-    string s = *t;
-    trim(s);
-    if (s.size() == 0) {
-      source.push_back(FeatureGenConstants::EPSILON);
-      numEpsilons++;
-    }
-    else {
-      source.push_back(s);
-      lenSource++;
-    }
-  }
-  ++line;
   
-  tokens = Tokenizer(*line, pipeSep);
-  vector<string> target;
-  int lenTarget = 0;
-  for (t = tokens.begin(); t != tokens.end(); ++t) {
-    string s = *t;
-    trim(s);
-    if (s.size() == 0) {
-      target.push_back(FeatureGenConstants::EPSILON);
-      numEpsilons++;
+  vector<StringPairAligned> alignments;
+  
+  while (line != lines.end()) {
+    ++line; // skip the alignment # and weight
+    ++line; // skip the sequence of edit operations
+    
+    // We define the edit distance to be the total number of epsilon symbols
+    // that appear in the source and target strings. Note that this is not
+    // necessarily the same as the edit distance computed by
+    // Utility::levenshtein, which returns the total cost of the edits. But
+    // since INS and DEL each have unit cost, we will get the same result.
+    int numEpsilons = 0;
+
+    Tokenizer tokens = Tokenizer(*line, pipeSep);
+    vector<string> source;
+    int lenSource = 0;
+    for (t = tokens.begin(); t != tokens.end(); ++t) {
+      string s = *t;
+      trim(s);
+      if (s.size() == 0) {
+        source.push_back(FeatureGenConstants::EPSILON);
+        numEpsilons++;
+      }
+      else {
+        source.push_back(s);
+        lenSource++;
+      }
     }
-    else {
-      target.push_back(s);
-      lenTarget++;
+    ++line;
+    
+    tokens = Tokenizer(*line, pipeSep);
+    vector<string> target;
+    int lenTarget = 0;
+    for (t = tokens.begin(); t != tokens.end(); ++t) {
+      string s = *t;
+      trim(s);
+      if (s.size() == 0) {
+        target.push_back(FeatureGenConstants::EPSILON);
+        numEpsilons++;
+      }
+      else {
+        target.push_back(s);
+        lenTarget++;
+      }
     }
+    ++line;
+    
+    alignments.push_back(StringPairAligned(source, target, max(lenSource,
+        lenTarget), numEpsilons));
   }
   
-  return StringPairAligned(source, target, max(lenSource, lenTarget),
-      numEpsilons);
+  return alignments;
 }

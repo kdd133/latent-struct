@@ -46,12 +46,16 @@ void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
     // false --> exclude observed (global) features
     model.printAlignment(align_ss, theta.u, x, ypos, false);
     
-    // Create a StringPairAligned object by parsing the alignment string.
-    StringPairAligned xPrime = Utility::toStringPairAligned(align_ss.str());
+    // Parse the best alignment from the alignment string.
+    vector<StringPairAligned> alignments = Utility::toStringPairAligned(
+        align_ss.str());
+    // This training objective doesn't use a k-best list, so there should only
+    // be one alignment.
+    assert(alignments.size() == 1);
     
     // Compute the "global" features and then classify using w.
     bool own = false;
-    SparseRealVec* phi = model.observedFeatures(xPrime, ypos, own);
+    SparseRealVec* phi = model.observedFeatures(alignments.front(), ypos, own);
     assert(phi);
     const double z = theta.w.innerProd(*phi);
     if (own) delete phi;
