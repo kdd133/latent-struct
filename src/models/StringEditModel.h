@@ -704,7 +704,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
   }
   else {
     Inference<KBestViterbiSemiring>::viterbiPathsK(*graph, alignments);
-    assert(alignments.size() == KBestViterbiSemiring::k);
+    assert(alignments.size() <= KBestViterbiSemiring::k);
   }
   
   const StringPair& pair = (StringPair&)x;

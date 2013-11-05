@@ -60,7 +60,7 @@ public:
   }
   
   bool operator<(const ViterbiSemiring& r) const {
-    return _score >= r._score;
+    return _score < r._score;
   }
   
   // Although insideOutside() cannot be called with this semiring, we need to

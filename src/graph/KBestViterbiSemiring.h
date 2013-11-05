@@ -46,7 +46,7 @@ public:
         i++;
       else if (!rhs._entries[j].bp())
         j++;
-      else if (_entries[i] < rhs._entries[j])
+      else if (rhs._entries[j] < _entries[i])
         newEntries[count++] = _entries[i++];
       else
         newEntries[count++] = rhs._entries[j++];
@@ -62,6 +62,7 @@ public:
     
     // Return the top k entries (or all the entries if fewer than k).
     _size = std::min(count, k);
+    assert(_size > 0);
     _entries.reset(new ViterbiSemiring[_size]);
     for (int i = 0; i < _size; i++)
       _entries[i] = newEntries[i];
@@ -69,26 +70,30 @@ public:
   }
   
   KBestViterbiSemiring& operator*=(const KBestViterbiSemiring& rhs) {
+    assert(_size > 0 && rhs._size > 0);
+    
     // General case: Enumerate the possible derivations.
     const int total = _size * rhs._size;
-    std::vector<ViterbiSemiring> temp(total);
-    int next = 0;
+    std::vector<ViterbiSemiring> derivations(total);
+    int count = 0;
     for (int i = 0; i < _size; i++)
       for (int j = 0; j < rhs._size; j++) {
-        temp[next] = _entries[i];
-        temp[next] *= rhs._entries[j];
-        next++;
+        derivations[count] = _entries[i];
+        derivations[count] *= rhs._entries[j];
+        count++;
       }
+    assert(total == count);
       
-    // Sort the derivations by weight.
-    std::sort(temp.begin(), temp.end());
+    // Sort the derivations by weight (descending order).
+    std::sort(derivations.rbegin(), derivations.rend());
     
     // Select the first k elements from the sorted list; if there are fewer
     // than k elements, keep the entire list.
-    _size = std::min(total, k);
+    _size = std::min(count, k);
+    assert(_size > 0);
     _entries.reset(new ViterbiSemiring[_size]);
     for (int i = 0; i < _size; i++)
-      _entries[i] = temp[i];
+      _entries[i] = derivations[i];
 
     return (*this);
   }

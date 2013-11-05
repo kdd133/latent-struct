@@ -98,7 +98,7 @@ void MaxMarginMultiPipelineUW::initializeKBestPart(const Parameters& theta,
       // Parse the k-best alignments from the alignment string.
       vector<StringPairAligned> alignments = Utility::toStringPairAligned(
           align_ss.str());
-      assert(alignments.size() == KBestViterbiSemiring::k);
+      assert(alignments.size() <= KBestViterbiSemiring::k);
       
       boost::mutex::scoped_lock lock(_lock); // place a lock on _kBestMap
       
