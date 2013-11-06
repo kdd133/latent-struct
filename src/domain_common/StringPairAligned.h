@@ -26,6 +26,7 @@ class StringPairAligned : public StringPair {
       _longest = StringPair::getSize(); // record this before inserting epsilons
       _editDistance = Utility::levenshtein(source, target, _source, _target,
           _substitutionCost);
+      updateHashString();
     }
     
     // This constructor is accepts an already-aligned pair of strings; i.e.,

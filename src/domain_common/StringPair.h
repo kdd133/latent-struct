@@ -13,7 +13,8 @@
 #include "FeatureGenConstants.h"
 #include "Pattern.h"
 #include <assert.h>
-#include <boost/foreach.hpp>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,7 @@ class StringPair : public Pattern {
       // We only need to check for begin/end markers in the source string, since
       // they are either present in both or in neither.
       setHasBeginEnd(_source);
+      updateHashString();
     }
       
     // Assume the source and target strings are arrays of characters (i.e.,
@@ -36,6 +38,7 @@ class StringPair : public Pattern {
       for (std::size_t i = 0; i < target.size(); ++i)
         _target.push_back(target.substr(i, 1));
       setHasBeginEnd(_source);
+      updateHashString();
     }
     
     virtual const std::vector<std::string>& getSource() const;
@@ -44,6 +47,10 @@ class StringPair : public Pattern {
     
     // Returns the length of the longer string.
     virtual int getSize() const;
+    
+    virtual std::string getHashString() const;
+    
+    void updateHashString();
     
     friend std::ostream& operator<<(std::ostream& out, const StringPair& sp);
 
@@ -54,6 +61,8 @@ class StringPair : public Pattern {
     std::vector<std::string> _target;
     
     bool _hasBeginEnd;
+    
+    std::string _hashString;
     
     void setHasBeginEnd(std::vector<std::string> source);
 };
@@ -100,11 +109,29 @@ inline void StringPair::setHasBeginEnd(std::vector<std::string> vecStr) {
     }
   assert(firstNonEpsilon >= 0 && lastNonEpsilon >= 0);
   if (vecStr[firstNonEpsilon] == FeatureGenConstants::BEGIN_CHAR) {
-    assert(vecStr[lastNonEpsilon] == FeatureGenConstants::END_CHAR);
-    _hasBeginEnd = true;
+    if (vecStr[lastNonEpsilon] != FeatureGenConstants::END_CHAR) {
+      std::cout << "Warning: String has begin marker but no end marker.\n";
+      _hasBeginEnd = false;
+    }
+    else
+      _hasBeginEnd = true;
   }
   else
     _hasBeginEnd = false;
+}
+
+inline std::string StringPair::getHashString() const {
+  return _hashString;
+}
+
+inline void StringPair::updateHashString() {
+  std::stringstream ss;
+  for (std::size_t i = 0; i < _source.size(); ++i)
+    ss << _source[i] << FeatureGenConstants::PART_SEP;
+  ss << FeatureGenConstants::WORDFEAT_SEP;
+  for (std::size_t i = 0; i < _target.size(); ++i)
+    ss << _target[i] << FeatureGenConstants::PART_SEP;
+  _hashString = ss.str();
 }
 
 #endif

@@ -98,7 +98,7 @@ class StringEditModel : public Model {
     
     virtual void emptyCache();
     
-    typedef std::pair<size_t, Label> ExampleId;
+    typedef std::pair<std::string, Label> ExampleId;
     
 
   private:
@@ -794,7 +794,7 @@ Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
   assert(_states.size() > 0);
   Graph* graph = 0;
   if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
-    ExampleId id = std::make_pair(x.getId(), y);
+    ExampleId id = std::make_pair(x.getHashString(), y);
     typename boost::ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
     if (it == cache.end()) {
       graph = new Graph(_states, _fgenAlign, _fgenObserved, !_noFinalArcFeats);
@@ -829,7 +829,7 @@ SparseRealVec* StringEditModel<Graph>::observedFeatures(const Pattern& x,
   callerOwns = !_cacheFsts;
   SparseRealVec* fv = 0;
   if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
-    ExampleId id = std::make_pair(x.getId(), y);
+    ExampleId id = std::make_pair(x.getHashString(), y);
     typename boost::ptr_map<ExampleId, SparseRealVec>::iterator it =
         _fvCacheObs.find(id);
     if (it == _fvCacheObs.end()) {

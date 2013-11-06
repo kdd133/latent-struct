@@ -11,6 +11,8 @@
 #define _PATTERN_H
 
 #include <stddef.h>
+#include <string>
+
 
 class Pattern {
 
@@ -18,26 +20,28 @@ class Pattern {
   
     Pattern() : _id(0) {}
     
-    Pattern(size_t id) : _id(id) {}
+    Pattern(std::size_t id) : _id(id) {}
     
     virtual ~Pattern() {}
     
     virtual int getSize() const = 0;
     
-    size_t getId() const;
+    std::size_t getId() const;
     
-    void setId(size_t id);
+    void setId(std::size_t id);
+    
+    virtual std::string getHashString() const = 0;
 
   private:
   
-    size_t _id;
+    std::size_t _id;
 };
 
-inline size_t Pattern::getId() const {
+inline std::size_t Pattern::getId() const {
   return _id;
 }
 
-inline void Pattern::setId(size_t id) {
+inline void Pattern::setId(std::size_t id) {
   _id = id;
 }
 

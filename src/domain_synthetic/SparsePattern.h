@@ -44,6 +44,11 @@ class SparsePattern : public Pattern {
     virtual int getSize() const {
       return _vector.size();
     }
+    
+    virtual std::string getHashString() const {
+      assert(0); // not implemented
+      return "";
+    }
 
   private:
     SparseRealVec _vector;
