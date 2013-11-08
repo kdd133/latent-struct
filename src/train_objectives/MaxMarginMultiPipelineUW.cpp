@@ -20,6 +20,7 @@
 #include "Utility.h"
 #include <algorithm>
 #include <assert.h>
+#include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/unordered_map.hpp>
 #include <iostream>
@@ -34,16 +35,13 @@ using namespace std;
 void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, SparseRealVec& gradFv) {    
-  initializeKBestPart(theta, model, begin, end, k);
-  
   assert(0); // not yet implemented
 }
 
 void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, LabelScoreTable& scores) {
-  initializeKBestPart(theta, model, begin, end, k);
-  
+
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
@@ -51,12 +49,9 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
       pair<size_t, Label> item = make_pair(x.getId(), y);
       boost::unordered_map<pair<size_t, Label>,
         vector<StringPairAligned> >::iterator it;
-      {
-        boost::mutex::scoped_lock lock(_lock); // place a lock on _kBestMap
-        it = _kBestMap.find(item); // retrieve the k-best alignments
-      }        
-      assert(it != _kBestMap.end());
+      it = _kBestMap.find(item); // retrieve the k-best alignments
       if (it == _kBestMap.end()) {
+        assert(0);
         cout << "Error: " << name() << " failed to retrieve alignments.\n";
         exit(1);
       }
@@ -68,27 +63,15 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
   }
 }
 
-void MaxMarginMultiPipelineUW::initializeKBestPart(const Parameters& theta,
+void MaxMarginMultiPipelineUW::initKBestPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k) {
   assert(theta.hasU());
   assert(KBestViterbiSemiring::k > 0);
   
-  // If the first example in this partition of the dataset already has a k-best
-  // list stored, it means that the k-best lists for all the examples in this
-  // partition have been initialized; so, we simply return.
-  pair<size_t, Label> first = make_pair(begin->x()->getId(), 0);
-  {    
-    boost::mutex::scoped_lock lock(_lock); // place a lock on _kBestMap
-    boost::unordered_map<pair<size_t, Label>,
-      vector<StringPairAligned> >::iterator firstFind = _kBestMap.find(first);
-    if (firstFind != _kBestMap.end())
-      return;
-  }
-  
-  for (Label y = 0; y < k; y++) {
-    for (Dataset::iterator it = begin; it != end; ++it) {
-      const Pattern& x = *it->x();
+  for (Dataset::iterator it = begin; it != end; ++it) {
+    const Pattern& x = *it->x();
+    for (Label y = 0; y < k; y++) {
         
       // Impute the max-scoring alignment based using u.
       stringstream align_ss;
@@ -114,6 +97,10 @@ void MaxMarginMultiPipelineUW::initializeKBestPart(const Parameters& theta,
   }
 }
 
+void MaxMarginMultiPipelineUW::clearKBest() {
+  _kBestMap.clear();
+}
+
 double MaxMarginMultiPipelineUW::bestAlignmentScore(
     const vector<StringPairAligned>& alignments, const WeightVector& weights,
     Model& model, const Label y) {
@@ -125,6 +112,7 @@ double MaxMarginMultiPipelineUW::bestAlignmentScore(
     SparseRealVec* phi = model.observedFeatures(alignments[i], y, own);
     assert(phi);
     const double score = weights.innerProd(*phi);
+    cout << i << " " << alignments[i] << " " << score << endl;
     if (own) delete phi;
     if (bestIndex == -1 || score > bestScore) {
       bestIndex = i;
@@ -132,4 +120,38 @@ double MaxMarginMultiPipelineUW::bestAlignmentScore(
     }
   }
   return bestScore;
+}
+
+/* We override gatherFeaturesPart() because we only want to extract observed
+ * features here. The latent features will have already been extracted (and
+ * their graphs cached, if applicable) in initKBestPart().
+ */
+void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
+    const Dataset::iterator& begin, const Dataset::iterator& end,
+    const Label k, size_t& maxFvs, size_t& totalFvs) {
+  totalFvs = 0;
+  maxFvs = 1; // there can only be one observed feature vector per instance
+  for (Dataset::iterator it = begin; it != end; ++it) {
+    const Pattern& x = *it->x();
+    for (Label y = 0; y < k; y++) {
+      pair<size_t, Label> item = make_pair(x.getId(), y);
+      boost::unordered_map<pair<size_t, Label>,
+        vector<StringPairAligned> >::iterator it;
+      it = _kBestMap.find(item); // retrieve the k-best alignments
+      if (it == _kBestMap.end()) {
+        assert(0);
+        cout << "Error: " << name() << " failed to retrieve alignments.\n";
+        exit(1);
+      }      
+      const vector<StringPairAligned>& alignments = it->second;
+      BOOST_FOREACH(const StringPairAligned& alignment, alignments) {
+        bool own;
+        SparseRealVec* phi = model.observedFeatures(alignment, y, own);
+        assert(phi);
+        if (own)
+          delete phi;
+        totalFvs++;
+      }
+    }
+  }
 }

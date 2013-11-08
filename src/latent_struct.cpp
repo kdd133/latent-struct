@@ -356,6 +356,7 @@ according to weights-init")
     }
   }
   else {
+    // Load two alphabets from files, one each for the w and u parameters.
     if (!filesystem::exists(uAlphabetFname)) {
       cout << "Error: " << uAlphabetFname << " does not exist.\n";
       return 1;
@@ -387,12 +388,10 @@ according to weights-init")
     shared_ptr<Alphabet> alphabet;
     if (pipeline)
       alphabet = wAlphabet;
-    else {
-      if (resumed)
-        alphabet = loadedAlphabet;
-      else
-        alphabet.reset(new Alphabet(false, false));
-    }
+    else if (resumed)
+      alphabet = loadedAlphabet;
+    else
+      alphabet.reset(new Alphabet(false, false));
       
     // initialize the latent feature generator
     shared_ptr<AlignmentFeatureGen> fgenLat;
@@ -820,6 +819,43 @@ according to weights-init")
     }
     theta0.w.read(wFname, alphabet->size());
     theta0.u.read(uFname, alphabet->size());
+    
+    if (KBestViterbiSemiring::k > 0) {
+      if (trainFileSpecified)
+        objective->initKBest(trainData, theta0);
+      if (validationFileSpecified) {
+        assert(validationData);
+        objective->initKBest(*validationData, theta0);
+      }
+    }
+
+    if (trainFileSpecified) {
+      const size_t oldSize = alphabet->size();
+      cout << "Gathering features (pipeline) ...\n";
+      alphabet->unlock();
+      assert(!alphabet->isLocked());
+      {
+        size_t maxNumFvs = 0, totalNumFvs = 0;
+        timer::auto_cpu_timer gatherTimer;
+        objective->gatherFeatures(maxNumFvs, totalNumFvs);
+        assert(maxNumFvs > 0 && totalNumFvs > 0);
+      }
+      objective->combineAlphabets(trainData.getLabelSet());
+      alphabet->lock();
+      const size_t newSize = alphabet->size();
+      // If we added some new features, we need to grow w and u to match the new
+      // alphabet size. We then need to initialize (only) the weights of the new
+      // features using whatever initialization policy has been specified.
+      if (alphabet->size() > oldSize) {
+        theta0.w.read(wFname, newSize);
+        theta0.u.read(uFname, newSize);
+        Parameters newWeights(newSize);
+        initWeights(newWeights.w, weightsInit, weightsNoise, seed, alphabet,
+            instantiatedLabels, fgenLat);
+        for (int i = oldSize; i < newSize; i++)
+          theta0.w.setWeight(i, newWeights.w[i]);
+      }
+    }
   }
   else {
     initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
@@ -1123,6 +1159,7 @@ according to weights-init")
   }
   
   trainData.clear(); // We no longer need the training data.
+  objective->clearKBest(); // We no longer need the k-best lists.
 
   // Clear the fsts that were cached for the training data.
   if (cachingEnabled) {
@@ -1133,8 +1170,8 @@ according to weights-init")
     }
   }
   
-  if (pipeline)
-    weightVectors.push_back(theta0);
+  if (pipeline && !trainFileSpecified)
+    weightVectors.push_back(theta0); // just predict using the loaded weights
 
   // Load the eval examples from the specified file.
   if (!split && evalFileSpecified && weightVectors.size() > 0) {

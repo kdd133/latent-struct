@@ -88,6 +88,10 @@ class TrainingObjective {
     
     void gatherFeatures(std::size_t& maxFvs, std::size_t& totalFvs);
     
+    void initKBest(const Dataset& data, const Parameters& theta);
+    
+    void clearKBest();
+    
     // Combines the alphabets from all the models and sets each model's feature
     // generator(s) to use the combined alphabet; returns the combined alphabet.
     boost::shared_ptr<Alphabet> combineAlphabets(const std::set<Label>& labels);
@@ -107,7 +111,7 @@ class TrainingObjective {
     
     virtual void valueAndGradientPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, double& f, SparseRealVec& g) = 0;
+      const Label numLabels, double& f, SparseRealVec& g) = 0;
     
     // After valueAndGradientPart() completes for each thread, this function is
     // called and may modify the function value and/or gradient. For example,
@@ -118,7 +122,7 @@ class TrainingObjective {
       
     virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, LabelScoreTable& scores) = 0;
+      const Label numLabels, LabelScoreTable& scores) = 0;
       
     // Called by setLatentFeatureVectors prior to delegating computations to
     // setLatentFeatureVectorsPart. For example, used to zero out the feature
@@ -127,10 +131,14 @@ class TrainingObjective {
       
     virtual void setLatentFeatureVectorsPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end);
-      
+
+    virtual void initKBestPart(const Parameters& theta, Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      const Label numLabels);
+
     virtual void gatherFeaturesPart(Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
-      const Label maxLabel, std::size_t& maxFvs, std::size_t& totalFvs);
+      const Label numLabels, std::size_t& maxFvs, std::size_t& totalFvs);
 };
 
 #endif

@@ -130,6 +130,7 @@ void TrainingObjective::predict(const Parameters& theta, const Dataset& evalData
   const size_t numParts = evalData.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)evalData.getLabelSet().size();
+  assert(k > 0);
   ptr_vector<thread> threads;
   for (size_t i = 0; i < numParts; i++) {
     const Dataset::iterator begin = evalData.partitionBegin(i);
@@ -162,6 +163,34 @@ void TrainingObjective::setLatentFeatureVectors(const Parameters& theta) {
     threads[i].join();
 }
 
+void TrainingObjective::initKBest(const Dataset& data, const Parameters& theta) {
+  const size_t numParts = data.numPartitions();
+  assert(numParts == getNumModels());
+  const Label k = (Label)data.getLabelSet().size();
+  assert(k > 0);
+  ptr_vector<thread> threads;
+  for (size_t i = 0; i < numParts; i++) {
+    const Dataset::iterator begin = data.partitionBegin(i);
+    const Dataset::iterator end = data.partitionEnd(i);
+    threads.push_back(new thread(bind(
+        &TrainingObjective::initKBestPart, this, boost::cref(theta),
+        boost::ref(_models[i]), begin, end, k
+    )));
+  }
+  // Wait for the threads to finish.
+  for (size_t i = 0; i < numParts; i++)
+    threads[i].join();
+}
+
+void TrainingObjective::clearKBest() {
+  // Not implemented by the given TrainingObjective subclass. Do nothing.
+}
+
+void TrainingObjective::initKBestPart(const Parameters& theta, Model& model,
+    const Dataset::iterator& begin, const Dataset::iterator& end, const Label k) {
+  // Not implemented by the given TrainingObjective subclass. Do nothing.
+}
+
 void TrainingObjective::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
   assert(0); // Not implemented by the given TrainingObjective subclass.
@@ -186,6 +215,7 @@ void TrainingObjective::gatherFeatures(size_t& maxFvs, size_t& totalFvs) {
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
   const Label k = (Label)_dataset.getLabelSet().size();
+  assert(k > 0);
   // If there's only one unique label, it has to be 0 in order for the loop
   // over labels in gatherFeaturesPart() to make sense.
   assert(k > 1 || _dataset.getExamples().at(0).y() == 0);

@@ -35,6 +35,8 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     virtual bool isBinary() const { return false; }
     
     virtual bool isUW() const { return true; }
+    
+    virtual void clearKBest();
 
     static const std::string& name() {
       static const std::string _name = "MaxMarginMultiPipelineUW";
@@ -51,7 +53,7 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     double bestAlignmentScore(const std::vector<StringPairAligned>& alignments,
         const WeightVector& weights, Model& model, const Label y);
     
-    virtual void initializeKBestPart(const Parameters& theta, Model& model,
+    virtual void initKBestPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k);
   
@@ -62,6 +64,10 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     virtual void predictPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label k, LabelScoreTable& scores);
+      
+    virtual void gatherFeaturesPart(Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end,
+      const Label maxLabel, std::size_t& maxFvs, std::size_t& totalFvs);
 };
 
 #endif

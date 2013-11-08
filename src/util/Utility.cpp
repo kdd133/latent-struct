@@ -106,12 +106,17 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
     }
     partData.addLabels(evalData.getLabelSet());
     assert(partData.getLabelSet().size() == evalData.getLabelSet().size());
+    obj->initKBest(partData, weightVectors[0]);
     obj->predict(weightVectors[0], partData, labelScores[0]);
+    obj->clearKBest();
     
     // We have now cached the fsts for the first (original) partition of the
     // data, which can be reused for predicting with the other weight vectors.
-    for (size_t wvIndex = 1; wvIndex < numWeightVectors; wvIndex++)
+    for (size_t wvIndex = 1; wvIndex < numWeightVectors; wvIndex++) {
+      obj->initKBest(partData, weightVectors[wvIndex]);
       obj->predict(weightVectors[wvIndex], partData, labelScores[wvIndex]);
+      obj->clearKBest();
+    }
     
     // Clear the cache (we don't need the fsts for this partition any more).
     if (caching) {
