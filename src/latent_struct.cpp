@@ -370,12 +370,14 @@ according to weights-init")
       cout << "Error: Unable to read " << wAlphabetFname << endl;
       return 1;
     }
+    cout << "Loaded w alphabet from " << wAlphabetFname << endl;
       
     Alphabet uAlphabet(false, false);
     if (!uAlphabet.read(uAlphabetFname)) {
       cout << "Error: Unable to read " << uAlphabetFname << endl;
       return 1;
     }
+    cout << "Loaded u alphabet from " << uAlphabetFname << endl;
     
     // Append the u features to the w alphabet.
     for (int i = 0; i < uAlphabet.numFeaturesPerClass(); i++) {
@@ -818,7 +820,9 @@ according to weights-init")
       return 1;
     }
     theta0.w.read(wFname, alphabet->size());
+    cout << "Loaded w weights from " << wFname << endl;
     theta0.u.read(uFname, alphabet->size());
+    cout << "Loaded u weights from " << uFname << endl;
     
     if (KBestViterbiSemiring::k > 0) {
       if (trainFileSpecified)

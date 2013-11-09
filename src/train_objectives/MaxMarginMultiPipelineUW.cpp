@@ -112,7 +112,14 @@ double MaxMarginMultiPipelineUW::bestAlignmentScore(
     SparseRealVec* phi = model.observedFeatures(alignments[i], y, own);
     assert(phi);
     const double score = weights.innerProd(*phi);
+#if 0
+    SparseRealVec::const_iterator pos = phi->begin();
+    for (; pos != phi->end(); ++pos) {
+      cout << pos.index() << " " << *pos << endl;
+    }
+    cout << endl;
     cout << i << " " << alignments[i] << " " << score << endl;
+#endif
     if (own) delete phi;
     if (bestIndex == -1 || score > bestScore) {
       bestIndex = i;
