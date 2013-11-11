@@ -57,9 +57,9 @@ class MaxMarginMulti : public TrainingObjective {
     
     virtual void clearLatentFeatureVectors();
   
-    boost::scoped_ptr<SparseRealVec> _imputedFv;
+    boost::scoped_ptr<RealVec> _imputedFv;
     
-    boost::mutex _flag;
+    boost::mutex _flag; // used to synchronize access to _imputedFv
 };
 
 #endif

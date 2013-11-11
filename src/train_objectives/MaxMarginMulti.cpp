@@ -83,13 +83,9 @@ void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
   funcVal = Utility::hinge(funcVal - theta.w.innerProd(*_imputedFv)); 
 }
 
-// TODO: Made this more efficient by using a dense accumulator as above?
-// We would only need a lock on _imputedFv after the for loop is finished.
 void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
-  const int d = theta.w.getDim();
-  SparseRealVec fv(d);  
-  
+  SparseRealVec fv(theta.w.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
@@ -100,13 +96,13 @@ void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     // property.
     model.maxFeatures(theta.w, &fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
-    (*_imputedFv) += fv;
+    noalias(*_imputedFv) += fv;
   }
 }
 
 void MaxMarginMulti::initLatentFeatureVectors(const Parameters& theta) {
   assert(_dataset.numExamples() > 0);
-  _imputedFv.reset(new SparseRealVec(theta.w.getDim()));
+  _imputedFv.reset(new RealVec(theta.w.getDim()));
 }
 
 void MaxMarginMulti::clearLatentFeatureVectors() {
