@@ -823,6 +823,22 @@ according to weights-init")
     cout << "Loaded w weights from " << wFname << endl;
     theta0.u.read(uFname, alphabet->size());
     cout << "Loaded u weights from " << uFname << endl;
+    assert(theta0.w.getDim() == theta0.u.getDim());
+    
+    // Since the w and u features are assumed to be non-overlapping, the w
+    // vector should not contain a non-zero weight where the u vector also has
+    // a non-zero weight. We perform the check here as a way of possibly
+    // warning the user that they have loaded incompatible weight vectors.
+    for (size_t i = 0; i < theta0.w.getDim(); i++) {
+      double w = theta0.w[i];
+      double u = theta0.u[i];
+      if (w != 0 && u != 0) {
+        cout << "Warning: The loaded w and u vectors both have non-zero " <<
+            "weights for coordinate " << i << " (and possibly others)\n";
+        assert(0);
+        break;
+      }
+    }
     
     if (KBestViterbiSemiring::k > 0) {
       if (trainFileSpecified)
