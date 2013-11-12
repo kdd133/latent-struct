@@ -17,6 +17,7 @@
 #include "WeightVector.h"
 #include <boost/shared_ptr.hpp>
 #include <iostream>
+#include <vector>
 
 class InputReader;
 class LogWeight;
@@ -61,8 +62,9 @@ class Model {
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns) = 0;
       
-    virtual void printAlignment(std::ostream& out, const WeightVector& w,
-      const Pattern& pattern, const Label label,
+    virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
+      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+      const WeightVector& w, const Pattern& pattern, const Label label,
       bool includeObservedFeatures = true) = 0;
     
     virtual void emptyCache() = 0;

@@ -410,8 +410,8 @@ double Utility::avg11ptPrecision(std::vector<prediction>& predictions) {
   return prSum / 11;
 }
 
-vector<StringPairAligned> Utility::toStringPairAligned(const string&
-    alignmentString) {
+shared_ptr<vector<StringPairAligned> > Utility::toStringPairAligned(
+    const string& alignmentString) {
   typedef tokenizer<char_separator<char> > Tokenizer;
   char_separator<char> newlineSep("\n");
   char_separator<char> pipeSep("|");
@@ -419,7 +419,8 @@ vector<StringPairAligned> Utility::toStringPairAligned(const string&
   Tokenizer::const_iterator line = lines.begin();
   Tokenizer::const_iterator t;
   
-  vector<StringPairAligned> alignments;
+  shared_ptr<vector<StringPairAligned> > alignments(
+      new vector<StringPairAligned>());
   
   while (line != lines.end()) {
     ++line; // skip the alignment # and weight
@@ -466,7 +467,7 @@ vector<StringPairAligned> Utility::toStringPairAligned(const string&
     }
     ++line;
     
-    alignments.push_back(StringPairAligned(source, target, max(lenSource,
+    alignments->push_back(StringPairAligned(source, target, max(lenSource,
         lenTarget), numEpsilons));
   }
   

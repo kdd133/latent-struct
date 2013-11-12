@@ -90,9 +90,9 @@ class Utility {
     // |^| |s|a|k|e| |$
     //
     // and returns a StringPairAligned object.
-    static std::vector<StringPairAligned> toStringPairAligned(
-        const std::string& alignmentString);
-                           
+    static boost::shared_ptr<std::vector<StringPairAligned> >
+      toStringPairAligned(const std::string& alignmentString);
+
   private:
   
     // Call the library function log1p if argument to log1Plus is less than

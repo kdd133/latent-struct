@@ -13,6 +13,7 @@
 #include "Parameters.h"
 #include "TrainingObjective.h"
 #include "Ublas.h"
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/unordered_map.hpp>
 #include <string>
@@ -43,15 +44,22 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
       return _name;
     }
     
+    typedef struct {
+      boost::shared_ptr<std::vector<StringPairAligned> > alignments;
+      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > > maxFvs;
+    } KBestInfo;
+    
   private:
   
-    boost::unordered_map<std::pair<std::size_t, Label>,
-      std::vector<StringPairAligned> > _kBestMap;
+    boost::unordered_map<std::pair<std::size_t, Label>, KBestInfo> _kBestMap;
 
     boost::mutex _lock; // used to synchronize access to _kBestMap
       
-    double bestAlignmentScore(const std::vector<StringPairAligned>& alignments,
-        const WeightVector& weights, Model& model, const Label y);
+    // Returns the score of the highest-scoring alignment, and its index in the
+    // alignments vector.
+    double bestAlignment(const std::vector<StringPairAligned>& alignments,
+        const WeightVector& weights, Model& model, const Label y,
+        int* indexBest = 0);
     
     virtual void initKBestPart(const Parameters& theta, Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -68,6 +76,22 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     virtual void gatherFeaturesPart(Model& model,
       const Dataset::iterator& begin, const Dataset::iterator& end,
       const Label maxLabel, std::size_t& maxFvs, std::size_t& totalFvs);
+    
+    virtual void setLatentFeatureVectorsPart(const Parameters& theta, Model& model,
+      const Dataset::iterator& begin, const Dataset::iterator& end);
+    
+    virtual void initLatentFeatureVectors(const Parameters& theta);
+    
+    virtual void clearLatentFeatureVectors();
+    
+    virtual void valueAndGradientFinalize(const Parameters& theta, double& f,
+      SparseRealVec& g);
+      
+    const KBestInfo& fetchKBestInfo(const Pattern& x, Label y);
+  
+    boost::scoped_ptr<RealVec> _imputedFv;
+    
+    boost::mutex _flag; // used to synchronize access to _imputedFv
 };
 
 #endif

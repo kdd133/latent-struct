@@ -88,8 +88,11 @@ class StringEditModel : public Model {
     virtual SparseRealVec* observedFeatures(const Pattern& pattern,
       const Label label, bool& callerOwns);
       
-    virtual void printAlignment(std::ostream& out, const WeightVector& w,
-      const Pattern& pattern, const Label label, bool observedFeatures = true);
+    virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
+      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >&
+        maxFvForEachAlignment,
+      const WeightVector& w, const Pattern& pattern, const Label label,
+      bool observedFeatures = true);
     
     static const std::string& name() {
       static const std::string _name = "StringEdit";
@@ -159,6 +162,11 @@ class StringEditModel : public Model {
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
+        
+    void alignmentsToMaxFvs(
+        const std::vector<std::list<const Hyperedge*> >& alignments,
+        boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+        int dim);
         
     void addZeroOrderStates();
     
@@ -688,7 +696,25 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
 }
 
 template <typename Graph>
-void StringEditModel<Graph>::printAlignment(std::ostream& out,
+void StringEditModel<Graph>::alignmentsToMaxFvs(
+    const std::vector<std::list<const Hyperedge*> >& alignments,
+    boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+    int dim) {
+  using namespace std;
+  maxFvs.reset(new vector<boost::shared_ptr<SparseRealVec> >());
+  BOOST_FOREACH(const list<const Hyperedge*>& path, alignments) {
+    boost::shared_ptr<SparseRealVec> fv(new SparseRealVec(dim));
+    BOOST_FOREACH(const Hyperedge* e, path) {
+      assert(e->getChildren().size() == 1); // Only works for graphs at this point
+      ublas_util::addExponentiated(*e->getFeatureVector(), *fv);
+    }
+    maxFvs->push_back(fv);
+  }
+}
+
+template <typename Graph>
+void StringEditModel<Graph>::getBestAlignments(std::ostream& str,
+    boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
     const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   using namespace std;
   
@@ -706,6 +732,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
     Inference<KBestViterbiSemiring>::viterbiPathsK(*graph, alignments);
     assert(alignments.size() <= KBestViterbiSemiring::k);
   }
+  alignmentsToMaxFvs(alignments, maxFvs, w.getDim());
   
   const StringPair& pair = (StringPair&)x;
   const vector<string>& s = pair.getSource();
@@ -716,7 +743,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
     LogWeight weight(1);
     BOOST_FOREACH(const Hyperedge* edge, edges)
       weight *= edge->getWeight();
-    out << "Alignment " << k << " ( weight = " << weight << " ):" << endl;
+    str << "Alignment " << k << " ( weight = " << weight << " ):" << endl;
     stringstream alignedSource, alignedTarget;
     int i = 0, j = 0, iNew = -1, jNew = -1;
     size_t alignPos = 0;
@@ -740,7 +767,7 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
           int iPhraseLen = iNew - i;
           int jPhraseLen = jNew - j;
           
-          out << op->getName() << " "; // Print the name of the edit operation.
+          str << op->getName() << " "; // Print the name of the edit operation.
           alignedSource << "|";
           alignedTarget << "|";
           
@@ -773,11 +800,11 @@ void StringEditModel<Graph>::printAlignment(std::ostream& out,
         }
       }
     }
-    out << endl;
+    str << endl;
     
     // Print the strings with alignment markers.
-    out << alignedSource.str() << endl;
-    out << alignedTarget.str() << endl;
+    str << alignedSource.str() << endl;
+    str << alignedTarget.str() << endl;
   }
 }
 

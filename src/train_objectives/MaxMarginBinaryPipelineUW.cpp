@@ -19,6 +19,7 @@
 #include "Utility.h"
 #include <algorithm>
 #include <assert.h>
+#include <boost/shared_ptr.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -44,18 +45,19 @@ void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
     // Impute the max-scoring alignment based using u.
     stringstream align_ss;
     // false --> exclude observed (global) features
-    model.printAlignment(align_ss, theta.u, x, ypos, false);
+    shared_ptr<vector<shared_ptr<SparseRealVec> > > maxFvs;
+    model.getBestAlignments(align_ss, maxFvs, theta.u, x, ypos, false);
     
     // Parse the best alignment from the alignment string.
-    vector<StringPairAligned> alignments = Utility::toStringPairAligned(
-        align_ss.str());
+    shared_ptr<vector<StringPairAligned> > alignments =
+        Utility::toStringPairAligned(align_ss.str());
     // This training objective doesn't use a k-best list, so there should only
     // be one alignment.
-    assert(alignments.size() == 1);
+    assert(alignments->size() == 1);
     
     // Compute the "global" features and then classify using w.
     bool own = false;
-    SparseRealVec* phi = model.observedFeatures(alignments.front(), ypos, own);
+    SparseRealVec* phi = model.observedFeatures(alignments->front(), ypos, own);
     assert(phi);
     const double z = theta.w.innerProd(*phi);
     if (own) delete phi;
