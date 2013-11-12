@@ -43,7 +43,8 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
   assert(n > 0 && n == theta.u.getDim());
   
   vector<double> score(k);
-  vector<SparseRealVec> feats(k, SparseRealVec(d));  
+  vector<SparseRealVec> feats(k, SparseRealVec(d));
+  vector<KBestInfo> kBest(k);
   
   funcVal = 0;
   
@@ -61,20 +62,70 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
-    
-    double scoreMax(-numeric_limits<double>::infinity());
-    Label yMax = 0;
     for (Label y = 0; y < k; y++) {
-      const KBestInfo& kBest = fetchKBestInfo(xi, y);
-      int indexMax;
-      score[y] = Utility::delta(yi,y) + bestAlignment(*kBest.alignments,
-          theta.w, model, y, &indexMax);
+      kBest[y] = fetchKBestInfo(xi, y);
+      assert(kBest[y].alignments->size() == kBest[y].maxFvs->size()); 
+    }
+    
+    // The block below looks like what we should be doing to compute the
+    // max_{y,z}w'phi (2nd) term. To compute the first term, we need to check
+    // all k alignments explicitly here, i.e., not call bestAlignment().
+    
+    double scoreMax = -numeric_limits<double>::infinity();
+    Label yMax = 0;
+    int indexMax = -1;
+    shared_ptr<const SparseRealVec> phiMax_w;
+    
+    // Compute max_{z} (u-v)'*phi(xi,yi,z)
+    for (int j = 0; j < kBest[yi].alignments->size(); j++) {
+      shared_ptr<const SparseRealVec> phi_w = model.observedFeatures(
+          kBest[yi].alignments->at(j), yi);
+      assert(phi_w);
+      const double score_u = theta.u.innerProd(*kBest[yi].maxFvs->at(j));
+      const double score_w = theta.w.innerProd(*phi_w);
+      const double score = score_u - score_w;
+      if (score > scoreMax) {
+        scoreMax = score;
+        indexMax = j;
+        phiMax_w = phi_w;
+      }
+    }
+    assert(indexMax >= 0);
+    assert(phiMax_w);
+    
+    // Update the gradient and function value.
+    noalias(gradDense) += *kBest[yi].maxFvs->at(indexMax);
+    noalias(gradDense) -= *phiMax_w;
+    funcVal += scoreMax;
+    
+    // Compute max_{y,z} [delta(yi,y) + w'*phi(xi,y,z)]
+    scoreMax = -numeric_limits<double>::infinity();  
+    yMax = 0;
+    indexMax = -1;
+    for (Label y = 0; y < k; y++) {
+      int kBestIndex = -1;
+      score[y] = Utility::delta(yi,y) + bestAlignment(*kBest[y].alignments,
+          theta.w, model, y, &kBestIndex);
+      assert(kBestIndex >= 0);
       if (score[y] > scoreMax) {
         scoreMax = score[y];
         yMax = y;
+        indexMax = kBestIndex;
       }
     }
+    assert(indexMax >= 0);
+    
+    // Update the gradient and function value.
+    noalias(gradDense) += *kBest[yMax].maxFvs->at(indexMax);
+    funcVal += score[yMax];
+    
+    // Subtract the observed features and score for the correct label yi.
+    shared_ptr<const SparseRealVec> phi_yi = model.observedFeatures(xi, yi);
+    assert(phi_yi);
+    noalias(gradDense) -= (*phi_yi);
+    funcVal -= theta.w.innerProd(*phi_yi);
   }
+  noalias(gradFv) = gradDense;
   assert(0); // this method is incomplete
 }
 
@@ -150,8 +201,7 @@ double MaxMarginMultiPipelineUW::bestAlignment(
   double bestScore = -1;
   assert(alignments.size() > 0);
   for (int i = 0; i < alignments.size(); i++) {
-    bool own = false;
-    SparseRealVec* phi = model.observedFeatures(alignments[i], y, own);
+    shared_ptr<const SparseRealVec> phi = model.observedFeatures(alignments[i], y);
     assert(phi);
     const double score = weights.innerProd(*phi);
 #if 0
@@ -162,7 +212,6 @@ double MaxMarginMultiPipelineUW::bestAlignment(
     cout << endl;
     cout << i << " " << alignments[i] << " " << score << endl;
 #endif
-    if (own) delete phi;
     if (bestIndex == -1 || score > bestScore) {
       bestIndex = i;
       bestScore = score;
@@ -187,11 +236,9 @@ void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
     for (Label y = 0; y < k; y++) {
       const KBestInfo& kBest = fetchKBestInfo(x, y);
       BOOST_FOREACH(const StringPairAligned& alignment, *kBest.alignments) {
-        bool own;
-        SparseRealVec* phi = model.observedFeatures(alignment, y, own);
+        shared_ptr<const SparseRealVec> phi = model.observedFeatures(
+            alignment, y);
         assert(phi);
-        if (own)
-          delete phi;
         totalFvs++;
       }
     }

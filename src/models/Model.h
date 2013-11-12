@@ -58,9 +58,8 @@ class Model {
       const WeightVector& w, AccumLogMat* fm, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true) = 0;
       
-    // Returns true if the caller assumes ownership of the FeatureVector.
-    virtual SparseRealVec* observedFeatures(const Pattern& pattern,
-      const Label label, bool& callerOwns) = 0;
+    virtual boost::shared_ptr<const SparseRealVec> observedFeatures(
+      const Pattern& pattern, const Label label) = 0;
       
     virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
       boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,

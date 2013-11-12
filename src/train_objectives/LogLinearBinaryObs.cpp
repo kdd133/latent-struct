@@ -8,6 +8,7 @@
  */
 
 #include <boost/foreach.hpp>
+#include <boost/shared_ptr.hpp>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -20,6 +21,8 @@
 #include "Ublas.h"
 #include "Utility.h"
 #include "Parameters.h"
+
+using namespace boost;
 
 void LogLinearBinaryObs::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -37,14 +40,11 @@ void LogLinearBinaryObs::valueAndGradientPart(const Parameters& theta,
     const Pattern& xi = *it->x();
     const Label yi = (it->y() == ypos) ? 1 : -1;
     
-    bool own = false;
-    SparseRealVec* phi = model.observedFeatures(xi, ypos, own);
+    shared_ptr<const SparseRealVec> phi = model.observedFeatures(xi, ypos);
     assert(phi);
     const double mass = -yi * theta.w.innerProd(*phi);
     funcVal += Utility::log1Plus(exp(mass));
     noalias(gradDense) += (*phi) * (-yi * (1 - Utility::sigmoid(-mass)));
-    
-    if (own) delete phi;
   }  
   noalias(gradFv) = gradDense;
 }
@@ -56,11 +56,9 @@ void LogLinearBinaryObs::predictPart(const Parameters& theta, Model& model,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    bool own = false;
-    SparseRealVec* phi = model.observedFeatures(x, ypos, own);
+    shared_ptr<const SparseRealVec> phi = model.observedFeatures(x, ypos);
     assert(phi);
     const double z = theta.w.innerProd(*phi);
-    if (own) delete phi;
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, -z);
   }

@@ -46,6 +46,7 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/unordered_map.hpp>
 #include <iostream>
 #include <list>
 #include <map>
@@ -85,8 +86,8 @@ class StringEditModel : public Model {
       const WeightVector& w, AccumLogMat* fm, SparseLogVec* fv,
       const Pattern& pattern, const Label label, bool normalize = true);
       
-    virtual SparseRealVec* observedFeatures(const Pattern& pattern,
-      const Label label, bool& callerOwns);
+    virtual boost::shared_ptr<const SparseRealVec> observedFeatures(
+      const Pattern& pattern, const Label label);
       
     virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
       boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >&
@@ -148,7 +149,8 @@ class StringEditModel : public Model {
     boost::ptr_map<ExampleId, Graph> _fstCacheNoObs;
     
     // A cache for observed feature vectors.
-    boost::ptr_map<ExampleId, SparseRealVec> _fvCacheObs;
+    boost::unordered_map<ExampleId, boost::shared_ptr<const SparseRealVec> >
+      _fvCacheObs;
     
     // If caching is disabled, it's still useful to reuse an existing graph in
     // order to avoid repeated memory allocation.
@@ -851,18 +853,19 @@ Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
 }
 
 template <typename Graph>
-SparseRealVec* StringEditModel<Graph>::observedFeatures(const Pattern& x,
-    const Label y, bool& callerOwns) {
-  callerOwns = !_cacheFsts;
-  SparseRealVec* fv = 0;
+boost::shared_ptr<const SparseRealVec> StringEditModel<Graph>::observedFeatures(
+    const Pattern& x, const Label y) {
+  using namespace boost;
+  shared_ptr<const SparseRealVec> fv;
   if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
     ExampleId id = std::make_pair(x.getHashString(), y);
-    typename boost::ptr_map<ExampleId, SparseRealVec>::iterator it =
+    unordered_map<ExampleId, shared_ptr<const SparseRealVec> >::iterator it =
         _fvCacheObs.find(id);
     if (it == _fvCacheObs.end()) {
-      fv = _fgenObserved->getFeatures(x, y);
-      assert(fv);
-      _fvCacheObs.insert(id, fv);
+      const SparseRealVec* fvRaw = _fgenObserved->getFeatures(x, y);
+      assert(fvRaw);
+      fv.reset(fvRaw);
+      _fvCacheObs.insert(std::make_pair(id, fv));
     }
     else {
       fv = it->second;
@@ -870,7 +873,7 @@ SparseRealVec* StringEditModel<Graph>::observedFeatures(const Pattern& x,
     }
   }
   else {
-    fv = _fgenObserved->getFeatures(x, y);
+    fv.reset(_fgenObserved->getFeatures(x, y));
   }
   assert(fv);
   return fv;

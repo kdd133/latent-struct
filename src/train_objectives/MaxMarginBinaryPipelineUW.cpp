@@ -56,11 +56,10 @@ void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
     assert(alignments->size() == 1);
     
     // Compute the "global" features and then classify using w.
-    bool own = false;
-    SparseRealVec* phi = model.observedFeatures(alignments->front(), ypos, own);
+    shared_ptr<const SparseRealVec> phi = model.observedFeatures(
+        alignments->front(), ypos);
     assert(phi);
     const double z = theta.w.innerProd(*phi);
-    if (own) delete phi;
     
     scores.setScore(id, ypos, z);
     scores.setScore(id, !ypos, (-z));

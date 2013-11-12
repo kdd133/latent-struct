@@ -21,6 +21,7 @@
 #include <boost/thread/mutex.hpp>
 #include <vector>
 
+using namespace boost;
 using namespace std;
 
 void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
@@ -65,12 +66,10 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
     funcVal += score[yMax];
     
     // Subtract the observed features and score for the correct label yi.
-    bool own = false;
-    SparseRealVec* phi_yi = model.observedFeatures(xi, yi, own);
+    shared_ptr<const SparseRealVec> phi_yi = model.observedFeatures(xi, yi);
     assert(phi_yi);
     noalias(gradDense) -= (*phi_yi);
     funcVal -= theta.w.innerProd(*phi_yi);
-    if (own) delete phi_yi;
   }
   noalias(gradFv) = gradDense;
 }

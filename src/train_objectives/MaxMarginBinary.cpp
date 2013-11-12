@@ -18,6 +18,9 @@
 #include "Parameters.h"
 #include <boost/foreach.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/shared_ptr.hpp>
+
+using namespace boost;
 
 void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
@@ -57,15 +60,13 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
       const size_t i = xi.getId();
       // Since we did not fix the observed features in setLatentFeatureVectorsPart,
       // we need to factor them in here.
-      bool own = false;
-      SparseRealVec* phiObs = model.observedFeatures(xi, ypos, own);
+      shared_ptr<const SparseRealVec> phiObs = model.observedFeatures(xi, ypos);
       assert(phiObs);
       z = yi * (theta.w.innerProd(*phiObs) + theta.w.innerProd(_imputedFvs[i]));
       if (z < 1) {
         noalias(gradDense) += -yi * (_imputedFvs[i]);
         noalias(gradDense) += -yi * (*phiObs);
       }
-      if (own) delete phiObs;
     }
     funcVal += Utility::hinge(1 - z);
   }
