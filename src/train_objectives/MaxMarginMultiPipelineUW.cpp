@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <boost/foreach.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/unordered_map.hpp>
@@ -67,16 +68,12 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
       assert(kBest[y].alignments->size() == kBest[y].maxFvs->size()); 
     }
     
-    // The block below looks like what we should be doing to compute the
-    // max_{y,z}w'phi (2nd) term. To compute the first term, we need to check
-    // all k alignments explicitly here, i.e., not call bestAlignment().
-    
     double scoreMax = -numeric_limits<double>::infinity();
     Label yMax = 0;
     int indexMax = -1;
     shared_ptr<const SparseRealVec> phiMax_w;
     
-    // Compute max_{z} (u-v)'*phi(xi,yi,z)
+    // Compute max_{z} (u-w)'*phi(xi,yi,z)
     for (int j = 0; j < kBest[yi].alignments->size(); j++) {
       shared_ptr<const SparseRealVec> phi_w = model.observedFeatures(
           kBest[yi].alignments->at(j), yi);
@@ -94,8 +91,9 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     assert(phiMax_w);
     
     // Update the gradient and function value.
-    noalias(gradDense) += *kBest[yi].maxFvs->at(indexMax);
-    noalias(gradDense) -= *phiMax_w;
+//    cout << theta.u.getDim() << " " << theta.w.getDim() << " " << gradDense.size() << " " << kBest[yi].maxFvs->at(indexMax)->size() << " " << phiMax_w->size() << endl;
+    noalias(subrange(gradDense, 0, n)) -= *phiMax_w;
+    noalias(subrange(gradDense, n, d)) += *kBest[yi].maxFvs->at(indexMax);
     funcVal += scoreMax;
     
     // Compute max_{y,z} [delta(yi,y) + w'*phi(xi,y,z)]
@@ -104,7 +102,7 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     indexMax = -1;
     for (Label y = 0; y < k; y++) {
       int kBestIndex = -1;
-      score[y] = Utility::delta(yi,y) + bestAlignment(*kBest[y].alignments,
+      score[y] = Utility::delta(yi,y) + bestAlignmentScore(*kBest[y].alignments,
           theta.w, model, y, &kBestIndex);
       assert(kBestIndex >= 0);
       if (score[y] > scoreMax) {
@@ -116,17 +114,10 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     assert(indexMax >= 0);
     
     // Update the gradient and function value.
-    noalias(gradDense) += *kBest[yMax].maxFvs->at(indexMax);
+    noalias(subrange(gradDense, 0, n)) += *kBest[yMax].maxFvs->at(indexMax);
     funcVal += score[yMax];
-    
-    // Subtract the observed features and score for the correct label yi.
-    shared_ptr<const SparseRealVec> phi_yi = model.observedFeatures(xi, yi);
-    assert(phi_yi);
-    noalias(gradDense) -= (*phi_yi);
-    funcVal -= theta.w.innerProd(*phi_yi);
   }
   noalias(gradFv) = gradDense;
-  assert(0); // this method is incomplete
 }
 
 void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
@@ -138,7 +129,7 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
     const size_t id = x.getId();
     for (Label y = 0; y < k; y++) {
       const KBestInfo& kBest = fetchKBestInfo(x, y);
-      const double z = bestAlignment(*kBest.alignments, theta.w, model, y);
+      const double z = bestAlignmentScore(*kBest.alignments, theta.w, model, y);
       scores.setScore(id, y, z);
     }
   }
@@ -194,7 +185,7 @@ void MaxMarginMultiPipelineUW::clearKBest() {
   _kBestMap.clear();
 }
 
-double MaxMarginMultiPipelineUW::bestAlignment(
+double MaxMarginMultiPipelineUW::bestAlignmentScore(
     const vector<StringPairAligned>& alignments, const WeightVector& weights,
     Model& model, const Label y, int* indexBest) {
   int bestIndex = -1;
@@ -247,23 +238,23 @@ void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
 
 void MaxMarginMultiPipelineUW::valueAndGradientFinalize(const Parameters& theta,
     double& funcVal, SparseRealVec& gradFv) {    
-  // Subtract the sum of the imputed vectors from the gradient.
-  noalias(gradFv) -= (*_imputedFv);
+  const int n = theta.w.getDim(); // i.e., the number of features (all classes)
+  const int d = theta.getDimWU(); // i.e., the length of the [w u] vector
+  // Subtract the sum of the imputed vectors from the u portion of the gradient.
+  noalias(subrange(gradFv, n, d)) -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
   funcVal = Utility::hinge(funcVal - theta.u.innerProd(*_imputedFv)); 
 }
 
 void MaxMarginMultiPipelineUW::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
-  SparseRealVec fv(theta.w.getDim());
+  SparseRealVec fv(theta.u.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
-    
-    // Note: The last argument is set to false because we wish to exclude the
-    // observed features (if any) being included in the max feature vector.
-    // Those do not need to be fixed in order to exploit the semi-convexity
-    // property.
+    // Note: The last argument is set to false because the u parameters do not
+    // overlap with the observed features in this model, so there is no need to
+    // compute those features.
     model.maxFeatures(theta.u, &fv, xi, yi, false);
     boost::mutex::scoped_lock lock(_flag); // place a lock on _imputedFv
     noalias(*_imputedFv) += fv;

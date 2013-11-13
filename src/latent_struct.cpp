@@ -388,12 +388,17 @@ according to weights-init")
 
   for (size_t th = 0; th < threads; th++) {
     shared_ptr<Alphabet> alphabet;
-    if (pipeline)
-      alphabet = wAlphabet;
+    if (pipeline) {
+      // Each thread needs its own copy, since we may be gathering additional
+      // features from the training data.
+      alphabet.reset(new Alphabet(*wAlphabet));
+    }
     else if (resumed)
       alphabet = loadedAlphabet;
-    else
+    else {
+      // Each thread gets an empty Alphabet; we combine them below.
       alphabet.reset(new Alphabet(false, false));
+    }
       
     // initialize the latent feature generator
     shared_ptr<AlignmentFeatureGen> fgenLat;
@@ -605,10 +610,14 @@ according to weights-init")
     objective.reset(new MaxMarginMulti(trainData, models));
     optEM = true; // EM is currently required for optimizing this objective
   }
-  else if (objName == MaxMarginBinaryPipelineUW::name())
+  else if (objName == MaxMarginBinaryPipelineUW::name()) {
     objective.reset(new MaxMarginBinaryPipelineUW(trainData, models));
-  else if (objName == MaxMarginMultiPipelineUW::name())
+    optEM = true;
+  }
+  else if (objName == MaxMarginMultiPipelineUW::name()) {
     objective.reset(new MaxMarginMultiPipelineUW(trainData, models));
+    optEM = true;
+  }
   else {
     if (!help) {
       cout << "Invalid arguments: An unrecognized objective name was given: "
@@ -849,6 +858,9 @@ according to weights-init")
       }
     }
 
+    // TODO: If we gather more features, we also need to regenerate the k-best
+    // lists so that the new features fire when present.
+    assert(0);
     if (trainFileSpecified) {
       const size_t oldSize = alphabet->size();
       cout << "Gathering features (pipeline) ...\n";

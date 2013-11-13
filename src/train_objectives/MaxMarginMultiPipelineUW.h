@@ -57,7 +57,7 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
       
     // Returns the score of the highest-scoring alignment, and its index in the
     // alignments vector.
-    double bestAlignment(const std::vector<StringPairAligned>& alignments,
+    double bestAlignmentScore(const std::vector<StringPairAligned>& alignments,
         const WeightVector& weights, Model& model, const Label y,
         int* indexBest = 0);
     
