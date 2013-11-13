@@ -88,10 +88,10 @@ void LogLinearMultiELFV::valueAndGradientPart(const Parameters& theta,
     funcVal += log(massTotal) - theta.w.innerProd(phiBar[yi]);
     
     // Update the gradient wrt w.
-    subrange(gradFv, 0, n) += phiBar_sumY - phiBar[yi];    
+    noalias(subrange(gradFv, 0, n)) += phiBar_sumY - phiBar[yi];    
     
     // Update the gradient wrt u.
-    subrange(gradFv, n, d) += gradU;
+    noalias(subrange(gradFv, n, d)) += gradU;
   }
 }
 

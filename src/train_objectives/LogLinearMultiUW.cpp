@@ -78,11 +78,13 @@ void LogLinearMultiUW::valueAndGradientPart(const Parameters& theta,
     ublas_util::matrixVectorMultLowerSymmetric(covU_yi, uMinusW, gradU);
     
     // Update the gradient wrt w (first, exponentiate features).
-    subrange(gradFv, 0, n) += ublas_util::exponentiate(logFeatsW, feats);
-    subrange(gradFv, 0, n) -= ublas_util::exponentiate(logFeatsU_yi, feats);
+    noalias(subrange(gradFv, 0, n)) += ublas_util::exponentiate(logFeatsW,
+        feats);
+    noalias(subrange(gradFv, 0, n)) -= ublas_util::exponentiate(logFeatsU_yi,
+        feats);
     
     // Update the gradient wrt u.
-    subrange(gradFv, n, d) += gradU;
+    noalias(subrange(gradFv, n, d)) += gradU;
     
     // Update the function value.
     // Note: We work in log space here, which is why we don't exponentiate.
