@@ -77,16 +77,16 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   
   SparseRealVec gradFv(d);
   double fval;
-  objective->valueAndGradient(W, fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv, 0, true);
   
-  BOOST_CHECK_CLOSE(6.1197757635591392, fval, 1e-8);
+  BOOST_CHECK_CLOSE(1.5546500076564003, fval, 1e-8);
   BOOST_CHECK_CLOSE(-0.25, (double)gradFv[0], 1e-8);
-  BOOST_CHECK_CLOSE(0.2, (double)gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0, (double)gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(0.9, (double)gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(-0.45, (double)gradFv[1], 1e-8);
+  BOOST_CHECK_CLOSE(-0.30, (double)gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(-1.45, (double)gradFv[3], 1e-8);
   BOOST_CHECK_CLOSE(0.25, (double)gradFv[4], 1e-8);
-  BOOST_CHECK_CLOSE(4.4, (double)gradFv[5], 1e-8);
-  BOOST_CHECK_CLOSE(4.1, (double)gradFv[6], 1e-8);
+  BOOST_CHECK_CLOSE(1.90, (double)gradFv[5], 1e-8);
+  BOOST_CHECK_CLOSE(1.75, (double)gradFv[6], 1e-8);
   BOOST_CHECK_CLOSE(0, (double)gradFv[7], 1e-8);
   
   // Note: BmrmOptimizer handles regularization in a non-standard way, so it
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginMulti)
   
   objective->valueAndGradient(W, fval, gradFv);
   l2->addRegularization(W, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.9406601396594475, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.94151630926932661, fval, 1e-8);
   
   // Compare the analytical and numerical gradients.  
   testing_util::checkGradientFiniteDifferences(*objective, W, 1e-4, 10);

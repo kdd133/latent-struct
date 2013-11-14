@@ -13,6 +13,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/test/unit_test.hpp>
 #include <vector>
+
 using namespace boost;
 
 /*
@@ -108,7 +109,8 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   
   // Check that the max-scoring alignment is correct.
   std::stringstream alignmentStr;
-  model->printAlignment(alignmentStr, W, *pair, label);
+  shared_ptr<std::vector<shared_ptr<SparseRealVec> > > maxFvs;
+  model->getBestAlignments(alignmentStr, maxFvs, W, *pair, label);
   const std::string alignment = alignmentStr.str();
   std::string correctAlignment =
       "Mat11 Ins1 Mat11 Ins1 Mat11 Mat11 Mat11 Mat11 Ins1 \n";

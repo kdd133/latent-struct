@@ -31,7 +31,7 @@ namespace testing_util {
       boost::shared_array<double> weights = Utility::generateGaussianSamples(d,
           (wi%2 ? 1 : -1)*wi, 0.5, wi); // alternate the sign of the prior mean
       theta.setWeights(weights.get(), d);
-      objective.valueAndGradient(theta, fval, gradFv);
+      objective.valueAndGradient(theta, fval, gradFv, 0, true);
       for (int i = 0; i < d; i++) {
         const double numGrad_i = Utility::getNumericalGradientForCoordinate(
             objective, theta, i);

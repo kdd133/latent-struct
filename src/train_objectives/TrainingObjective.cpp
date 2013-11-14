@@ -73,7 +73,7 @@ void TrainingObjective::valueAndGradient(const Parameters& theta,
 }
 */
 void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
-    SparseRealVec& gradFv, const list<int>* indices) {
+    SparseRealVec& gradFv, const list<int>* indices, bool resetLatentFvs) {
   assert(gradFv.size() == theta.getDimTotal());
   const size_t numParts = _dataset.numPartitions();
   assert(numParts == getNumModels());
@@ -90,7 +90,15 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
       sampledData.addExample(_dataset.getExamples()[i]);
     dataset = &sampledData;
   }
-    
+  
+  if (resetLatentFvs) {
+    // The setLatentFeatureVectors() method uses the member _dataset, so we
+    // can't select arbitrary examples at this point.
+    assert(!indices);
+    initLatentFeatureVectors(theta);
+    setLatentFeatureVectors(theta);
+  }
+
   vector<SparseRealVec> grads(numParts, SparseRealVec(theta.getDimTotal()));
   vector<double> fvals(numParts, 0);
   
@@ -193,13 +201,11 @@ void TrainingObjective::initKBestPart(const Parameters& theta, Model& model,
 
 void TrainingObjective::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
-  assert(0); // Not implemented by the given TrainingObjective subclass.
-             // Should not be called for an objective that doesn't use it.
+  // Not implemented by the given TrainingObjective subclass. Do nothing.
 }
 
 void TrainingObjective::clearLatentFeatureVectors() {
-  assert(0); // Not implemented by the given TrainingObjective subclass.
-             // Should not be called for an objective that doesn't use it.
+  // Not implemented by the given TrainingObjective subclass. Do nothing.
 }
 
 void TrainingObjective::initLatentFeatureVectors(const Parameters& theta) {

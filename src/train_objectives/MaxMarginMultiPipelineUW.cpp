@@ -53,13 +53,6 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
   RealVec gradDense(d);
   gradDense.clear();
   
-  // This if statement should never be executed while the objective is being
-  // optimized, since the (EM) optimizer will perform the initialization.
-  // However, if the gradient is requested outside of the optimization routine,
-  // we need to initialize the latent FVs using the given weight vector.
-  if (!_imputedFv)
-    initLatentFeatureVectors(theta);
-  
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
@@ -238,6 +231,7 @@ void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
 
 void MaxMarginMultiPipelineUW::valueAndGradientFinalize(const Parameters& theta,
     double& funcVal, SparseRealVec& gradFv) {    
+  assert(_imputedFv);
   const int n = theta.w.getDim(); // i.e., the number of features (all classes)
   const int d = theta.getDimWU(); // i.e., the length of the [w u] vector
   // Subtract the sum of the imputed vectors from the u portion of the gradient.
@@ -248,6 +242,7 @@ void MaxMarginMultiPipelineUW::valueAndGradientFinalize(const Parameters& theta,
 
 void MaxMarginMultiPipelineUW::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
+  assert(_imputedFv);
   SparseRealVec fv(theta.u.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();

@@ -39,13 +39,6 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
   RealVec gradDense(d);
   gradDense.clear();
   
-  // This if statement should never be executed while the objective is being
-  // optimized, since the (EM) optimizer will perform the initialization.
-  // However, if the gradient is requested outside of the optimization routine,
-  // we need to initialize the latent FVs using the given weight vector.
-  if (!_imputedFv)
-    initLatentFeatureVectors(theta);
-  
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
@@ -76,6 +69,7 @@ void MaxMarginMulti::valueAndGradientPart(const Parameters& theta, Model& model,
 
 void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
     double& funcVal, SparseRealVec& gradFv) {    
+  assert(_imputedFv);
   // Subtract the sum of the imputed vectors from the gradient.
   noalias(gradFv) -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
@@ -84,6 +78,7 @@ void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
 
 void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end) {
+  assert(_imputedFv);
   SparseRealVec fv(theta.w.getDim());
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();

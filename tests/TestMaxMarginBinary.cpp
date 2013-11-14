@@ -76,13 +76,13 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   
   SparseRealVec gradFv(d);
   double fval;
-  objective->valueAndGradient(W, fval, gradFv);
+  objective->valueAndGradient(W, fval, gradFv, 0, true);
   
-  BOOST_CHECK_CLOSE(2.7189972967528266, fval, 1e-8);
-  BOOST_CHECK_CLOSE(-0.1, (double)gradFv[0], 1e-8);
+  BOOST_CHECK_CLOSE(2.2574876134537281, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.30, (double)gradFv[0], 1e-8);
   BOOST_CHECK_CLOSE(0.65, (double)gradFv[1], 1e-8);
-  BOOST_CHECK_CLOSE(0.05, (double)gradFv[2], 1e-8);
-  BOOST_CHECK_CLOSE(1.95, (double)gradFv[3], 1e-8);
+  BOOST_CHECK_CLOSE(0.00, (double)gradFv[2], 1e-8);
+  BOOST_CHECK_CLOSE(1.65, (double)gradFv[3], 1e-8);
   
   const double beta = 0.1;
   shared_ptr<Regularizer> l2(new RegularizerL2(beta));
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(testMaxMarginBinary)
   
   objective->valueAndGradient(W, fval, gradFv);
   l2->addRegularization(W, fval, gradFv);
-  BOOST_CHECK_CLOSE(0.63012440026923944, fval, 1e-8);
+  BOOST_CHECK_CLOSE(0.63012433177499205, fval, 1e-8);
   
   // Compare the analytical and numerical gradients.  
   testing_util::checkGradientFiniteDifferences(*objective, W, 1e-4, 10);

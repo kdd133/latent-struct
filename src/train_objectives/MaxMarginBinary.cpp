@@ -36,13 +36,6 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
   RealVec gradDense(d);
   gradDense.clear();
   
-  // This if statement should never be executed while the objective is being
-  // optimized, since the (EM) optimizer will perform the initialization.
-  // However, if the gradient is requested outside of the optimization routine,
-  // we need to initialize the latent FVs using the given weight vector.
-  if (_imputedFvs.size() == 0)
-    initLatentFeatureVectors(theta);
-  
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = (it->y() == ypos) ? 1 : -1;
@@ -58,6 +51,7 @@ void MaxMarginBinary::valueAndGradientPart(const Parameters& theta, Model& model
     }
     else {
       const size_t i = xi.getId();
+      assert(_imputedFvs.size() > i);
       // Since we did not fix the observed features in setLatentFeatureVectorsPart,
       // we need to factor them in here.
       shared_ptr<const SparseRealVec> phiObs = model.observedFeatures(xi, ypos);
@@ -81,6 +75,7 @@ void MaxMarginBinary::setLatentFeatureVectorsPart(const Parameters& theta,
     const Label yi = (it->y() == ypos) ? 1 : -1;    
     if (yi == 1) {
       const size_t i = xi.getId();
+      assert(_imputedFvs.size() > i);
       // The last argument in the call to maxFeatures is false because we do
       // not want to fix the observed features when computing the objective.
       model.maxFeatures(theta.w, &_imputedFvs[i], xi, yi, false);

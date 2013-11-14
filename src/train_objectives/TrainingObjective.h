@@ -32,9 +32,14 @@ class TrainingObjective {
     virtual ~TrainingObjective() {}
   
     // Return the function value and gradient computed over the entire training
-    // set.
+    // set. However, if an array of indices is provided, compute the gradient
+    // over only the examples corresponding to these indices.
+    // If resetLatentFeatureVectors is true, initLatentFeatureVectors and
+    // setLatentFeatureVectors are called prior to computing the gradient; this
+    // is convenient for unit testing, but should not normally need to be used.
     virtual void valueAndGradient(const Parameters& theta, double& value,
-      SparseRealVec& grad, const std::list<int>* indices = 0);
+      SparseRealVec& grad, const std::list<int>* indices = 0,
+      bool resetLatentFeatureVectors = false);
       
     // Return the function value and gradient for the subset of training
     // examples specified by begin and end.
