@@ -157,10 +157,20 @@ bool Alphabet::read(const string& fname) {
     int index = lexical_cast<int>(*it++);
     string key = *it++;
     assert(it == fields.end());
+    // Insert the dictionary entry.
     pair<DictType::iterator, bool> ret = _dict.insert(PairType(key, index));
     if (!ret.second)
       return false;
-    _entries.push_back(key);
+    // Add an entry to the reverse index. 
+    if (index == _entries.size()) {
+      // This is more efficient if the entries are in order by index.
+      _entries.push_back(key);
+    }
+    else {
+      if (index > _entries.size())
+        _entries.resize(index + 1);
+      _entries[index] = key;
+    }
   }
   fin.close();
   return true;
@@ -178,8 +188,8 @@ bool Alphabet::write(const string& fname) const {
     fout << " " << _labelIndices[i];
   fout << endl;
   // The remaining output consists of the dictionary entries.
-  BOOST_FOREACH(const PairType& entry, _dict)
-    fout << entry.second << " " << entry.first << endl;
+  for (size_t index = 0; index < _entries.size(); ++index)
+    fout << index << " " << _entries[index] << endl;
   fout.close();
   return true;
 }
