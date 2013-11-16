@@ -271,8 +271,13 @@ shared_ptr<Alphabet> TrainingObjective::combineAlphabets(
   Alphabet::DictType::const_iterator it;
   for (size_t i = 0; i < getNumModels(); i++) {
     vector<shared_ptr<Alphabet> > alphabets;
-    alphabets.push_back(_models[i].getFgenLatent()->getAlphabet());
-    alphabets.push_back(_models[i].getFgenObserved()->getAlphabet());
+    shared_ptr<Alphabet> lat = _models[i].getFgenLatent()->getAlphabet();
+    shared_ptr<Alphabet> obs = _models[i].getFgenObserved()->getAlphabet();
+    alphabets.push_back(lat);
+    // If the latent and observed alphabets are the same object, it's redundant
+    // to process them both.
+    if (lat != obs)
+      alphabets.push_back(obs);
     BOOST_FOREACH(shared_ptr<Alphabet> a, alphabets) {
       // Note: We don't use a->size() here because that would give us the
       // dimensionality of the space (across all classes), whereas we want the
