@@ -384,14 +384,22 @@ according to weights-init")
       string f = uAlphabet.reverseLookup(i);
       wAlphabet->lookup(f, TrainingObjective::kPositive, true);
     }
+    wAlphabet->lock();
   }
 
+  // The pipeline models may need to lock and unlock the alphabets more than
+  // once, since alphabets are loaded, then additional feature gathering may
+  // be performed. For convenience, we store a pointer to the alphabet for each
+  // thread.
+  vector<shared_ptr<Alphabet> > threadAlphabets;
+  
   for (size_t th = 0; th < threads; th++) {
     shared_ptr<Alphabet> alphabet;
     if (pipeline) {
       // Each thread needs its own copy, since we may be gathering additional
       // features from the training data.
       alphabet.reset(new Alphabet(*wAlphabet));
+      threadAlphabets.push_back(alphabet);
     }
     else if (resumed)
       alphabet = loadedAlphabet;
@@ -730,6 +738,7 @@ according to weights-init")
       timer::auto_cpu_timer gatherTimer;
       objective->gatherFeatures(maxNumFvs, totalNumFvs);
       assert(maxNumFvs > 0 && totalNumFvs > 0);
+      assert(trainData.getLabelSet().size() > 0);
       objective->combineAlphabets(trainData.getLabelSet());
     }
   }
@@ -752,6 +761,7 @@ according to weights-init")
         return 1;
       }
       cout << "Loaded features from " << loadFeaturesFilename << endl;
+      assert(trainData.getLabelSet().size() > 0);
       alphabet = objective->combineAlphabets(trainData.getLabelSet());
     }
     
@@ -816,7 +826,6 @@ according to weights-init")
     instantiatedLabels = trainData.getLabelSet();
   regularizer->setupParameters(theta0, *alphabet, instantiatedLabels,
       seed);
-  alphabet->lock(); // We can lock the Alphabet at this point.
   
   if (pipeline) {
     assert(theta0.hasU());
@@ -827,6 +836,14 @@ according to weights-init")
     if (!filesystem::exists(wFname)) {
       cout << "Error: " << wFname << " does not exist.\n";
       return 1;
+    }
+    assert(threads == threadAlphabets.size());
+    BOOST_FOREACH(shared_ptr<Alphabet>& a, threadAlphabets) {
+      if (alphabet->size() != a->size()) {
+        cout << "Error: Alphabets for different threads differ in size.\n";
+        assert(0);
+      }
+      a->lock();
     }
     theta0.w.read(wFname, alphabet->size());
     cout << "Loaded w weights from " << wFname << endl;
@@ -850,6 +867,7 @@ according to weights-init")
     }
     
     if (KBestViterbiSemiring::k > 0) {
+      assert(alphabet->isLocked());
       if (trainFileSpecified)
         objective->initKBest(trainData, theta0);
       if (validationFileSpecified) {
@@ -863,17 +881,24 @@ according to weights-init")
     assert(0);
     if (trainFileSpecified) {
       const size_t oldSize = alphabet->size();
+#if 0 //FIXME: temporarily commented out so we can check gradients 
+      BOOST_FOREACH(shared_ptr<Alphabet>& a, threadAlphabets) {
+        assert(a->isLocked());
+        a->unlock();
+      }
       cout << "Gathering features (pipeline) ...\n";
-      alphabet->unlock();
-      assert(!alphabet->isLocked());
       {
         size_t maxNumFvs = 0, totalNumFvs = 0;
         timer::auto_cpu_timer gatherTimer;
         objective->gatherFeatures(maxNumFvs, totalNumFvs);
         assert(maxNumFvs > 0 && totalNumFvs > 0);
       }
-      objective->combineAlphabets(trainData.getLabelSet());
-      alphabet->lock();
+#endif
+      assert(trainData.getLabelSet().size() > 0);
+      alphabet = objective->combineAlphabets(trainData.getLabelSet());
+      alphabet->lock();      
+      threadAlphabets.clear();
+      
       const size_t newSize = alphabet->size();
       // If we added some new features, we need to grow w and u to match the new
       // alphabet size. We then need to initialize (only) the weights of the new
@@ -887,9 +912,14 @@ according to weights-init")
         for (int i = oldSize; i < newSize; i++)
           theta0.w.setWeight(i, newWeights.w[i]);
       }
+      
+      // TODO: If we gather more features, we also need to regenerate the k-best
+      // lists so that the new features fire when present.
+      assert(0);
     }
   }
   else {
+    alphabet->lock(); // We can lock the Alphabet at this point.
     initWeights(theta0.w, weightsInit, weightsNoise, seed, alphabet,
         instantiatedLabels, fgenLat);
     if (theta0.hasU()) {
@@ -1229,6 +1259,14 @@ according to weights-init")
       }
       assert(evalData.numExamples() > 0);
       assert(evalData.getLabelSet().size() > 1);
+      
+      // If we're in pipeline mode and haven't consolidated the alphabets for
+      // the various threads, do so now.
+      if (pipeline && threadAlphabets.size() > 1) {
+        alphabet = objective->combineAlphabets(evalData.getLabelSet());
+        alphabet->lock();
+        threadAlphabets.clear();
+      }
       
       evaluateMultipleWeightVectors(weightVectors, evalData, objective,
           dirPath, evalId++, writeFiles, printAlignments, cachingEnabled);

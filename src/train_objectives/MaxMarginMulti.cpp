@@ -73,7 +73,7 @@ void MaxMarginMulti::valueAndGradientFinalize(const Parameters& theta,
   // Subtract the sum of the imputed vectors from the gradient.
   noalias(gradFv) -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
-  funcVal = Utility::hinge(funcVal - theta.w.innerProd(*_imputedFv)); 
+  funcVal -= theta.w.innerProd(*_imputedFv); 
 }
 
 void MaxMarginMulti::setLatentFeatureVectorsPart(const Parameters& theta,

@@ -38,6 +38,18 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
     const Label k, double& funcVal, SparseRealVec& gradFv) {    
 
+  // This training objective computes a function of parameters u and w. The
+  // parameters u correspond to "local" features that decompose over a given
+  // sequence, while the w parameters correspond to "global" features that are
+  // computed given a complete latent structure.
+  // The training objective expects a parameter vector of the form
+  // [w1 u1 w2 u2 ... wk uk], where wj is the portion of w that corresponds to
+  // the jth class, and similarly for u. It is further assumed that w and u are
+  // of the same length, namely, the total length of the parameter vector, but
+  // u will be have zero weights for all the w coorindates. On the other hand,
+  // w may have non-zero weights for the u coordinates, since the global
+  // feature vector may include local features from, e.g., the max alignment.
+
   const int n = theta.w.getDim(); // i.e., the number of features (all classes)
   const int d = theta.getDimWU(); // i.e., the length of the [w u] vector
   assert(theta.hasU());
@@ -62,10 +74,9 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     }
     
     double scoreMax = -numeric_limits<double>::infinity();
-    Label yMax = 0;
     int indexMax = -1;
     shared_ptr<const SparseRealVec> phiMax_w;
-    
+
     // Compute max_{z} (u-w)'*phi(xi,yi,z)
     for (int j = 0; j < kBest[yi].alignments->size(); j++) {
       shared_ptr<const SparseRealVec> phi_w = model.observedFeatures(
@@ -82,16 +93,17 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     }
     assert(indexMax >= 0);
     assert(phiMax_w);
+    assert(phiMax_w->size() == n);
+    assert(kBest[yi].maxFvs->at(indexMax)->size() == n);
     
     // Update the gradient and function value.
-//    cout << theta.u.getDim() << " " << theta.w.getDim() << " " << gradDense.size() << " " << kBest[yi].maxFvs->at(indexMax)->size() << " " << phiMax_w->size() << endl;
     noalias(subrange(gradDense, 0, n)) -= *phiMax_w;
     noalias(subrange(gradDense, n, d)) += *kBest[yi].maxFvs->at(indexMax);
     funcVal += scoreMax;
-    
+
     // Compute max_{y,z} [delta(yi,y) + w'*phi(xi,y,z)]
-    scoreMax = -numeric_limits<double>::infinity();  
-    yMax = 0;
+    Label yMax = 0;
+    scoreMax = -numeric_limits<double>::infinity();    
     indexMax = -1;
     for (Label y = 0; y < k; y++) {
       int kBestIndex = -1;
@@ -107,7 +119,8 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     assert(indexMax >= 0);
     
     // Update the gradient and function value.
-    noalias(subrange(gradDense, 0, n)) += *kBest[yMax].maxFvs->at(indexMax);
+    noalias(subrange(gradDense, 0, n)) += *model.observedFeatures(
+        kBest[yMax].alignments->at(indexMax), yMax);
     funcVal += score[yMax];
   }
   noalias(gradFv) = gradDense;
@@ -123,6 +136,7 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
     for (Label y = 0; y < k; y++) {
       const KBestInfo& kBest = fetchKBestInfo(x, y);
       const double z = bestAlignmentScore(*kBest.alignments, theta.w, model, y);
+      assert(0); // need to factor in the other terms as well (similar to LogLinearMultiUW)
       scores.setScore(id, y, z);
     }
   }
@@ -230,14 +244,14 @@ void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
 }
 
 void MaxMarginMultiPipelineUW::valueAndGradientFinalize(const Parameters& theta,
-    double& funcVal, SparseRealVec& gradFv) {    
+    double& funcVal, SparseRealVec& gradFv) {
   assert(_imputedFv);
+  // Subtract the sum of the imputed vectors from the gradient.
   const int n = theta.w.getDim(); // i.e., the number of features (all classes)
   const int d = theta.getDimWU(); // i.e., the length of the [w u] vector
-  // Subtract the sum of the imputed vectors from the u portion of the gradient.
   noalias(subrange(gradFv, n, d)) -= (*_imputedFv);
   // Subtract the scores of the imputed vectors from the function value.
-  funcVal = Utility::hinge(funcVal - theta.u.innerProd(*_imputedFv)); 
+  funcVal -= theta.u.innerProd(*_imputedFv);
 }
 
 void MaxMarginMultiPipelineUW::setLatentFeatureVectorsPart(const Parameters& theta,
@@ -257,6 +271,7 @@ void MaxMarginMultiPipelineUW::setLatentFeatureVectorsPart(const Parameters& the
 }
 
 void MaxMarginMultiPipelineUW::initLatentFeatureVectors(const Parameters& theta) {
+  assert(theta.u.getDim() == theta.w.getDim());
   assert(_dataset.numExamples() > 0);
   _imputedFv.reset(new RealVec(theta.u.getDim()));
 }
