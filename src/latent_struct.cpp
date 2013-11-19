@@ -876,12 +876,9 @@ according to weights-init")
       }
     }
 
-    // TODO: If we gather more features, we also need to regenerate the k-best
-    // lists so that the new features fire when present.
-    assert(0);
     if (trainFileSpecified) {
-      const size_t oldSize = alphabet->size();
-#if 0 //FIXME: temporarily commented out so we can check gradients 
+      shared_ptr<Alphabet> uwAlphabet(new Alphabet(*alphabet));
+      const size_t oldSize = uwAlphabet->size();
       BOOST_FOREACH(shared_ptr<Alphabet>& a, threadAlphabets) {
         assert(a->isLocked());
         a->unlock();
@@ -893,17 +890,30 @@ according to weights-init")
         objective->gatherFeatures(maxNumFvs, totalNumFvs);
         assert(maxNumFvs > 0 && totalNumFvs > 0);
       }
-#endif
+      
       assert(trainData.getLabelSet().size() > 0);
       alphabet = objective->combineAlphabets(trainData.getLabelSet());
       alphabet->lock();      
       threadAlphabets.clear();
       
       const size_t newSize = alphabet->size();
-      // If we added some new features, we need to grow w and u to match the new
-      // alphabet size. We then need to initialize (only) the weights of the new
-      // features using whatever initialization policy has been specified.
-      if (alphabet->size() > oldSize) {
+      if (newSize > oldSize) {
+        // If we added some new features, we need to grow w and u to match the
+        // new alphabet size.
+        
+        // Append the newly extracted feature to the ones we initially loaded.
+        uwAlphabet->unlock();
+        for (int i = 0; i < alphabet->numFeaturesPerClass(); i++) {
+          string f = alphabet->reverseLookup(i);
+          uwAlphabet->lookup(f, TrainingObjective::kPositive, true);
+        }
+        uwAlphabet->lock();
+        alphabet = uwAlphabet;
+        
+        // Re-load w and u into larger weight vectors, which are set to zero
+        // initially. Nothing further needs to be done to u, since the new
+        // features are all w (observed) features. We then initialize those new
+        // w parameters according to the specified policy (i.e., weightsInit).
         theta0.w.read(wFname, newSize);
         theta0.u.read(uFname, newSize);
         Parameters newWeights(newSize);
@@ -911,11 +921,13 @@ according to weights-init")
             instantiatedLabels, fgenLat);
         for (int i = oldSize; i < newSize; i++)
           theta0.w.setWeight(i, newWeights.w[i]);
+        
+        // Clear any feature vectors that have been cached.
+        if (cachingEnabled)
+          for (size_t i = 0; i < objective->getNumModels(); i++)
+            objective->getModel(i).emptyCache();
       }
       
-      // TODO: If we gather more features, we also need to regenerate the k-best
-      // lists so that the new features fire when present.
-      assert(0);
     }
   }
   else {
