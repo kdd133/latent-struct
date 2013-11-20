@@ -94,18 +94,7 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     assert(indexMax >= 0);
     assert(phiMax_w);
     assert(phiMax_w->size() == n);
-    
-    // The dimensionality of the maxFvs may be less than n, due to the
-    // possibility that additional features were added after the k-best lists
-    // were initially generated. However, by design the new features can only
-    // be observed features (corresponding to parameters w), so the alignments
-    // and their scores are not affected. In order to get the += below to work,
-    // we do need equal sized vectors on the left and right sides, so we'll
-    // simply enlarge the maxFv here.
-    if (kBest[yi].maxFvs->at(indexMax)->size() != n) {
-      assert(kBest[yi].maxFvs->at(indexMax)->size() < n); // must be shorter
-      kBest[yi].maxFvs->at(indexMax)->resize(n, true);
-    }
+    assert(kBest[yi].maxFvs->at(indexMax)->size() == n);
     
     // Update the gradient and function value.
     noalias(subrange(gradDense, 0, n)) -= *phiMax_w;

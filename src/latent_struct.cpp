@@ -81,6 +81,33 @@
 using namespace boost;
 using namespace std;
 
+void checkGradientFiniteDifferences(TrainingObjective& objective,
+    Parameters& theta, double tol, int nWeightVectors, const shared_ptr<const Alphabet>& a) {
+  cout << "Running finite differences gradient check\n";
+  const int d = theta.getDimWU();
+  SparseRealVec gradFv(d);
+  double fval;
+
+  for (int wi = 0; wi < nWeightVectors; wi++) {
+    // try several different (random) weight vectors
+    boost::shared_array<double> weights = Utility::generateGaussianSamples(d,
+        (wi%2 ? 1 : -1)*wi, 0.5, wi); // alternate the sign of the prior mean
+    theta.setWeights(weights.get(), d);
+    objective.valueAndGradient(theta, fval, gradFv, 0, true);
+    for (int i = 0; i < 100; i++) {
+//      const int i = rand() % theta.getDimWU();
+      const double numGrad_i = Utility::getNumericalGradientForCoordinate(
+          objective, theta, i);
+      double analytical = gradFv[i];
+      if (abs(numGrad_i - analytical) < tol)
+        cout << "ok  " << wi << " " << i << " " << analytical << " " << numGrad_i << endl;
+      else {
+        cout << "BAD " << wi << " " << i << " " << analytical << " " << numGrad_i << endl;
+      }
+    }
+  }
+}
+
 int KBestViterbiSemiring::k;
 
 int main(int argc, char** argv) {
@@ -875,7 +902,7 @@ according to weights-init")
         objective->initKBest(*validationData, theta0);
       }
     }
-
+    
     if (trainFileSpecified) {
       shared_ptr<Alphabet> uwAlphabet(new Alphabet(*alphabet));
       const size_t oldSize = uwAlphabet->size();
@@ -890,44 +917,69 @@ according to weights-init")
         objective->gatherFeatures(maxNumFvs, totalNumFvs);
         assert(maxNumFvs > 0 && totalNumFvs > 0);
       }
-      
       assert(trainData.getLabelSet().size() > 0);
       alphabet = objective->combineAlphabets(trainData.getLabelSet());
       alphabet->lock();      
       threadAlphabets.clear();
-      
+
       const size_t newSize = alphabet->size();
       if (newSize > oldSize) {
         // If we added some new features, we need to grow w and u to match the
         // new alphabet size.
         
         // Append the newly extracted feature to the ones we initially loaded.
+        shared_ptr<Alphabet> uwAlphabetOld(new Alphabet(*uwAlphabet));
         uwAlphabet->unlock();
         for (int i = 0; i < alphabet->numFeaturesPerClass(); i++) {
           string f = alphabet->reverseLookup(i);
           uwAlphabet->lookup(f, TrainingObjective::kPositive, true);
         }
         uwAlphabet->lock();
-        alphabet = uwAlphabet;
         
-        // Re-load w and u into larger weight vectors, which are set to zero
-        // initially. Nothing further needs to be done to u, since the new
-        // features are all w (observed) features. We then initialize those new
-        // w parameters according to the specified policy (i.e., weightsInit).
-        theta0.w.read(wFname, newSize);
-        theta0.u.read(uFname, newSize);
-        Parameters newWeights(newSize);
-        initWeights(newWeights.w, weightsInit, weightsNoise, seed, alphabet,
-            instantiatedLabels, fgenLat);
-        for (int i = oldSize; i < newSize; i++)
-          theta0.w.setWeight(i, newWeights.w[i]);
+        // We will copy w and u into larger weight vectors, which are set to
+        // zero initially.
+        assert(oldSize == theta0.getDimW());
+        assert(oldSize == theta0.getDimU());
+        Parameters temp(oldSize, oldSize);
+        temp.setParams(theta0);        
+        theta0 = Parameters(newSize, newSize);
+
+        // Remap the old/loaded weights so they correspond to the new (expanded)
+        // alphabet. The new weights are simply set to zero.
+        BOOST_FOREACH(const Label y, trainData.getLabelSet()) {
+          for (int i = 0; i < uwAlphabetOld->numFeaturesPerClass(); i++) {
+            const string feature = uwAlphabetOld->reverseLookup(i);
+            const int oldIndex = uwAlphabetOld->lookup(feature, y, false);
+            const int newIndex = uwAlphabet->lookup(feature, y, false);
+            theta0.w.setWeight(newIndex, temp.w[oldIndex]);
+            theta0.u.setWeight(newIndex, temp.u[oldIndex]);
+          }
+        }        
+        alphabet = uwAlphabet; // the old alphabet can be overwritten
         
         // Clear any feature vectors that have been cached.
         if (cachingEnabled)
           for (size_t i = 0; i < objective->getNumModels(); i++)
             objective->getModel(i).emptyCache();
+        
+        // Finally, we now need to regenerate the k-best lists, since the
+        // max feature vectors were invalidated when we modified the alphabet.
+        if (KBestViterbiSemiring::k > 0) {
+          assert(alphabet->isLocked());
+          if (trainFileSpecified) {
+            objective->clearKBest();
+            objective->initKBest(trainData, theta0);
+          }
+          if (validationFileSpecified) {
+            assert(validationData);
+            objective->clearKBest();
+            objective->initKBest(*validationData, theta0);
+          }
+        }
       }
       
+      // FIXME: DEBUGGING (remove this)
+      checkGradientFiniteDifferences(*objective, theta0, 1e-5, 1, alphabet);
     }
   }
   else {

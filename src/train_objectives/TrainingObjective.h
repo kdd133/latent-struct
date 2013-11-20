@@ -95,7 +95,7 @@ class TrainingObjective {
     
     void initKBest(const Dataset& data, const Parameters& theta);
     
-    void clearKBest();
+    virtual void clearKBest();
     
     // Combines the alphabets from all the models and sets each model's feature
     // generator(s) to use the combined alphabet; returns the combined alphabet.
