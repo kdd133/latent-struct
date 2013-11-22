@@ -81,33 +81,6 @@
 using namespace boost;
 using namespace std;
 
-void checkGradientFiniteDifferences(TrainingObjective& objective,
-    Parameters& theta, double tol, int nWeightVectors, const shared_ptr<const Alphabet>& a) {
-  cout << "Running finite differences gradient check\n";
-  const int d = theta.getDimWU();
-  SparseRealVec gradFv(d);
-  double fval;
-
-  for (int wi = 0; wi < nWeightVectors; wi++) {
-    // try several different (random) weight vectors
-    boost::shared_array<double> weights = Utility::generateGaussianSamples(d,
-        (wi%2 ? 1 : -1)*wi, 0.5, wi); // alternate the sign of the prior mean
-    theta.setWeights(weights.get(), d);
-    objective.valueAndGradient(theta, fval, gradFv, 0, true);
-    for (int i = 0; i < 100; i++) {
-//      const int i = rand() % theta.getDimWU();
-      const double numGrad_i = Utility::getNumericalGradientForCoordinate(
-          objective, theta, i);
-      double analytical = gradFv[i];
-      if (abs(numGrad_i - analytical) < tol)
-        cout << "ok  " << wi << " " << i << " " << analytical << " " << numGrad_i << endl;
-      else {
-        cout << "BAD " << wi << " " << i << " " << analytical << " " << numGrad_i << endl;
-      }
-    }
-  }
-}
-
 int KBestViterbiSemiring::k;
 
 int main(int argc, char** argv) {
@@ -977,9 +950,6 @@ according to weights-init")
           }
         }
       }
-      
-      // FIXME: DEBUGGING (remove this)
-      checkGradientFiniteDifferences(*objective, theta0, 1e-5, 1, alphabet);
     }
   }
   else {
