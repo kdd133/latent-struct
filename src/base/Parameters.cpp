@@ -20,6 +20,25 @@ void Parameters::init() {
   _wv[3] = &shared_u;
 }
 
+Parameters::Parameters(const Parameters& other) {
+  w = other.w;
+  u = other.u;
+  shared_w = other.shared_w;
+  shared_u = other.shared_u;
+  init();
+}
+
+Parameters& Parameters::operator=(const Parameters& rhs) {
+  if (this != &rhs) {
+    w = rhs.w;
+    u = rhs.u;
+    shared_w = rhs.shared_w;
+    shared_u = rhs.shared_u;
+    init();
+  }
+  return (*this);
+}
+
 void Parameters::add(const int index, const double v) {
   assert(index >= 0 && index < getDimTotal());
   int offset = 0;

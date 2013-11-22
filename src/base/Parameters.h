@@ -30,6 +30,9 @@ public:
   Parameters(int dw) : w(dw) { init(); }
   Parameters(int dw, int du) : w(dw), u(du) { init(); }
   
+  Parameters(const Parameters& other); // copy constructor
+  Parameters& operator=(const Parameters& rhs); // assignment operator
+  
   void add(const int index, const double v);
   
   std::size_t getDimW() const;
