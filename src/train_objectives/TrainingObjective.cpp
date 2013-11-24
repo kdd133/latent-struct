@@ -268,7 +268,7 @@ void TrainingObjective::gatherFeaturesPart(Model& model,
 shared_ptr<Alphabet> TrainingObjective::combineAlphabets(
     const set<Label>& labels) {
   shared_ptr<Alphabet> combined(new Alphabet(false, false));
-  Alphabet::DictType::const_iterator it;
+  set<string> features;
   for (size_t i = 0; i < getNumModels(); i++) {
     vector<shared_ptr<Alphabet> > alphabets;
     shared_ptr<Alphabet> lat = _models[i].getFgenLatent()->getAlphabet();
@@ -284,8 +284,11 @@ shared_ptr<Alphabet> TrainingObjective::combineAlphabets(
       // number of (base) features in this case.
       const size_t n = a->numFeaturesPerClass();
       for (size_t j = 0; j < n; j++)
-        combined->lookup(a->reverseLookup(j), kPositive, true);
+        features.insert(a->reverseLookup(j));
     }
+  }
+  BOOST_FOREACH(const string& f, features) {
+    combined->lookup(f, kPositive, true);
   }
   // We performed lookups using label=1 above, simply to populate the feature
   // dictionary. We must also tell the alphabet which class labels exist, so
