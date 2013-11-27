@@ -92,6 +92,10 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     boost::scoped_ptr<RealVec> _imputedFv;
     
     boost::mutex _flag; // used to synchronize access to _imputedFv
+    
+    void maxZ(const KBestInfo& kBest, const Label y, const Parameters& theta,
+        Model& model, double& scoreMaxUW, int& indexMaxUW, double& scoreMaxU,
+        int& indexMaxU);
 };
 
 #endif

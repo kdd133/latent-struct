@@ -929,6 +929,10 @@ according to weights-init")
           }
         }        
         alphabet = uwAlphabet; // the old alphabet can be overwritten
+        for (size_t i = 0; i < objective->getNumModels(); i++) {
+          objective->getModel(i).getFgenLatent()->setAlphabet(alphabet);
+          objective->getModel(i).getFgenObserved()->setAlphabet(alphabet);
+        }
         
         // Clear any feature vectors that have been cached.
         if (cachingEnabled)
