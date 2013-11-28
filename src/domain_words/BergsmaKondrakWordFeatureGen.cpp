@@ -296,8 +296,7 @@ void BergsmaKondrakWordFeatureGen::getMismatches(const vector<string>& s,
 
   string prevCharS = s[0];
   string prevCharT = t[0];
-  assert(prevCharS == prevCharT); // the first characters (^) must always match
-  bool prevMatch = true;
+  bool prevMatch = (prevCharS == prevCharT);
   
   for (int i = 0; i < s.size(); i++) {
     const bool currMatch = s[i] == t[i];
