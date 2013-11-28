@@ -37,8 +37,12 @@ class Utility {
       const Dataset& eval, const std::string& identifier,
       const std::string& outFname = "");
       
+    // Evaluate multiple Parameters on the given Dataset. The fourth argument
+    // is assumed to be the initial set of parameters (i.e., theta0), which
+    // will be used here to generate k-best lists for the eval data.
     static void evaluate(const std::vector<Parameters>& weightVectors,
       boost::shared_ptr<TrainingObjective> obj, const Dataset& evalData,
+      const Parameters& initialParameters,
       const std::vector<std::string>& ids,
       const std::vector<std::string>& fnames, bool enableCache);
       

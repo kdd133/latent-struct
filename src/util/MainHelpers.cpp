@@ -59,7 +59,8 @@ void initWeights(WeightVector& w, const string& initType, double noiseLevel,
   }
 }
 
-void evaluateMultipleWeightVectors(const vector<Parameters>& weightVectors,
+void evaluateMultipleWeightVectors(const Parameters& w0,
+    const vector<Parameters>& weightVectors,
     const Dataset& evalData, shared_ptr<TrainingObjective> objective,
     const string& path, int id, bool writeFiles, bool writeAlignments,
     bool cachingEnabled) {
@@ -110,6 +111,6 @@ void evaluateMultipleWeightVectors(const vector<Parameters>& weightVectors,
       alignOut.close();
     }
   }
-  Utility::evaluate(weightVectors, objective, evalData, identifiers, fnames,
+  Utility::evaluate(weightVectors, objective, evalData, w0, identifiers, fnames,
       cachingEnabled);
 }

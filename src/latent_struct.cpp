@@ -1306,7 +1306,7 @@ according to weights-init")
         threadAlphabets.clear();
       }
       
-      evaluateMultipleWeightVectors(weightVectors, evalData, objective,
+      evaluateMultipleWeightVectors(theta0, weightVectors, evalData, objective,
           dirPath, evalId++, writeFiles, printAlignments, cachingEnabled);
     }
   }

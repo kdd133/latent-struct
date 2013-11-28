@@ -23,7 +23,11 @@ class WeightVector;
 
 // Classify eval examples and optionally write the predictions to files.
 // Can also write the alignments to files upon request.
-void evaluateMultipleWeightVectors(const std::vector<Parameters>&,
+// The first argument is a reference to the initial set of parameters (prior to
+// training), which are used to generate k-best lists for the eval examples
+// when necessary.
+void evaluateMultipleWeightVectors(const Parameters& w0,
+    const std::vector<Parameters>&,
     const Dataset&, boost::shared_ptr<TrainingObjective>, const std::string&,
     int id, bool writeFiles, bool writeAlignments, bool cachingEnabled);
 

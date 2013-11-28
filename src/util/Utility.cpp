@@ -66,8 +66,8 @@ bool Utility::loadDataset(const InputReader& reader, string fileName,
 
 void Utility::evaluate(const vector<Parameters>& weightVectors,
     shared_ptr<TrainingObjective> obj, const Dataset& evalData,
-    const vector<string>& identifiers, const vector<string>& fnames,
-    bool caching) {
+    const Parameters& w0, const vector<string>& identifiers,
+    const vector<string>& fnames, bool caching) {
     
   assert(obj->getModel(0).getFgenLatent()->getAlphabet()->isLocked());
   assert(obj->getModel(0).getFgenObserved()->getAlphabet()->isLocked());
@@ -106,14 +106,16 @@ void Utility::evaluate(const vector<Parameters>& weightVectors,
     }
     partData.addLabels(evalData.getLabelSet());
     assert(partData.getLabelSet().size() == evalData.getLabelSet().size());
-    obj->initKBest(partData, weightVectors[0]);
+    // Use the initial parameters w0 to generate the k-best list (if applicable
+    // for this training objective).
+    obj->initKBest(partData, w0);
     obj->predict(weightVectors[0], partData, labelScores[0]);
     obj->clearKBest();
     
     // We have now cached the fsts for the first (original) partition of the
     // data, which can be reused for predicting with the other weight vectors.
     for (size_t wvIndex = 1; wvIndex < numWeightVectors; wvIndex++) {
-      obj->initKBest(partData, weightVectors[wvIndex]);
+      obj->initKBest(partData, w0);
       obj->predict(weightVectors[wvIndex], partData, labelScores[wvIndex]);
       obj->clearKBest();
     }
