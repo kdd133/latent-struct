@@ -868,10 +868,15 @@ according to weights-init")
     
     if (KBestViterbiSemiring::k > 0) {
       assert(alphabet->isLocked());
-      if (trainFileSpecified)
+      if (trainFileSpecified) {
+        cout << "Generating " << KBestViterbiSemiring::k << "-best " <<
+            "lists (training data) ...\n";
         objective->initKBest(trainData, theta0);
+      }
       if (validationFileSpecified) {
         assert(validationData);
+        cout << "Generating " << KBestViterbiSemiring::k << "-best " <<
+            "lists (validation data) ...\n";
         objective->initKBest(*validationData, theta0);
       }
     }
@@ -883,7 +888,7 @@ according to weights-init")
         assert(a->isLocked());
         a->unlock();
       }
-      cout << "Gathering features (pipeline) ...\n";
+      cout << "Gathering additional features from k-best lists ...\n";
       {
         size_t maxNumFvs = 0, totalNumFvs = 0;
         timer::auto_cpu_timer gatherTimer;
@@ -944,10 +949,14 @@ according to weights-init")
         if (KBestViterbiSemiring::k > 0) {
           assert(alphabet->isLocked());
           if (trainFileSpecified) {
+            cout << "Re-generating " << KBestViterbiSemiring::k << "-best " <<
+                "lists with additional features (training data) ...\n";
             objective->clearKBest();
             objective->initKBest(trainData, theta0);
           }
           if (validationFileSpecified) {
+            cout << "Re-generating " << KBestViterbiSemiring::k << "-best " <<
+                "lists with additional features (validation data) ...\n";
             assert(validationData);
             objective->clearKBest();
             objective->initKBest(*validationData, theta0);

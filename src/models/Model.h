@@ -87,8 +87,8 @@ class Model {
     // The observed feature generator.
     boost::shared_ptr<ObservedFeatureGen> _fgenObserved;
     
-    // Whether or not to cache transducers in memory during training.
-    bool _cacheFsts;
+    // Whether or not to cache graphs in memory during training.
+    bool _cacheGraphs;
     
     // Do not cache a graph for an example that has an id less than or equal
     // to this value.
@@ -103,18 +103,18 @@ class Model {
 
 inline Model::Model(boost::shared_ptr<AlignmentFeatureGen> fgenAlign,
     boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
-    _fgenAlign(fgenAlign), _fgenObserved(fgenObserved), _cacheFsts(false),
+    _fgenAlign(fgenAlign), _fgenObserved(fgenObserved), _cacheGraphs(false),
     _onlyCacheIdsGreaterThanOrEqualTo(0) {
   assert(_fgenAlign != 0);
   assert(_fgenObserved != 0);
 }
 
 inline void Model::setCacheEnabled(bool state) {
-  _cacheFsts = state;
+  _cacheGraphs = state;
 }
 
 inline bool Model::getCacheEnabled() const {
-  return _cacheFsts;
+  return _cacheGraphs;
 }
 
 inline boost::shared_ptr<ObservedFeatureGen> Model::getFgenObserved() const {

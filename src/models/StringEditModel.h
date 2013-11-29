@@ -161,6 +161,10 @@ class StringEditModel : public Model {
     // number of samples specified by this parameter.
     int _featureCoocSamples;    
     
+    // If true, only cache observed feature vectors (regardless of the value of
+    // _cacheGraphs, which is inherited from class Model).
+    bool _cacheObsFeatsOnly;
+    
     Graph* getGraph(boost::ptr_map<ExampleId, Graph>& cache,
         const WeightVector& w, const Pattern& x, const Label y,
         bool includeObsFeaturesArc = true);
@@ -186,7 +190,8 @@ StringEditModel<Graph>::StringEditModel(
     boost::shared_ptr<ObservedFeatureGen> fgenObserved) :
     Model(fgenAlign, fgenObserved), _useMatch(false), _allowRedundant(false),
     _maxSourcePhraseLength(1), _maxTargetPhraseLength(1), _order(1),
-    _noFinalArcFeats(false), _includeStartArc(false) {
+    _noFinalArcFeats(false), _includeStartArc(false),
+    _cacheObsFeatsOnly(false) {
 }
 
 template <typename Graph>
@@ -536,8 +541,10 @@ int StringEditModel<Graph>::processOptions(int argc, char** argv) {
     ("allow-redundant", opt::bool_switch(&_allowRedundant),
         "if true, a delete operation may follow an insert operation \
 (note: this is automatically true for a zero-order model)")
-    ("cache-fsts", opt::bool_switch(&_cacheFsts),
-        "if true, store the FSTs and rescore them instead of rebuilding")
+    ("cache-graphs", opt::bool_switch(&_cacheGraphs),
+        "if true, store the graphs and rescore them instead of rebuilding")
+    ("fv-cache-only", opt::bool_switch(&_cacheObsFeatsOnly),
+        "if true, cache observed feature vectors, but not graphs")
     ("exact-match-state", opt::bool_switch(&_useMatch), "if true, use a \
 match state when identical source and target phrases are encountered, or a \
 substitute state if they differ; if false, use a replace state in both cases")
@@ -822,7 +829,8 @@ Graph* StringEditModel<Graph>::getGraph(boost::ptr_map<ExampleId, Graph>& cache,
     const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   assert(_states.size() > 0);
   Graph* graph = 0;
-  if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
+  if (_cacheGraphs && !_cacheObsFeatsOnly &&
+      x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
     ExampleId id = std::make_pair(x.getHashString(), y);
     typename boost::ptr_map<ExampleId, Graph>::iterator it = cache.find(id);
     if (it == cache.end()) {
@@ -857,7 +865,8 @@ boost::shared_ptr<const SparseRealVec> StringEditModel<Graph>::observedFeatures(
     const Pattern& x, const Label y) {
   using namespace boost;
   shared_ptr<const SparseRealVec> fv;
-  if (_cacheFsts && x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
+  if ((_cacheGraphs || _cacheObsFeatsOnly) &&
+      x.getId() >= _onlyCacheIdsGreaterThanOrEqualTo) {
     ExampleId id = std::make_pair(x.getHashString(), y);
     unordered_map<ExampleId, shared_ptr<const SparseRealVec> >::iterator it =
         _fvCacheObs.find(id);
