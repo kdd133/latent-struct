@@ -627,6 +627,11 @@ to the final state")
   }
 #endif
   
+  // This ensures that Model::getCacheEnabled() returns true, even if only the
+  // observed feature vectors are being cached. 
+  if (_cacheObsFeatsOnly)
+    _cacheGraphs = true;
+  
   return 0;
 }
 

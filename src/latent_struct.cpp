@@ -871,12 +871,16 @@ according to weights-init")
       if (trainFileSpecified) {
         cout << "Generating " << KBestViterbiSemiring::k << "-best " <<
             "lists (training data) ...\n";
+        timer::auto_cpu_timer timer;
+        objective->clearKBest();
         objective->initKBest(trainData, theta0);
       }
       if (validationFileSpecified) {
         assert(validationData);
         cout << "Generating " << KBestViterbiSemiring::k << "-best " <<
             "lists (validation data) ...\n";
+        timer::auto_cpu_timer timer;
+        objective->clearKBest();
         objective->initKBest(*validationData, theta0);
       }
     }
@@ -951,6 +955,7 @@ according to weights-init")
           if (trainFileSpecified) {
             cout << "Re-generating " << KBestViterbiSemiring::k << "-best " <<
                 "lists with additional features (training data) ...\n";
+            timer::auto_cpu_timer timer;
             objective->clearKBest();
             objective->initKBest(trainData, theta0);
           }
@@ -958,6 +963,7 @@ according to weights-init")
             cout << "Re-generating " << KBestViterbiSemiring::k << "-best " <<
                 "lists with additional features (validation data) ...\n";
             assert(validationData);
+            timer::auto_cpu_timer timer;
             objective->clearKBest();
             objective->initKBest(*validationData, theta0);
           }
