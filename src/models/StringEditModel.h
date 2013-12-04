@@ -90,7 +90,7 @@ class StringEditModel : public Model {
       const Pattern& pattern, const Label label);
       
     virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
-      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >&
+      boost::shared_ptr<std::vector<boost::shared_ptr<const SparseRealVec> > >&
         maxFvForEachAlignment,
       const WeightVector& w, const Pattern& pattern, const Label label,
       bool observedFeatures = true);
@@ -171,7 +171,7 @@ class StringEditModel : public Model {
         
     void alignmentsToMaxFvs(
         const std::vector<std::list<const Hyperedge*> >& alignments,
-        boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+        boost::shared_ptr<std::vector<boost::shared_ptr<const SparseRealVec> > >& maxFvs,
         int dim);
         
     void addZeroOrderStates();
@@ -712,10 +712,10 @@ LogWeight StringEditModel<Graph>::expectedFeatureCooccurrences(
 template <typename Graph>
 void StringEditModel<Graph>::alignmentsToMaxFvs(
     const std::vector<std::list<const Hyperedge*> >& alignments,
-    boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+    boost::shared_ptr<std::vector<boost::shared_ptr<const SparseRealVec> > >& maxFvs,
     int dim) {
   using namespace std;
-  maxFvs.reset(new vector<boost::shared_ptr<SparseRealVec> >());
+  maxFvs.reset(new vector<boost::shared_ptr<const SparseRealVec> >());
   BOOST_FOREACH(const list<const Hyperedge*>& path, alignments) {
     boost::shared_ptr<SparseRealVec> fv(new SparseRealVec(dim));
     BOOST_FOREACH(const Hyperedge* e, path) {
@@ -728,7 +728,7 @@ void StringEditModel<Graph>::alignmentsToMaxFvs(
 
 template <typename Graph>
 void StringEditModel<Graph>::getBestAlignments(std::ostream& str,
-    boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+    boost::shared_ptr<std::vector<boost::shared_ptr<const SparseRealVec> > >& maxFvs,
     const WeightVector& w, const Pattern& x, const Label y, bool includeObs) {
   using namespace std;
   

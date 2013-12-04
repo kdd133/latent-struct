@@ -62,7 +62,7 @@ class Model {
       const Pattern& pattern, const Label label) = 0;
       
     virtual void getBestAlignments(std::ostream& alignmentStringRepresentations,
-      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > >& maxFvs,
+      boost::shared_ptr<std::vector<boost::shared_ptr<const SparseRealVec> > >& maxFvs,
       const WeightVector& w, const Pattern& pattern, const Label label,
       bool includeObservedFeatures = true) = 0;
     

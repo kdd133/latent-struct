@@ -45,7 +45,7 @@ void MaxMarginBinaryPipelineUW::predictPart(const Parameters& theta,
     // Impute the max-scoring alignment based using u.
     stringstream align_ss;
     // false --> exclude observed (global) features
-    shared_ptr<vector<shared_ptr<SparseRealVec> > > maxFvs;
+    shared_ptr<vector<shared_ptr<const SparseRealVec> > > maxFvs;
     model.getBestAlignments(align_ss, maxFvs, theta.u, x, ypos, false);
     
     // Parse the best alignment from the alignment string.

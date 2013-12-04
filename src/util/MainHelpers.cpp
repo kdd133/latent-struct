@@ -100,7 +100,7 @@ void evaluateMultipleWeightVectors(const Parameters& w0,
               << y << endl;
           // FIXME: Will it always be the case that a U-W objective uses *only*
           // the u parameters to impute the latent variables?
-          shared_ptr<vector<shared_ptr<SparseRealVec> > > maxFvs;
+          shared_ptr<vector<shared_ptr<const SparseRealVec> > > maxFvs;
           if (params.hasU())
             model.getBestAlignments(alignOut, maxFvs, params.u, *ex.x(), y);
           else

@@ -191,7 +191,8 @@ MaxMarginMultiPipelineUW::fetchKBestInfo(const Pattern& x, Label y) {
     assert(0);
     cout << "Error: " << name() << " failed to retrieve alignments.\n";
     exit(1);
-  }  
+  }
+  assert(it->second);
   return it->second;
 }
 
