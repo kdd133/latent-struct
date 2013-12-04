@@ -15,7 +15,7 @@
 #include "Ublas.h"
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/unordered_map.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
 #include <string>
 #include <vector>
 
@@ -44,20 +44,32 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
       return _name;
     }
     
+    // A data structure that represents a k-best list.
     typedef struct {
-      boost::shared_ptr<std::vector<StringPairAligned> > alignments;
-      boost::shared_ptr<std::vector<boost::shared_ptr<SparseRealVec> > > maxFvs;
+      // A string representation of the k-best alignments.
+      // See, e.g., StringEditModel::getBestAlignments().
+      std::string alignStrings;
+      
+      // The latent feature vectors (based on parameters u) that correspond to
+      // the k-best alignments.
+      boost::shared_ptr<std::vector<boost::shared_ptr<
+        const SparseRealVec> > > maxFvs;
+        
+      // The observed feature vectors (based on parameters w) that correspond to
+      // the k-best alignments.
+      boost::shared_ptr<std::vector<boost::shared_ptr<
+        const SparseRealVec> > > observedFvs;
     } KBestInfo;
     
   private:
   
-    boost::unordered_map<std::pair<std::size_t, Label>, KBestInfo> _kBestMap;
+    boost::ptr_map<std::pair<std::size_t, Label>, KBestInfo> _kBestMap;
 
     boost::mutex _lock; // used to synchronize access to _kBestMap
       
     // Returns the score of the highest-scoring alignment, and its index in the
     // alignments vector.
-    double bestAlignmentScore(const std::vector<StringPairAligned>& alignments,
+    double bestAlignmentScore(const KBestInfo& kBest,
         const WeightVector& weights, Model& model, const Label y,
         int* indexBest = 0);
     
@@ -87,7 +99,7 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     virtual void valueAndGradientFinalize(const Parameters& theta, double& f,
       SparseRealVec& g);
       
-    const KBestInfo& fetchKBestInfo(const Pattern& x, Label y);
+    KBestInfo* fetchKBestInfo(const Pattern& x, Label y);
   
     boost::scoped_ptr<RealVec> _imputedFv;
     

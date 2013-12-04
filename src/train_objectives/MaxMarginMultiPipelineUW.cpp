@@ -22,9 +22,9 @@
 #include <assert.h>
 #include <boost/foreach.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/unordered_map.hpp>
 #include <iostream>
 #include <set>
 #include <sstream>
@@ -36,7 +36,7 @@ using namespace std;
 
 void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, double& funcVal, SparseRealVec& gradFv) {    
+    const Label nc, double& funcVal, SparseRealVec& gradFv) {    
 
   // This training objective computes a function of parameters u and w. The
   // parameters u correspond to "local" features that decompose over a given
@@ -69,46 +69,70 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& xi = *it->x();
     const Label yi = it->y();
-    vector<KBestInfo> kBest(k);
-    for (Label y = 0; y < k; y++) {
+    vector<KBestInfo*> kBest(nc);
+    for (Label y = 0; y < nc; y++) {
       kBest[y] = fetchKBestInfo(xi, y);
-      assert(kBest[y].alignments->size() == kBest[y].maxFvs->size()); 
+      assert(kBest[y]->maxFvs);
+      const int k = kBest[y]->maxFvs->size();
+      assert(k > 0);
+      
+      // If the observed feature vectors haven't been stored yet, we create
+      // them here by extracting features based on the string representation
+      // of the k-best alignments that was stored in initKBestPart.
+      if (!kBest[y]->observedFvs) {
+        assert(kBest[y]->alignStrings.size() > 0);
+        kBest[y]->observedFvs.reset(
+            new vector<shared_ptr<const SparseRealVec> >(k));
+        shared_ptr<vector<StringPairAligned> > alignments =
+            Utility::toStringPairAligned(kBest[y]->alignStrings);
+        for (int j = 0; j < k; j++) {
+          shared_ptr<const SparseRealVec> phi = model.observedFeatures(
+              (*alignments)[j], y);
+          assert(phi);
+          (*kBest[y]->observedFvs)[j] = phi;
+        }
+        // Now that we have the k-best feature vectors, we don't need the
+        // string representation of the alignments any more, so free the memory.
+        kBest[y]->alignStrings.clear();
+      }
+      assert(kBest[y]->observedFvs->size() == k);
+      assert(fetchKBestInfo(xi, y)->observedFvs->size() == k);
     }
     
     // Compute terms (1) and (3).
     {
       int indexMaxUW, indexMaxU;
       double scoreMaxUW, scoreMaxU;     
-      maxZ(kBest[yi], yi, theta, model, scoreMaxUW, indexMaxUW, scoreMaxU,
+      maxZ(*kBest[yi], yi, theta, model, scoreMaxUW, indexMaxUW, scoreMaxU,
           indexMaxU);
-      assert(kBest[yi].maxFvs->at(indexMaxUW)->size() == n);
+      assert((*kBest[yi]->maxFvs)[indexMaxUW]->size() == n);
       
-      shared_ptr<const SparseRealVec> phiMax_w = model.observedFeatures(
-          kBest[yi].alignments->at(indexMaxUW), yi);
+      shared_ptr<const SparseRealVec> phiMax_w =
+          (*kBest[yi]->observedFvs)[indexMaxUW];
       assert(phiMax_w);
       assert(phiMax_w->size() == n);
       
       // Update the gradient and function value contribution of term (1).
       noalias(subrange(gradDense, 0, n)) -= *phiMax_w;
-      noalias(subrange(gradDense, n, d)) += *kBest[yi].maxFvs->at(indexMaxUW);
+      noalias(subrange(gradDense, n, d)) += *(*kBest[yi]->maxFvs)[indexMaxUW];
       funcVal += scoreMaxUW;
       
       // Update the gradient and function value contribution of term (3).
-      noalias(subrange(gradDense, n, d)) -= *kBest[yi].maxFvs->at(indexMaxU);
+      noalias(subrange(gradDense, n, d)) -= *(*kBest[yi]->maxFvs)[indexMaxU];
       funcVal -= scoreMaxU;
     }
 
     // Compute term (2).
     {
-      vector<double> score(k);
-      vector<SparseRealVec> feats(k, SparseRealVec(d));
+      vector<double> score(nc);
+      vector<SparseRealVec> feats(nc, SparseRealVec(d));
       Label yMax = 0;
       double scoreMax = -numeric_limits<double>::infinity();    
       int indexMax = -1;
-      for (Label y = 0; y < k; y++) {
+      for (Label y = 0; y < nc; y++) {
         int kBestIndex = -1;
-        score[y] = Utility::delta(yi,y) + bestAlignmentScore(
-            *kBest[y].alignments, theta.w, model, y, &kBestIndex);
+        score[y] = Utility::delta(yi,y) + bestAlignmentScore(*kBest[y], theta.w,
+            model, y, &kBestIndex);
         assert(kBestIndex >= 0);
         if (score[y] > scoreMax) {
           scoreMax = score[y];
@@ -119,8 +143,8 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
       assert(indexMax >= 0);
     
       // Update the gradient and function value.
-      noalias(subrange(gradDense, 0, n)) += *model.observedFeatures(
-          kBest[yMax].alignments->at(indexMax), yMax);
+      noalias(subrange(gradDense, 0, n)) +=
+          *(*kBest[yMax]->observedFvs)[indexMax];
       funcVal += score[yMax];
     }
   }
@@ -129,13 +153,13 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
 
 void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, LabelScoreTable& scores) {
+    const Label numClasses, LabelScoreTable& scores) {
 
 #if 0 // 0 --> pipeline scoring; 1 --> objective function scoring
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    for (Label y = 0; y < k; y++) {
+    for (Label y = 0; y < numClasses; y++) {
       const KBestInfo& kBest = fetchKBestInfo(x, y);
       assert(kBest.alignments->size() == kBest.maxFvs->size());
       
@@ -152,7 +176,7 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
     const size_t id = x.getId();
-    for (Label y = 0; y < k; y++) {      
+    for (Label y = 0; y < numClasses; y++) {      
       int index = -1;
       double z;
       
@@ -161,18 +185,27 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
         // Impute the max-scoring alignment based using u.
         stringstream align_ss;
         // false --> exclude observed (global) features
-        shared_ptr<vector<shared_ptr<SparseRealVec> > > maxFvs;
+        shared_ptr<vector<shared_ptr<const SparseRealVec> > > maxFvs;
         model.getBestAlignments(align_ss, maxFvs, theta.u, x, y, false);
         
         // Parse the best alignments from the alignment string.
         shared_ptr<vector<StringPairAligned> > alignments =
             Utility::toStringPairAligned(align_ss.str());
-            
-        z = bestAlignmentScore(*alignments, theta.w, model, y, &index);
+        const int k = alignments->size();
+        assert(k > 0);
+        
+        // Get the observed feature vector for each alignment.
+        KBestInfo kBest;
+        kBest.observedFvs->resize(k);
+        for (int j = 0; j < k; j++)
+          (*kBest.observedFvs)[j] = model.observedFeatures((*alignments)[j], y);
+        
+        z = bestAlignmentScore(kBest, theta.w, model, y, &index);
       }
       else {
-        const KBestInfo& kBest = fetchKBestInfo(x, y);
-        z = bestAlignmentScore(*kBest.alignments, theta.w, model, y, &index);
+        const KBestInfo* kBest = fetchKBestInfo(x, y);
+        assert(kBest->observedFvs->size() > 0);
+        z = bestAlignmentScore(*kBest, theta.w, model, y, &index);
       }
       
       assert(index >= 0); // index not used here, but we check validity anyway      
@@ -182,10 +215,10 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
 #endif
 }
 
-const MaxMarginMultiPipelineUW::KBestInfo&
+MaxMarginMultiPipelineUW::KBestInfo*
 MaxMarginMultiPipelineUW::fetchKBestInfo(const Pattern& x, Label y) {
   pair<size_t, Label> item = make_pair(x.getId(), y);
-  boost::unordered_map<pair<size_t, Label>, KBestInfo>::iterator it;
+  boost::ptr_map<pair<size_t, Label>, KBestInfo>::iterator it;
   it = _kBestMap.find(item); // retrieve the k-best alignments
   if (it == _kBestMap.end()) {
     assert(0);
@@ -198,33 +231,32 @@ MaxMarginMultiPipelineUW::fetchKBestInfo(const Pattern& x, Label y) {
 
 void MaxMarginMultiPipelineUW::initKBestPart(const Parameters& theta,
     Model& model, const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k) {
+    const Label nc) {
   assert(theta.hasU());
   assert(KBestViterbiSemiring::k > 0);
   
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
-    for (Label y = 0; y < k; y++) {
+    for (Label y = 0; y < nc; y++) {
       // Impute the k max-scoring alignments using u.
-      KBestInfo kBest;
+      KBestInfo* kBest = new KBestInfo();
       stringstream align_ss;
       // false --> exclude observed (global) features
-      model.getBestAlignments(align_ss, kBest.maxFvs, theta.u, x, y, false);
-      
-      // Parse the k-best alignments from the alignment string.
-      kBest.alignments = Utility::toStringPairAligned(align_ss.str());
-      assert(kBest.alignments->size() <= KBestViterbiSemiring::k);
+      model.getBestAlignments(align_ss, kBest->maxFvs, theta.u, x, y, false);
+      assert(kBest->maxFvs->size() > 0);
+      assert(kBest->maxFvs->size() <= KBestViterbiSemiring::k);
+      kBest->alignStrings = align_ss.str();
       
       boost::mutex::scoped_lock lock(_lock); // place a lock on _kBestMap
       
       pair<size_t, Label> item = make_pair(x.getId(), y);
-      boost::unordered_map<pair<size_t, Label>, KBestInfo>::iterator itFind =
+      boost::ptr_map<pair<size_t, Label>, KBestInfo>::iterator itFind =
         _kBestMap.find(item);
 
       // The initialization method should only be called once, and we should
       // never try to insert a duplicate (Example,Label) pair.
       assert(itFind == _kBestMap.end());
-      _kBestMap.insert(make_pair(item, kBest));
+      _kBestMap.insert(item, kBest);
     }
   }
 }
@@ -234,13 +266,13 @@ void MaxMarginMultiPipelineUW::clearKBest() {
 }
 
 double MaxMarginMultiPipelineUW::bestAlignmentScore(
-    const vector<StringPairAligned>& alignments, const WeightVector& weights,
+    const KBestInfo& kBest, const WeightVector& weights,
     Model& model, const Label y, int* indexBest) {
   int bestIndex = -1;
   double bestScore = -1;
-  assert(alignments.size() > 0);
-  for (int i = 0; i < alignments.size(); i++) {
-    shared_ptr<const SparseRealVec> phi = model.observedFeatures(alignments[i], y);
+  assert(kBest.observedFvs->size() > 0);
+  for (int i = 0; i < kBest.observedFvs->size(); i++) {
+    shared_ptr<const SparseRealVec> phi = (*kBest.observedFvs)[i];
     assert(phi);
     const double score = weights.innerProd(*phi);
 #if 0
@@ -267,18 +299,20 @@ double MaxMarginMultiPipelineUW::bestAlignmentScore(
  */
 void MaxMarginMultiPipelineUW::gatherFeaturesPart(Model& model,
     const Dataset::iterator& begin, const Dataset::iterator& end,
-    const Label k, size_t& maxFvs, size_t& totalFvs) {
+    const Label numClasses, size_t& maxFvs, size_t& totalFvs) {
   totalFvs = 0;
   maxFvs = 1; // there can only be one observed feature vector per instance
   for (Dataset::iterator it = begin; it != end; ++it) {
     const Pattern& x = *it->x();
-    for (Label y = 0; y < k; y++) {
-      const KBestInfo& kBest = fetchKBestInfo(x, y);
-      assert(kBest.alignments->size() == kBest.maxFvs->size());
-      BOOST_FOREACH(const StringPairAligned& alignment, *kBest.alignments) {
-        shared_ptr<const SparseRealVec> phi = model.observedFeatures(
-            alignment, y);
-        assert(phi);
+    for (Label y = 0; y < numClasses; y++) {
+      KBestInfo* kBest = fetchKBestInfo(x, y);
+      const int k = kBest->maxFvs->size();
+      assert(k > 0);
+      shared_ptr<vector<StringPairAligned> > alignments =
+          Utility::toStringPairAligned(kBest->alignStrings);
+      assert(alignments->size() == k);
+      for (int j = 0; j < k; j++) {
+        model.observedFeatures((*alignments)[j], y);
         totalFvs++;
       }
     }
@@ -331,11 +365,11 @@ void MaxMarginMultiPipelineUW::maxZ(const KBestInfo& kBest, const Label y,
   scoreMaxU = -numeric_limits<double>::infinity();
   indexMaxU = -1;
   // Compute max_{z} (u-w)'*phi(x,y,z)
-  for (int j = 0; j < kBest.alignments->size(); j++) {
-    shared_ptr<const SparseRealVec> phi_w = model.observedFeatures(
-        kBest.alignments->at(j), y);
+  assert(kBest.observedFvs->size() > 0);
+  for (int j = 0; j < kBest.observedFvs->size(); j++) {
+    shared_ptr<const SparseRealVec> phi_w = (*kBest.observedFvs)[j];
     assert(phi_w);
-    const double scoreU = theta.u.innerProd(*kBest.maxFvs->at(j));
+    const double scoreU = theta.u.innerProd(*(*kBest.maxFvs)[j]);
     const double scoreW = theta.w.innerProd(*phi_w);
     const double scoreUW = scoreU - scoreW;
     if (scoreUW > scoreMaxUW) {
