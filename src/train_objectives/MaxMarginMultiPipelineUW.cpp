@@ -72,31 +72,9 @@ void MaxMarginMultiPipelineUW::valueAndGradientPart(const Parameters& theta,
     vector<KBestInfo*> kBest(nc);
     for (Label y = 0; y < nc; y++) {
       kBest[y] = fetchKBestInfo(xi, y);
-      assert(kBest[y]->maxFvs);
-      const int k = kBest[y]->maxFvs->size();
-      assert(k > 0);
-      
-      // If the observed feature vectors haven't been stored yet, we create
-      // them here by extracting features based on the string representation
-      // of the k-best alignments that was stored in initKBestPart.
-      if (!kBest[y]->observedFvs) {
-        assert(kBest[y]->alignStrings.size() > 0);
-        kBest[y]->observedFvs.reset(
-            new vector<shared_ptr<const SparseRealVec> >(k));
-        shared_ptr<vector<StringPairAligned> > alignments =
-            Utility::toStringPairAligned(kBest[y]->alignStrings);
-        for (int j = 0; j < k; j++) {
-          shared_ptr<const SparseRealVec> phi = model.observedFeatures(
-              (*alignments)[j], y);
-          assert(phi);
-          (*kBest[y]->observedFvs)[j] = phi;
-        }
-        // Now that we have the k-best feature vectors, we don't need the
-        // string representation of the alignments any more, so free the memory.
-        kBest[y]->alignStrings.clear();
-      }
-      assert(kBest[y]->observedFvs->size() == k);
-      assert(fetchKBestInfo(xi, y)->observedFvs->size() == k);
+      assert(kBest[y]);
+      if (!kBest[y]->observedFvs)
+        getKBestObservedFvs(kBest[y], y, model);
     }
     
     // Compute terms (1) and (3).
@@ -203,8 +181,10 @@ void MaxMarginMultiPipelineUW::predictPart(const Parameters& theta,
         z = bestAlignmentScore(kBest, theta.w, model, y, &index);
       }
       else {
-        const KBestInfo* kBest = fetchKBestInfo(x, y);
-        assert(kBest->observedFvs->size() > 0);
+        KBestInfo* kBest = fetchKBestInfo(x, y);
+        assert(kBest);
+        if (!kBest->observedFvs)
+          getKBestObservedFvs(kBest, y, model);
         z = bestAlignmentScore(*kBest, theta.w, model, y, &index);
       }
       
@@ -222,7 +202,7 @@ MaxMarginMultiPipelineUW::fetchKBestInfo(const Pattern& x, Label y) {
   it = _kBestMap.find(item); // retrieve the k-best alignments
   if (it == _kBestMap.end()) {
     assert(0);
-    cout << "Error: " << name() << " failed to retrieve alignments.\n";
+    cout << "Error: " << name() << " failed to retrieve k-best list.\n";
     exit(1);
   }
   assert(it->second);
@@ -270,6 +250,7 @@ double MaxMarginMultiPipelineUW::bestAlignmentScore(
     Model& model, const Label y, int* indexBest) {
   int bestIndex = -1;
   double bestScore = -1;
+  assert(kBest.observedFvs);
   assert(kBest.observedFvs->size() > 0);
   for (int i = 0; i < kBest.observedFvs->size(); i++) {
     shared_ptr<const SparseRealVec> phi = (*kBest.observedFvs)[i];
@@ -383,4 +364,34 @@ void MaxMarginMultiPipelineUW::maxZ(const KBestInfo& kBest, const Label y,
   }
   assert(indexMaxUW >= 0);
   assert(indexMaxU >= 0);
+}
+
+void MaxMarginMultiPipelineUW::getKBestObservedFvs(KBestInfo* kBest,
+    const Label y, Model& model) {
+  assert(kBest->maxFvs);
+  const int k = kBest->maxFvs->size();
+  assert(k > 0);
+  
+  // If the observed feature vectors haven't been stored yet, we create
+  // them here by extracting features based on the string representation
+  // of the k-best alignments that was stored in initKBestPart.
+  if (!kBest->observedFvs) {
+    assert(kBest->alignStrings.size() > 0);
+    kBest->observedFvs.reset(
+        new vector<shared_ptr<const SparseRealVec> >(k));
+    shared_ptr<vector<StringPairAligned> > alignments =
+        Utility::toStringPairAligned(kBest->alignStrings);
+    for (int j = 0; j < k; j++) {
+      shared_ptr<const SparseRealVec> phi = model.observedFeatures(
+          (*alignments)[j], y);
+      assert(phi);
+      (*kBest->observedFvs)[j] = phi;
+    }
+    // Now that we have the k-best feature vectors, we don't need the
+    // string representation of the alignments any more, so free the memory.
+    kBest->alignStrings.clear();
+  }
+  // Verify that this string has been cleared (possibly from a previous call).
+  assert(kBest->alignStrings.size() == 0);
+  assert(kBest->observedFvs->size() == k);
 }

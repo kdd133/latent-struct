@@ -115,13 +115,15 @@ void TrainingObjective::valueAndGradient(const Parameters& theta, double& fval,
   }
     
   // Combine the results.
-  gradFv.clear();
+  RealVec gradAggregate(theta.getDimTotal());
+  gradAggregate.clear();
   fval = 0;
   for (size_t i = 0; i < numParts; i++) {
     threads[i].join(); // Wait for the thread to finish.
     fval += fvals[i];
-    noalias(gradFv) += grads[i];
+    noalias(gradAggregate) += grads[i];
   }
+  noalias(gradFv) = gradAggregate;
   
   valueAndGradientFinalize(theta, fval, gradFv);
   

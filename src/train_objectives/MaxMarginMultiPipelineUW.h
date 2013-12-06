@@ -108,6 +108,8 @@ class MaxMarginMultiPipelineUW : public TrainingObjective {
     void maxZ(const KBestInfo& kBest, const Label y, const Parameters& theta,
         Model& model, double& scoreMaxUW, int& indexMaxUW, double& scoreMaxU,
         int& indexMaxU);
+        
+    void getKBestObservedFvs(KBestInfo* kBest, const Label y, Model& model);
 };
 
 #endif
