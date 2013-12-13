@@ -113,6 +113,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   model->getBestAlignments(alignmentStr, maxFvs, W, *pair, label);
   const std::string alignment = alignmentStr.str();
   std::string correctAlignment =
+      "Alignment 0 ( weight = -300 ):\n"
       "Mat11 Ins1 Mat11 Ins1 Mat11 Mat11 Mat11 Mat11 Ins1 \n";
   correctAlignment += "|s| |t| |r|e|s|s| \n|s|u|t|o|r|e|s|s|u\n";
   BOOST_CHECK(alignment == correctAlignment);
