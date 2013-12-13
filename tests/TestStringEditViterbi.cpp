@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(testStringEditViterbi)
   
   // Check that the max-scoring alignment is correct.
   std::stringstream alignmentStr;
-  shared_ptr<std::vector<shared_ptr<SparseRealVec> > > maxFvs;
+  shared_ptr<std::vector<shared_ptr<const SparseRealVec> > > maxFvs;
   model->getBestAlignments(alignmentStr, maxFvs, W, *pair, label);
   const std::string alignment = alignmentStr.str();
   std::string correctAlignment =
