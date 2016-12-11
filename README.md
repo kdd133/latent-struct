@@ -10,9 +10,9 @@ make all
 ```
 
 ### Dependencies
-[Boost C++ libraries](http://www.boost.org/) (version 1.48 or higher)
-[libLBFGS](https://github.com/chokkan/liblbfgs) (version 1.10 or higher)
-[QuadProg++](https://sourceforge.net/projects/quadprog/) (version 1.2.1)
+* [Boost C++ libraries](http://www.boost.org/) (version 1.48 or higher)
+* [libLBFGS](https://github.com/chokkan/liblbfgs) (version 1.10 or higher)
+* [QuadProg++](https://sourceforge.net/projects/quadprog/) (version 1.2.1)
 
 ### Installing
 The following instructions have been tested on Ubuntu 16.04.
